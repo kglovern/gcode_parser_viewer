@@ -23,12 +23,12 @@ export class ViewCube {
     this.root.appendChild(this.cube);
 
     const faces: Array<{ view: GCodeViewerCameraView; className: string; label: string }> = [
-      { view: "front", className: "tsparse-viewcube__face--front", label: "Front" },
-      { view: "back", className: "tsparse-viewcube__face--back", label: "Back" },
-      { view: "left", className: "tsparse-viewcube__face--left", label: "Left" },
-      { view: "right", className: "tsparse-viewcube__face--right", label: "Right" },
-      { view: "top", className: "tsparse-viewcube__face--top", label: "Top" },
-      { view: "bottom", className: "tsparse-viewcube__face--bottom", label: "Bottom" },
+      { view: "front", className: "gViewer-viewcube__face--front", label: "Front" },
+      { view: "back", className: "gViewer-viewcube__face--back", label: "Back" },
+      { view: "left", className: "gViewer-viewcube__face--left", label: "Left" },
+      { view: "right", className: "gViewer-viewcube__face--right", label: "Right" },
+      { view: "top", className: "gViewer-viewcube__face--top", label: "Top" },
+      { view: "bottom", className: "gViewer-viewcube__face--bottom", label: "Bottom" },
     ];
 
     for (const face of faces) {
