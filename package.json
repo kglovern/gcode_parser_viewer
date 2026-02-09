@@ -1,0 +1,59 @@
+{
+  "name": "gViewer",
+  "version": "0.1.0",
+  "description": "GCode parsing and virtualization for GRBL",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./viewer": {
+      "types": "./dist/viewer/index.d.ts",
+      "import": "./dist/viewer/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.mjs"
+    },
+    "./viewer/viewcube.css": "./dist/viewer/viewcube.css"
+  },
+  "scripts": {
+    "build": "yarn build:core && yarn build:viewer:types && yarn build:viewer && yarn build:react && yarn build:viewer:css",
+    "build:core": "tsc -p tsconfig.json",
+    "build:viewer": "esbuild src/viewer/index.ts --bundle --format=esm --platform=browser --external:three --external:three/* --outfile=dist/viewer/index.mjs",
+    "build:react": "esbuild src/react/index.ts --bundle --format=esm --platform=browser --external:react --external:react-dom --external:three --external:three/* --outfile=dist/react/index.mjs",
+    "build:viewer:types": "tsc -p tsconfig.viewer-types.json",
+    "build:viewer:css": "node scripts/copy-viewer-css.mjs",
+    "build:demo": "esbuild examples/threejs-viewer.ts --bundle --format=esm --outfile=examples/threejs-viewer.bundle.js && node scripts/copy-demo-assets.mjs",
+    "viewer": "yarn build:demo && yarn build:viewer:css && python -m http.server",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17",
+    "three": "^0.168.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "esbuild": "^0.23.0",
+    "jest": "^29.7.0",
+    "three": "^0.168.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.5.4"
+  }
+}

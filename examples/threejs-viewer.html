@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GCode Viewer</title>
+    <link rel="stylesheet" href="./viewcube.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #111827;
+        color: #d5dae0;
+        font-family: "Space Grotesk", "DM Sans", "Verdana", sans-serif;
+      }
+      #viewer {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .hint {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(12, 16, 20, 0.85);
+        border: 1px solid rgba(120, 140, 160, 0.3);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color-scheme: dark;
+      }
+      .hint__row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .hint__row--stepper {
+        width: 100%;
+        padding-top: 12px;
+        margin-top: 6px;
+        border-top: 1px solid rgba(120, 140, 160, 0.3);
+      }
+      .file {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 11px;
+        color: #9fd7ff;
+      }
+      .file input {
+        display: none;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #f3c77a;
+        cursor: pointer;
+      }
+      .toggle input {
+        accent-color: #f3c77a;
+      }
+      .select {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #d5dae0;
+      }
+      .select select,
+      .select input[type="number"] {
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
+        border: 1px solid rgba(120, 140, 160, 0.3);
+        border-radius: 10px;
+        padding: 6px 8px;
+        font: inherit;
+        letter-spacing: 0.02em;
+      }
+      .select select option {
+        background: #0c1014;
+        color: #d5dae0;
+      }
+      .select input[type="number"] {
+        width: 80px;
+      }
+      .stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .stepper__label {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #d5dae0;
+      }
+      .stepper__buttons {
+        display: inline-flex;
+        gap: 6px;
+      }
+      .stepper button {
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
+        border: 1px solid rgba(120, 140, 160, 0.3);
+        border-radius: 10px;
+        padding: 6px 8px;
+        font: inherit;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .stepper button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .stepper__mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #9fd7ff;
+        cursor: pointer;
+      }
+      .stepper__mode input {
+        accent-color: #9fd7ff;
+      }
+      .stepper__index {
+        width: 84px;
+      }
+      .timing {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 10000;
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: rgba(12, 16, 20, 0.85);
+        border: 1px solid rgba(120, 140, 160, 0.3);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .progress {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        z-index: 10000;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(12, 16, 20, 0.85);
+        border: 1px solid rgba(120, 140, 160, 0.3);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        align-items: center;
+        pointer-events: none;
+      }
+      .progress[hidden] {
+        display: none;
+      }
+      .progress__label {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #d5dae0;
+      }
+      .progress__value {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #9fd7ff;
+        font-variant-numeric: tabular-nums;
+      }
+      .progress progress {
+        grid-column: 1 / -1;
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .progress progress::-webkit-progress-bar {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .progress progress::-webkit-progress-value {
+        background: linear-gradient(90deg, #0ef6ae, #3e85c7);
+      }
+      .progress progress::-moz-progress-bar {
+        background: linear-gradient(90deg, #0ef6ae, #3e85c7);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hint">
+      <div class="hint__row">
+        <span>GCode Viewer</span>
+        <label class="file">
+          <input id="file-input" type="file" accept=".gcode,.nc,.tap,.txt" />
+          <span>Load GCode</span>
+        </label>
+        <label class="toggle">
+          <input id="laser-toggle" type="checkbox" />
+          <span>Laser Mode</span>
+        </label>
+        <label class="toggle">
+          <input id="bounding-box-toggle" type="checkbox" />
+          <span>Bounding Box</span>
+        </label>
+        <label class="toggle">
+          <input id="bounding-box-labels-toggle" type="checkbox" />
+          <span>Bounding Box Labels</span>
+        </label>
+        <label class="select">
+          <span>Grid</span>
+          <select id="grid-units">
+            <option value="mm">mm</option>
+            <option value="in">in</option>
+          </select>
+        </label>
+        <label class="toggle">
+          <input id="grid-labels-toggle" type="checkbox" checked />
+          <span>Grid Labels</span>
+        </label>
+        <label class="select">
+          <span>Size</span>
+          <input id="grid-size" type="number" min="1" step="1" value="400" />
+        </label>
+      </div>
+      <div class="hint__row hint__row--stepper">
+        <div class="stepper">
+          <span class="stepper__label">Sim</span>
+          <label class="stepper__mode">
+            <input id="sim-mode-grey" type="radio" name="sim-mode" value="grey" checked />
+            <span>Grey</span>
+          </label>
+          <label class="stepper__mode">
+            <input id="sim-mode-hide" type="radio" name="sim-mode" value="hide" />
+            <span>Hide</span>
+          </label>
+          <label class="select">
+            <span>Theme</span>
+            <select id="theme-select">
+              <option value="dark" selected>Dark</option>
+              <option value="light">Light</option>
+              <option value="flexoki-dark">Flexy Oak (Dark)</option>
+              <option value="tokyo-night">Shibuya After Hours</option>
+              <option value="gruvbox-light">Gruvbox Picnic</option>
+              <option value="ayu-dark">Ayu After Dark</option>
+              <option value="ayu-light">Ayu Daylight</option>
+            </select>
+          </label>
+          <label class="select">
+            <span>Bit</span>
+            <select id="bit-type-select">
+              <option value="circle" selected>Circle</option>
+              <option value="triangle">Triangle</option>
+            </select>
+          </label>
+          <label class="select">
+            <span>A Rot</span>
+            <input id="toolpath-a-rotation" type="number" step="1" value="0" />
+          </label>
+          <label class="select">
+            <span>Line</span>
+            <input class="stepper__index" id="sim-line" type="number" min="1" step="1" value="1" />
+          </label>
+          <div class="stepper__buttons">
+            <button id="sim-prev" type="button">Prev</button>
+            <button id="sim-next" type="button">Next</button>
+            <button id="sim-reset" type="button">Reset</button>
+          </div>
+          <span class="stepper__label" id="sim-status">- / -</span>
+        </div>
+      </div>
+    </div>
+    <div class="timing" id="timing">Load time: --</div>
+    <div class="progress" id="progress" hidden>
+      <div class="progress__label" id="progress-label">Loading...</div>
+      <div class="progress__value" id="progress-value">--%</div>
+      <progress id="progress-bar"></progress>
+    </div>
+    <div id="viewer"></div>
+    <script type="module" src="./threejs-viewer.bundle.js"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES2020",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/viewer/**/*.ts",
+    "src/viewer/**/*.d.ts",
+    "src/react/**/*.ts",
+    "src/react/**/*.tsx",
+    "src/react/**/*.d.ts"
+  ],
+  "exclude": []
+}

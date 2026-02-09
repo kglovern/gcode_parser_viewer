@@ -1,0 +1,3 @@
+import { VertexBuildOptions } from "./threejs-core";
+export declare function buildVerticesFromFile(filePath: string, options?: VertexBuildOptions): Promise<Float32Array>;
+export { buildVerticesFromLines, buildMovementVerticesFromLines, buildMovementVerticesFromLinesBatched, buildMovementGeometryFromLinesBatched, buildLaserVerticesFromLines, buildLaserVerticesFromLinesBatched, buildLaserGeometryFromLinesBatched, buildToolpathGeometryFromLinesBatched, VertexBuildOptions, BatchBuildOptions, VertexCollector, MovementVertices, MovementGeometry, LaserVertices, LaserGeometry, ToolpathGeometry, ToolpathGeometryStream, LaserBucket, pushXYZ, } from "./threejs-core";
