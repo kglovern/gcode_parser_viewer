@@ -1,0 +1,5 @@
+node_modules
+claude.md
+.claude/
+.idea/
+/node_modules/

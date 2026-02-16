@@ -1,0 +1,10 @@
+(program start)
+G21 G90 G17
+G0 X0 Y0 Z5 ; safe height
+G1 X10.5 Y-2.25 F1200
+G2 X20 Y0 I5 J2.5
+G91
+G1 X-2 Y3 Z-1.5
+T3
+M3 S1000
+G0 X0 Y0 Z0
