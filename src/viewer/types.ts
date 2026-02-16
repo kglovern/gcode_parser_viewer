@@ -35,6 +35,7 @@ export type GCodeViewerSim3dOptions = {
   toolDiameter: number;
   resolution: number;
   showToolpath: boolean;
+  erosionPasses: number;
 };
 
 export type GCodeViewerOptions = {
@@ -104,7 +105,7 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
 export const defaultGCodeViewerOptions: GCodeViewerOptions = {
   units: "mm",
   mode: { laser: false, sim3d: false },
-  sim3d: { toolDiameter: 6.35, resolution: 256, showToolpath: false },
+  sim3d: { toolDiameter: 6.35, resolution: 256, showToolpath: false, erosionPasses: 2 },
   bit: {
     enabled: true,
     type: "drill",

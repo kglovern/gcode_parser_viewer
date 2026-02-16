@@ -24,7 +24,7 @@ import {
   GCodeViewerOptions,
 } from "./types";
 import type { GCodeViewerProgressEventNoId } from "./types";
-import { buildSim3dData, seekHeightmap, type Sim3dData } from "./simulation/heightmap";
+import { buildSim3dData, seekHeightmap, erodeHeightmap, type Sim3dData } from "./simulation/heightmap";
 import {
   createMaterialSlab,
   updateSlabTopSurface,
@@ -236,6 +236,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       const line = Math.max(0, Math.min(Math.floor(lineIndex), this.currentLines.length - 1));
       if (line !== this.sim3dHandle.currentLine) {
         const hm = seekHeightmap(line, this.sim3dHandle.data);
+        erodeHeightmap(hm, this.sim3dHandle.data.resolution, this.options.sim3d.erosionPasses, this.sim3dHandle.data.slabBounds.zTop);
         updateSlabTopSurface(this.sim3dHandle.slab, hm);
         this.sim3dHandle.currentLine = line;
       }
@@ -443,6 +444,13 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (sim3dParamsChanged && this.options.mode.sim3d) {
       void this.renderScene();
       return;
+    }
+
+    if (previous.sim3d.erosionPasses !== this.options.sim3d.erosionPasses && this.sim3dHandle) {
+      const line = this.sim3dHandle.currentLine;
+      const hm = seekHeightmap(line, this.sim3dHandle.data);
+      erodeHeightmap(hm, this.sim3dHandle.data.resolution, this.options.sim3d.erosionPasses, this.sim3dHandle.data.slabBounds.zTop);
+      updateSlabTopSurface(this.sim3dHandle.slab, hm);
     }
 
     if (previous.sim3d.showToolpath !== this.options.sim3d.showToolpath && this.options.mode.sim3d) {
@@ -888,6 +896,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (mySequence !== this.renderSequence) return;
 
     const initialHeightmap = seekHeightmap(0, data);
+    erodeHeightmap(initialHeightmap, resolution, this.options.sim3d.erosionPasses, data.slabBounds.zTop);
     const slab = createMaterialSlab(data.slabBounds, resolution);
     updateSlabTopSurface(slab, initialHeightmap);
     this.setSim3dHandle({ data, slab, currentLine: 0 });

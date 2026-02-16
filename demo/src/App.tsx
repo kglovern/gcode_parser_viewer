@@ -175,6 +175,19 @@ export default function App() {
                 }
               />
             </label>
+            <label className="number-label">
+              Erosion Passes
+              <input
+                type="number"
+                min={0}
+                max={4}
+                step={1}
+                value={options.sim3d?.erosionPasses ?? 2}
+                onChange={(e) =>
+                  patchOptions({ sim3d: { erosionPasses: Number(e.target.value) } })
+                }
+              />
+            </label>
             <label className="checkbox-label">
               <input
                 type="checkbox"
