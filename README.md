@@ -326,16 +326,35 @@ viewer.setBitPosition({ x: 10, y: 5, z: 0 }, { immediate: true });
 viewer.setBitVisible(false);
 ```
 
+The bit type is controlled via `options.bit.type`. Four types are available:
+
+| Type | Description |
+|---|---|
+| `"drill"` | Real drill-bit mesh (STL) with metallic shading. **Default.** |
+| `"laser"` | Tapered beam with additive purple glow. Set automatically when `mode.laser` is enabled. |
+| `"circle"` | Simple sphere. |
+| `"triangle"` | Cone. |
+
+**Laser mode auto-switch:** when `mode.laser` is set to `true`, the bit type automatically switches to `"laser"`. When `mode.laser` is set back to `false`, the bit reverts to whatever type was active before laser mode was enabled.
+
+```ts
+viewer.setOptions({ mode: { laser: true } });
+// bit type is now automatically "laser"
+
+viewer.setOptions({ mode: { laser: false } });
+// bit type is restored to its previous value (e.g. "drill")
+```
+
 ##### Options
 
 ```ts
 viewer.setOptions({
   units: "mm",             // "mm" | "in"
-  mode: { laser: false },
+  mode: { laser: false },  // setting true auto-switches bit type to "laser"
   render: {
     theme: gCodeViewerThemePresets["tokyo-night"],
   },
-  grid: { size: 400, axisDepth: 200, labels: true },
+  grid: { size: 1000, axisDepth: 200, labels: true },
   boundingBox: { visible: true, labels: true },
   camera: { fov: 45 },
 });
@@ -366,15 +385,15 @@ type GCodeViewerOptions = {
   mode: { laser: boolean };
   bit: {
     enabled: boolean;
-    type: "circle" | "triangle";
-    size: number;        // world units
+    type: "drill" | "laser" | "circle" | "triangle";  // default: "drill"
+    size: number;        // world units (default: 4.05)
     opacity: number;     // 0–1
     tweenMs: number;     // animation duration
     colorSource: "cutting" | "rapid" | "custom";
     color: string;
   };
   progress: { mode: "hide" | "grey" };
-  grid: { size: number; axisDepth: number; labels: boolean };
+  grid: { size: number; axisDepth: number; labels: boolean };  // default size: 1000
   boundingBox: { visible: boolean; labels: boolean };
   geometry: {
     arcSegments: number;
@@ -439,7 +458,11 @@ npm run build        # compile + generate types
 npm test             # run all test suites
 npm run test:watch   # watch mode
 npm run dev          # rebuild on file changes
+npm run demo         # start the demo dev server
+npm run build:demo   # build the demo for deployment
 ```
+
+The demo is automatically built and published to GitHub Pages on every push to `master`.
 
 ### Output
 
