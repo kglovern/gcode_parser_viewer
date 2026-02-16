@@ -24,6 +24,13 @@ import {
   GCodeViewerOptions,
 } from "./types";
 import type { GCodeViewerProgressEventNoId } from "./types";
+import { buildSim3dData, seekHeightmap, type Sim3dData } from "./simulation/heightmap";
+import {
+  createMaterialSlab,
+  updateSlabTopSurface,
+  disposeSlabHandle,
+  type SlabHandle,
+} from "./simulation/materialSlab";
 import { ViewCube } from "./ViewCube";
 import { createBoundingBoxGroup, disposeBoundingBoxGroup } from "./bbox/boundingBox";
 import {
@@ -76,6 +83,12 @@ export class GCodeViewer implements GCodeViewerHandle {
   private toolpathStreams: ToolpathStreamState[] = [];
   private toolpathCutBucketCount = 1;
   private toolpathRotationA = 0;
+
+  private sim3dHandle: {
+    data: Sim3dData;
+    slab: SlabHandle;
+    currentLine: number;
+  } | null = null;
 
   private currentLines: string[] = [];
   private linePositions: Float32Array | null = null;
@@ -218,6 +231,14 @@ export class GCodeViewer implements GCodeViewerHandle {
         a: this.linePositions[i * 4 + 3],
       };
       this.setBitPosition(pos, { immediate: true });
+    }
+    if (this.sim3dHandle) {
+      const line = Math.max(0, Math.min(Math.floor(lineIndex), this.currentLines.length - 1));
+      if (line !== this.sim3dHandle.currentLine) {
+        const hm = seekHeightmap(line, this.sim3dHandle.data);
+        updateSlabTopSurface(this.sim3dHandle.slab, hm);
+        this.sim3dHandle.currentLine = line;
+      }
     }
   }
 
@@ -404,6 +425,28 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.ensureBitMarker();
       this.bitMarker?.setOptions(this.options);
       void this.renderScene();
+    }
+
+    if (previous.mode.sim3d !== this.options.mode.sim3d) {
+      if (!this.options.mode.sim3d) {
+        this.setSim3dHandle(null);
+        this.setToolpathStreamsVisible(true);
+      } else {
+        void this.renderScene();
+        return;
+      }
+    }
+
+    const sim3dParamsChanged =
+      previous.sim3d.toolDiameter !== this.options.sim3d.toolDiameter ||
+      previous.sim3d.resolution !== this.options.sim3d.resolution;
+    if (sim3dParamsChanged && this.options.mode.sim3d) {
+      void this.renderScene();
+      return;
+    }
+
+    if (previous.sim3d.showToolpath !== this.options.sim3d.showToolpath && this.options.mode.sim3d) {
+      this.setToolpathStreamsVisible(this.options.sim3d.showToolpath);
     }
   }
 
@@ -628,6 +671,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private setGeometryEmpty(): void {
+    this.setSim3dHandle(null);
     disposeToolpathStreams(this.toolpathRoot as unknown as THREE.Scene, this.toolpathStreams);
     this.toolpathStreams = [];
     this.toolpathCutBucketCount = 1;
@@ -776,6 +820,12 @@ export class GCodeViewer implements GCodeViewerHandle {
         cutBucketCount: result.cutBucketCount,
       });
       this.buildLinePositions();
+
+      // Sim3d mode: build heightmap and slab
+      if (this.options.mode.sim3d) {
+        this.setToolpathStreamsVisible(this.options.sim3d.showToolpath);
+        await this.buildAndApplySim3d(mySequence);
+      }
     } catch (error) {
       if (error instanceof Error && error.message === "Aborted.") {
         return;
@@ -786,6 +836,61 @@ export class GCodeViewer implements GCodeViewerHandle {
         this.emitProgress({ state: "hidden" });
       }
     }
+  }
+
+  private setSim3dHandle(
+    next: { data: Sim3dData; slab: SlabHandle; currentLine: number } | null
+  ): void {
+    if (this.sim3dHandle) {
+      this.scene.remove(this.sim3dHandle.slab.group);
+      disposeSlabHandle(this.sim3dHandle.slab);
+      this.sim3dHandle = null;
+    }
+    if (next) {
+      this.sim3dHandle = next;
+      this.scene.add(next.slab.group);
+    }
+  }
+
+  private setToolpathStreamsVisible(visible: boolean): void {
+    for (const stream of this.toolpathStreams) {
+      stream.line.visible = visible;
+    }
+  }
+
+  private async buildAndApplySim3d(mySequence: number): Promise<void> {
+    this.emitProgress({ state: "indeterminate", label: "Building 3D simulation..." });
+    const toolRadius = this.options.sim3d.toolDiameter / 2;
+    const resolution = this.options.sim3d.resolution;
+
+    let data: Sim3dData;
+    try {
+      data = await buildSim3dData(this.currentLines, toolRadius, resolution, {
+        arcSegments: this.options.geometry.arcSegments,
+        batch: {
+          shouldAbort: () => mySequence !== this.renderSequence,
+          onProgress: (processed, total) => {
+            if (mySequence !== this.renderSequence) return;
+            this.emitProgress({
+              state: "determinate",
+              label: "Building 3D simulation...",
+              processed,
+              total,
+            });
+          },
+          yieldEveryLines: this.options.geometry.batching.yieldEveryLines,
+        },
+      });
+    } catch {
+      return;
+    }
+
+    if (mySequence !== this.renderSequence) return;
+
+    const initialHeightmap = seekHeightmap(0, data);
+    const slab = createMaterialSlab(data.slabBounds, resolution);
+    updateSlabTopSurface(slab, initialHeightmap);
+    this.setSim3dHandle({ data, slab, currentLine: 0 });
   }
 
   private startCameraFocus(bounds: THREE.Box3): void {
@@ -880,6 +985,7 @@ function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions
     ...base,
     ...next,
     mode: { ...base.mode, ...next.mode },
+    sim3d: { ...base.sim3d, ...next.sim3d },
     bit: { ...base.bit, ...next.bit },
     progress: { ...base.progress, ...next.progress },
     grid: { ...base.grid, ...next.grid },

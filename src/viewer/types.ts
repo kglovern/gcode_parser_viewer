@@ -31,11 +31,19 @@ export type GCodeViewerBitPosition = {
   a?: number;
 };
 
+export type GCodeViewerSim3dOptions = {
+  toolDiameter: number;
+  resolution: number;
+  showToolpath: boolean;
+};
+
 export type GCodeViewerOptions = {
   units: GridUnits;
   mode: {
     laser: boolean;
+    sim3d: boolean;
   };
+  sim3d: GCodeViewerSim3dOptions;
   bit: {
     enabled: boolean;
     type: GCodeViewerBitType;
@@ -95,7 +103,8 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
 
 export const defaultGCodeViewerOptions: GCodeViewerOptions = {
   units: "mm",
-  mode: { laser: false },
+  mode: { laser: false, sim3d: false },
+  sim3d: { toolDiameter: 6.35, resolution: 256, showToolpath: false },
   bit: {
     enabled: true,
     type: "drill",

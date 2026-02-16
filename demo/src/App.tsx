@@ -152,6 +152,41 @@ export default function App() {
           />
           Laser Mode
         </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={options.mode?.sim3d ?? false}
+            onChange={(e) => patchOptions({ mode: { sim3d: e.target.checked } })}
+          />
+          3D Simulation
+        </label>
+        {(options.mode?.sim3d ?? false) && (
+          <>
+            <label className="number-label">
+              Tool Diameter (mm)
+              <input
+                type="number"
+                min={0.5}
+                max={50}
+                step={0.5}
+                value={options.sim3d?.toolDiameter ?? 6.35}
+                onChange={(e) =>
+                  patchOptions({ sim3d: { toolDiameter: Number(e.target.value) } })
+                }
+              />
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={options.sim3d?.showToolpath ?? false}
+                onChange={(e) =>
+                  patchOptions({ sim3d: { showToolpath: e.target.checked } })
+                }
+              />
+              Show Toolpath
+            </label>
+          </>
+        )}
       </section>
 
       <section>

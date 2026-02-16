@@ -1,4 +1,4 @@
-import { G as e, V as d, d as i, a as c } from "./GCodeViewer-DZS_6s4L.js";
+import { G as e, V as d, d as i, a as c } from "./GCodeViewer-kCUsrM8M.js";
 const a = {
   dark: {
     background: "#111827",

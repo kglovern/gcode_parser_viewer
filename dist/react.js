@@ -1,5 +1,5 @@
 import * as r from "react";
-import { G as p } from "./GCodeViewer-DZS_6s4L.js";
+import { G as p } from "./GCodeViewer-kCUsrM8M.js";
 const F = r.forwardRef(
   function(c, d) {
     const { id: n, options: i, callbacks: l, className: f, style: m } = c, u = r.useRef(null), s = r.useRef(null);
@@ -47,6 +47,9 @@ const F = r.forwardRef(
           },
           hideUntilLine(t, o) {
             e().hideUntilLine(t, o);
+          },
+          seekToLine(t, o) {
+            e().seekToLine(t, o);
           },
           showAll() {
             e().showAll();

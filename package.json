@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "GCode visualization library using Three.js",
   "type": "module",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     ".": {
       "import": "./dist/gviewer.js",
@@ -42,9 +44,15 @@
     "react-dom": ">=18"
   },
   "peerDependenciesMeta": {
-    "three": { "optional": true },
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "three": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
