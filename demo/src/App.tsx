@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo, useEffect } from "react";
-import { GCodeVisualizer } from "@src/react";
+import { GCodeVisualizer, GCodeSVGVisualizer, type GCodeSVGRendererHandle } from "@src/react";
 import { gCodeViewerThemePresets, type GCodeViewerThemePresetName } from "@src/viewer/themes";
 import type { GCodeViewerHandle, GCodeViewerOptions, GCodeViewerCallbacks } from "@src/viewer/types";
 import "@src/viewer/viewcube.css";
@@ -35,6 +35,10 @@ type ProgressState =
 
 export default function App() {
   const ref = useRef<GCodeViewerHandle>(null);
+  const svgRef = useRef<GCodeSVGRendererHandle>(null);
+  const gcodeTextRef = useRef<string>("");
+  const [svgMode, setSvgMode] = useState(false);
+  const [svgProjection, setSvgProjection] = useState<'isometric' | 'perspective'>('isometric');
   const [options, setOptions] = useState<Options>({
     render: { antialias: true, theme: gCodeViewerThemePresets["dark"] },
     progress: { mode: "grey" },
@@ -80,13 +84,45 @@ export default function App() {
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !ref.current) return;
+    if (!file) return;
     setTotalLines(0);
     setCurrentLine(0);
     setLineInput("0");
-    ref.current.loadFromFile(file).then(() => {
-      ref.current?.focusToModel();
+
+    // Always read as text so SVG renderer can use it (now or on later toggle)
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = typeof ev.target?.result === "string" ? ev.target.result : "";
+      gcodeTextRef.current = text;
+      if (svgMode) {
+        svgRef.current?.loadFromText(text);
+      }
+    };
+    reader.readAsText(file);
+
+    if (!svgMode) {
+      ref.current?.loadFromFile(file).then(() => {
+        ref.current?.focusToModel();
+      });
+    }
+  }
+
+  function handleToggleSvgMode() {
+    setSvgMode((prev) => {
+      const next = !prev;
+      if (next && gcodeTextRef.current) {
+        setTimeout(() => svgRef.current?.loadFromText(gcodeTextRef.current), 0);
+      } else if (!next) {
+        setTimeout(() => ref.current?.resize(), 0);
+      }
+      return next;
     });
+  }
+
+  function handleSvgProjectionToggle() {
+    const next = svgProjection === 'isometric' ? 'perspective' : 'isometric';
+    setSvgProjection(next);
+    svgRef.current?.setProjectionMode(next);
   }
 
   function handleLineInput(val: string) {
@@ -140,6 +176,30 @@ export default function App() {
           onChange={handleFile}
           className="file-input"
         />
+      </section>
+
+      <section>
+        <label className="section-label">View</label>
+        <button className="reset-btn" onClick={handleToggleSvgMode}>
+          {svgMode ? "Switch to 3D View" : "Switch to SVG View"}
+        </button>
+        {svgMode && (
+          <>
+            <button className="reset-btn" onClick={handleSvgProjectionToggle}>
+              {svgProjection === 'isometric' ? 'Projection: Isometric' : 'Projection: Perspective'}
+            </button>
+            <button className="reset-btn" onClick={() => svgRef.current?.resetView()}>
+              Reset View
+            </button>
+            <div className="svg-legend">
+              <span className="svg-legend__swatch" style={{ background: "#4a9eff" }} />
+              G0 Rapid
+              <span className="svg-legend__swatch" style={{ background: "#e05c00", marginLeft: 8 }} />
+              G1/G2/G3 Cut
+            </div>
+            <div className="svg-hint">Drag · Shift+drag to pan · Scroll to zoom</div>
+          </>
+        )}
       </section>
 
       <section>
@@ -374,8 +434,11 @@ export default function App() {
   return (
     <div className="app-layout">
       <div className="viewer-area">
-        <GCodeVisualizer id="demo" ref={ref} options={options} callbacks={callbacks} />
-        {loadProgress.state !== "hidden" && (
+        {svgMode
+          ? <GCodeSVGVisualizer id="demo-svg" ref={svgRef} options={{ projectionMode: svgProjection }} />
+          : <GCodeVisualizer id="demo" ref={ref} options={options} callbacks={callbacks} />
+        }
+        {!svgMode && loadProgress.state !== "hidden" && (
           <div className="load-overlay">
             <div className="load-bar-wrap">
               <div className="load-label">{loadProgress.label}</div>

@@ -1,4 +1,4 @@
-import { G as e, V as d, d as i, a as c } from "./GCodeViewer-kCUsrM8M.js";
+import { G as r, a as d, V as i, d as c, b as s } from "./GCodeSVGRenderer-CXv7AINS.js";
 const a = {
   dark: {
     background: "#111827",
@@ -100,9 +100,10 @@ const a = {
   }
 };
 export {
-  e as GCodeViewer,
-  d as ViewCube,
-  i as defaultGCodeViewerOptions,
-  c as defaultGCodeViewerTheme,
+  r as GCodeSVGRenderer,
+  d as GCodeViewer,
+  i as ViewCube,
+  c as defaultGCodeViewerOptions,
+  s as defaultGCodeViewerTheme,
   a as gCodeViewerThemePresets
 };

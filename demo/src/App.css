@@ -256,6 +256,30 @@ section:last-child {
   animation: indeterminate 1.2s ease-in-out infinite;
 }
 
+/* ── SVG view legend ────────────────────────────────────── */
+
+.svg-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.svg-legend__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.svg-hint {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
 /* ── FAB panel toggle (hidden on desktop) ───────────────── */
 
 .panel-toggle {

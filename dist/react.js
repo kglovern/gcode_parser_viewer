@@ -1,55 +1,55 @@
-import * as r from "react";
-import { G as p } from "./GCodeViewer-kCUsrM8M.js";
-const F = r.forwardRef(
-  function(c, d) {
-    const { id: n, options: i, callbacks: l, className: f, style: m } = c, u = r.useRef(null), s = r.useRef(null);
-    return r.useEffect(() => {
-      const e = u.current;
+import * as o from "react";
+import { a as w, G as V } from "./GCodeSVGRenderer-CXv7AINS.js";
+const C = o.forwardRef(
+  function(u, c) {
+    const { id: l, options: n, callbacks: a, className: f, style: d } = u, i = o.useRef(null), t = o.useRef(null);
+    return o.useEffect(() => {
+      const e = i.current;
       if (!e)
         return;
-      const a = new p({ id: n, container: e, options: i, callbacks: l });
-      return s.current = a, () => {
-        s.current = null, a.dispose();
+      const m = new w({ id: l, container: e, options: n, callbacks: a });
+      return t.current = m, () => {
+        t.current = null, m.dispose();
       };
-    }, [n]), r.useEffect(() => {
+    }, [l]), o.useEffect(() => {
       var e;
-      (e = s.current) == null || e.setOptions(i ?? {});
-    }, [i]), r.useEffect(() => {
+      (e = t.current) == null || e.setOptions(n ?? {});
+    }, [n]), o.useEffect(() => {
       var e;
-      (e = s.current) == null || e.setCallbacks(l ?? {});
-    }, [l]), r.useImperativeHandle(
-      d,
+      (e = t.current) == null || e.setCallbacks(a ?? {});
+    }, [a]), o.useImperativeHandle(
+      c,
       () => {
         const e = () => {
-          const t = s.current;
-          if (!t)
+          const r = t.current;
+          if (!r)
             throw new Error("GCodeViewer is not ready.");
-          return t;
+          return r;
         };
         return {
           get id() {
-            return n;
+            return l;
           },
-          setCallbacks(t) {
-            e().setCallbacks(t);
+          setCallbacks(r) {
+            e().setCallbacks(r);
           },
-          snapCameraToView(t, o) {
-            e().snapCameraToView(t, o);
+          snapCameraToView(r, s) {
+            e().snapCameraToView(r, s);
           },
-          setBitPosition(t, o) {
-            e().setBitPosition(t, o);
+          setBitPosition(r, s) {
+            e().setBitPosition(r, s);
           },
-          setBitVisible(t) {
-            e().setBitVisible(t);
+          setBitVisible(r) {
+            e().setBitVisible(r);
           },
-          setToolpathRotationA(t) {
-            e().setToolpathRotationA(t);
+          setToolpathRotationA(r) {
+            e().setToolpathRotationA(r);
           },
-          hideUntilLine(t, o) {
-            e().hideUntilLine(t, o);
+          hideUntilLine(r, s) {
+            e().hideUntilLine(r, s);
           },
-          seekToLine(t, o) {
-            e().seekToLine(t, o);
+          seekToLine(r, s) {
+            e().seekToLine(r, s);
           },
           showAll() {
             e().showAll();
@@ -57,23 +57,23 @@ const F = r.forwardRef(
           resetColors() {
             e().resetColors();
           },
-          loadFromUrl(t, o) {
-            return e().loadFromUrl(t, o);
+          loadFromUrl(r, s) {
+            return e().loadFromUrl(r, s);
           },
-          loadFromFile(t) {
-            return e().loadFromFile(t);
+          loadFromFile(r) {
+            return e().loadFromFile(r);
           },
-          loadFromText(t) {
-            return e().loadFromText(t);
+          loadFromText(r) {
+            return e().loadFromText(r);
           },
-          loadFromLines(t) {
-            return e().loadFromLines(t);
+          loadFromLines(r) {
+            return e().loadFromLines(r);
           },
           unload() {
             e().unload();
           },
-          setOptions(t) {
-            e().setOptions(t);
+          setOptions(r) {
+            e().setOptions(r);
           },
           getOptions() {
             return e().getOptions();
@@ -95,10 +95,47 @@ const F = r.forwardRef(
           }
         };
       },
-      [n]
-    ), r.createElement("div", { ref: u, className: f, style: m });
+      [l]
+    ), o.createElement("div", { ref: i, className: f, style: d });
+  }
+), G = o.forwardRef(
+  function(u, c) {
+    const { id: l, options: n, className: a, style: f } = u, d = o.useRef(null), i = o.useRef(null);
+    return o.useEffect(() => {
+      const t = d.current;
+      if (!t) return;
+      const e = new V(t, n);
+      return i.current = e, () => {
+        i.current = null, e.dispose();
+      };
+    }, []), o.useEffect(() => {
+      var t;
+      n && ((t = i.current) == null || t.setOptions(n));
+    }, [n]), o.useImperativeHandle(c, () => {
+      const t = () => {
+        const e = i.current;
+        if (!e) throw new Error("GCodeSVGRenderer is not ready.");
+        return e;
+      };
+      return {
+        loadFromLines: (e) => t().loadFromLines(e),
+        loadFromFile: (e) => t().loadFromFile(e),
+        loadFromText: (e) => t().loadFromText(e),
+        clear: () => t().clear(),
+        resetView: () => t().resetView(),
+        setOptions: (e) => t().setOptions(e),
+        setProjectionMode: (e) => t().setProjectionMode(e),
+        getSVGElement: () => t().getSVGElement(),
+        dispose: () => t().dispose()
+      };
+    }, []), o.createElement("div", {
+      ref: d,
+      className: a,
+      style: { width: "100%", height: "100%", ...f }
+    });
   }
 );
 export {
-  F as GCodeVisualizer
+  G as GCodeSVGVisualizer,
+  C as GCodeVisualizer
 };
