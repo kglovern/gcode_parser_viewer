@@ -126,6 +126,40 @@
         opacity: 0.4;
         cursor: default;
       }
+      .view-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font: inherit;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9fd7ff;
+        background: rgba(159, 215, 255, 0.1);
+        border: 1px solid rgba(159, 215, 255, 0.35);
+        border-radius: 10px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      .view-toggle:hover { background: rgba(159, 215, 255, 0.18); }
+      .svg-legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #9aabb8;
+      }
+      .svg-legend__swatch {
+        display: inline-block;
+        width: 16px;
+        height: 3px;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+      .hint__row--svg { display: none; }
       .stepper__mode {
         display: inline-flex;
         align-items: center;
@@ -208,6 +242,7 @@
     <div class="hint">
       <div class="hint__row">
         <span>GCode Viewer</span>
+        <button id="view-toggle" class="view-toggle" type="button">SVG View</button>
         <label class="file">
           <input id="file-input" type="file" accept=".gcode,.nc,.tap,.txt" />
           <span>Load GCode</span>
@@ -239,6 +274,17 @@
           <span>Size</span>
           <input id="grid-size" type="number" min="1" step="1" value="400" />
         </label>
+      </div>
+      <div class="hint__row hint__row--svg" id="svg-controls">
+        <button id="svg-reset" class="stepper button" style="border-radius:10px;padding:5px 10px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;" type="button">Reset View</button>
+        <button id="svg-projection" class="stepper button" style="border-radius:10px;padding:5px 10px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;" type="button">Perspective</button>
+        <span class="svg-legend">
+          <span class="svg-legend__swatch" style="background:#4a9eff"></span>G0 Rapid
+        </span>
+        <span class="svg-legend">
+          <span class="svg-legend__swatch" style="background:#e05c00"></span>G1/G2/G3 Cut
+        </span>
+        <span class="svg-legend" style="color:#6a7480">Drag · Shift+drag to pan · Scroll to zoom</span>
       </div>
       <div class="hint__row hint__row--stepper">
         <div class="stepper">
@@ -294,6 +340,7 @@
       <progress id="progress-bar"></progress>
     </div>
     <div id="viewer"></div>
+    <div id="svg-viewer" style="display:none;position:fixed;inset:0;"></div>
     <script type="module" src="./threejs-viewer.bundle.js"></script>
   </body>
 </html>

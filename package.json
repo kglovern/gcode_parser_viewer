@@ -19,16 +19,28 @@
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.mjs"
     },
-    "./viewer/viewcube.css": "./dist/viewer/viewcube.css"
+    "./viewer/viewcube.css": "./dist/viewer/viewcube.css",
+    "./svg": {
+      "types": "./dist/svg/index.d.ts",
+      "import": "./dist/svg/index.mjs"
+    },
+    "./svg-react": {
+      "types": "./dist/svg-react/index.d.ts",
+      "import": "./dist/svg-react/index.mjs"
+    }
   },
   "scripts": {
-    "build": "yarn build:core && yarn build:viewer:types && yarn build:viewer && yarn build:react && yarn build:viewer:css",
+    "build": "yarn build:core && yarn build:viewer:types && yarn build:viewer && yarn build:react && yarn build:viewer:css && yarn build:svg && yarn build:svg-react",
     "build:core": "tsc -p tsconfig.json",
     "build:viewer": "esbuild src/viewer/index.ts --bundle --format=esm --platform=browser --external:three --external:three/* --outfile=dist/viewer/index.mjs",
     "build:react": "esbuild src/react/index.ts --bundle --format=esm --platform=browser --external:react --external:react-dom --external:three --external:three/* --outfile=dist/react/index.mjs",
+    "build:svg": "esbuild src/svg/index.ts --bundle --format=esm --platform=browser --outfile=dist/svg/index.mjs",
+    "build:svg-react": "esbuild src/svg-react/index.ts --bundle --format=esm --platform=browser --external:react --external:react-dom --outfile=dist/svg-react/index.mjs",
+    "build:svg-demo": "esbuild examples/svg-viewer.ts --bundle --format=esm --outfile=examples/svg-viewer.bundle.js",
     "build:viewer:types": "tsc -p tsconfig.viewer-types.json",
     "build:viewer:css": "node scripts/copy-viewer-css.mjs",
     "build:demo": "esbuild examples/threejs-viewer.ts --bundle --format=esm --outfile=examples/threejs-viewer.bundle.js && node scripts/copy-demo-assets.mjs",
+    "svg": "yarn build:svg-demo && python -m http.server",
     "viewer": "yarn build:demo && yarn build:viewer:css && python -m http.server",
     "test": "jest"
   },
@@ -50,8 +62,12 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "esbuild": "^0.23.0",
     "jest": "^29.7.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "three": "^0.168.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.5.4"

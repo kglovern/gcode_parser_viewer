@@ -7698,8 +7698,8 @@ var init_three_module = __esm({
       }
       determinant() {
         const te = this.elements;
-        const a = te[0], b = te[1], c = te[2], d = te[3], e = te[4], f = te[5], g = te[6], h = te[7], i = te[8];
-        return a * e * i - a * f * h - b * d * i + b * f * g + c * d * h - c * e * g;
+        const a = te[0], b = te[1], c = te[2], d = te[3], e = te[4], f2 = te[5], g = te[6], h = te[7], i = te[8];
+        return a * e * i - a * f2 * h - b * d * i + b * f2 * g + c * d * h - c * e * g;
       }
       invert() {
         const te = this.elements, n11 = te[0], n21 = te[1], n31 = te[2], n12 = te[3], n22 = te[4], n32 = te[5], n13 = te[6], n23 = te[7], n33 = te[8], t11 = n33 * n22 - n32 * n23, t12 = n32 * n13 - n33 * n12, t13 = n23 * n12 - n22 * n13, det = n11 * t11 + n21 * t12 + n31 * t13;
@@ -8796,11 +8796,11 @@ var init_three_module = __esm({
           z0 = z0 * s + z1 * tDir;
           w0 = w0 * s + w1 * tDir;
           if (s === 1 - t) {
-            const f = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
-            x0 *= f;
-            y0 *= f;
-            z0 *= f;
-            w0 *= f;
+            const f2 = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
+            x0 *= f2;
+            y0 *= f2;
+            z0 *= f2;
+            w0 *= f2;
           }
         }
         dst[dstOffset] = x0;
@@ -10385,11 +10385,11 @@ var init_three_module = __esm({
         const x = euler.x, y = euler.y, z = euler.z;
         const a = Math.cos(x), b = Math.sin(x);
         const c = Math.cos(y), d = Math.sin(y);
-        const e = Math.cos(z), f = Math.sin(z);
+        const e = Math.cos(z), f2 = Math.sin(z);
         if (euler.order === "XYZ") {
-          const ae = a * e, af = a * f, be = b * e, bf = b * f;
+          const ae = a * e, af = a * f2, be = b * e, bf = b * f2;
           te[0] = c * e;
-          te[4] = -c * f;
+          te[4] = -c * f2;
           te[8] = d;
           te[1] = af + be * d;
           te[5] = ae - bf * d;
@@ -10398,20 +10398,20 @@ var init_three_module = __esm({
           te[6] = be + af * d;
           te[10] = a * c;
         } else if (euler.order === "YXZ") {
-          const ce = c * e, cf = c * f, de = d * e, df = d * f;
+          const ce = c * e, cf = c * f2, de = d * e, df = d * f2;
           te[0] = ce + df * b;
           te[4] = de * b - cf;
           te[8] = a * d;
-          te[1] = a * f;
+          te[1] = a * f2;
           te[5] = a * e;
           te[9] = -b;
           te[2] = cf * b - de;
           te[6] = df + ce * b;
           te[10] = a * c;
         } else if (euler.order === "ZXY") {
-          const ce = c * e, cf = c * f, de = d * e, df = d * f;
+          const ce = c * e, cf = c * f2, de = d * e, df = d * f2;
           te[0] = ce - df * b;
-          te[4] = -a * f;
+          te[4] = -a * f2;
           te[8] = de + cf * b;
           te[1] = cf + de * b;
           te[5] = a * e;
@@ -10420,11 +10420,11 @@ var init_three_module = __esm({
           te[6] = b;
           te[10] = a * c;
         } else if (euler.order === "ZYX") {
-          const ae = a * e, af = a * f, be = b * e, bf = b * f;
+          const ae = a * e, af = a * f2, be = b * e, bf = b * f2;
           te[0] = c * e;
           te[4] = be * d - af;
           te[8] = ae * d + bf;
-          te[1] = c * f;
+          te[1] = c * f2;
           te[5] = bf * d + ae;
           te[9] = af * d - be;
           te[2] = -d;
@@ -10433,25 +10433,25 @@ var init_three_module = __esm({
         } else if (euler.order === "YZX") {
           const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
           te[0] = c * e;
-          te[4] = bd - ac * f;
-          te[8] = bc * f + ad;
-          te[1] = f;
+          te[4] = bd - ac * f2;
+          te[8] = bc * f2 + ad;
+          te[1] = f2;
           te[5] = a * e;
           te[9] = -b * e;
           te[2] = -d * e;
-          te[6] = ad * f + bc;
-          te[10] = ac - bd * f;
+          te[6] = ad * f2 + bc;
+          te[10] = ac - bd * f2;
         } else if (euler.order === "XZY") {
           const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
           te[0] = c * e;
-          te[4] = -f;
+          te[4] = -f2;
           te[8] = d * e;
-          te[1] = ac * f + bd;
+          te[1] = ac * f2 + bd;
           te[5] = a * e;
-          te[9] = ad * f - bc;
-          te[2] = bc * f - ad;
+          te[9] = ad * f2 - bc;
+          te[2] = bc * f2 - ad;
           te[6] = b * e;
-          te[10] = bd * f + ac;
+          te[10] = bd * f2 + ac;
         }
         te[3] = 0;
         te[7] = 0;
@@ -19089,11 +19089,11 @@ void main() {
               break validate_interval;
             }
             while (i1 < right) {
-              const mid = i1 + right >>> 1;
-              if (t < pp[mid]) {
-                right = mid;
+              const mid2 = i1 + right >>> 1;
+              if (t < pp[mid2]) {
+                right = mid2;
               } else {
-                i1 = mid + 1;
+                i1 = mid2 + 1;
               }
             }
             t1 = pp[i1];
@@ -21512,6 +21512,33 @@ var init_virtualizer = __esm({
 });
 
 // src/threejs-core.ts
+function buildMovementVerticesFromLines(lines, options = {}) {
+  const rapidVertices = [];
+  const cuttingVertices = [];
+  const arcSegments = options.arcSegments ?? 30;
+  const virtualizer = new GCodeVirtualizer({
+    onLinearMove: (args) => {
+      const start = args.transformedStart ?? args.start;
+      const end = args.transformedEnd ?? args.end;
+      const target = args.modals.motion === "G0" ? rapidVertices : cuttingVertices;
+      target.push(start.X, start.Y, start.Z, end.X, end.Y, end.Z);
+    },
+    onArcMove: (args) => {
+      const target = args.modals.motion === "G0" ? rapidVertices : cuttingVertices;
+      tessellateArc(args, target, arcSegments);
+    }
+  });
+  for (const line of lines) {
+    if (!line) {
+      continue;
+    }
+    virtualizer.processLine(line);
+  }
+  return {
+    rapid: Float32Array.from(rapidVertices),
+    cutting: Float32Array.from(cuttingVertices)
+  };
+}
 async function buildToolpathGeometryFromLinesBatched(lines, options = {}) {
   const arcSegments = options.arcSegments ?? 30;
   const bucketCount = Math.max(1, Math.floor(options.bucketCount ?? 16));
@@ -23345,11 +23372,463 @@ var init_viewer = __esm({
   }
 });
 
+// src/svg/types.ts
+var defaultGCodeSVGOptions;
+var init_types2 = __esm({
+  "src/svg/types.ts"() {
+    "use strict";
+    defaultGCodeSVGOptions = {
+      rapidColor: "#4a9eff",
+      cutColor: "#e05c00",
+      boundingBoxColor: "#d0d0d0",
+      strokeWidth: 0.5,
+      arcSegments: 30,
+      padding: 5,
+      projectionMode: "isometric"
+    };
+  }
+});
+
+// src/svg/GCodeSVGRenderer.ts
+function makePath() {
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("fill", "none");
+  return p;
+}
+function makeText(anchor, baseline) {
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t.setAttribute("text-anchor", anchor);
+  t.setAttribute("dominant-baseline", baseline);
+  return t;
+}
+function setLabel(el, _at, offset, fontSize, text) {
+  el.setAttribute("x", f(offset.x));
+  el.setAttribute("y", f(offset.y));
+  el.setAttribute("font-size", f(fontSize));
+  el.textContent = text;
+  el.setAttribute("visibility", "visible");
+}
+function mid(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+function outward(pos, interior, gap) {
+  const dx = pos.x - interior.x;
+  const dy = pos.y - interior.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: pos.x + dx / len * gap, y: pos.y + dy / len * gap };
+}
+function f(n) {
+  return n.toFixed(2);
+}
+function fDraft(n) {
+  return Math.round(n) + "";
+}
+function fd(n) {
+  return n.toFixed(2);
+}
+function verticesToPath(verts, project, fmt) {
+  if (verts.length === 0) return "";
+  const parts = [];
+  const EPS = 1e-6;
+  let prevX = NaN, prevY = NaN;
+  for (let i = 0; i + 5 < verts.length; i += 6) {
+    const p0 = project(verts[i], verts[i + 1], verts[i + 2]);
+    const p1 = project(verts[i + 3], verts[i + 4], verts[i + 5]);
+    if (Math.abs(p0.x - prevX) < EPS && Math.abs(p0.y - prevY) < EPS) {
+      parts.push(`L${fmt(p1.x)} ${fmt(p1.y)}`);
+    } else {
+      parts.push(`M${fmt(p0.x)} ${fmt(p0.y)}L${fmt(p1.x)} ${fmt(p1.y)}`);
+    }
+    prevX = p1.x;
+    prevY = p1.y;
+  }
+  return parts.join("");
+}
+function computeBounds(...arrays) {
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  let empty = true;
+  for (const verts of arrays) {
+    for (let i = 0; i + 5 < verts.length; i += 6) {
+      const x0 = verts[i], y0 = verts[i + 1], z0 = verts[i + 2];
+      const x1 = verts[i + 3], y1 = verts[i + 4], z1 = verts[i + 5];
+      if (x0 < minX) minX = x0;
+      if (y0 < minY) minY = y0;
+      if (z0 < minZ) minZ = z0;
+      if (x0 > maxX) maxX = x0;
+      if (y0 > maxY) maxY = y0;
+      if (z0 > maxZ) maxZ = z0;
+      if (x1 < minX) minX = x1;
+      if (y1 < minY) minY = y1;
+      if (z1 < minZ) minZ = z1;
+      if (x1 > maxX) maxX = x1;
+      if (y1 > maxY) maxY = y1;
+      if (z1 > maxZ) maxZ = z1;
+      empty = false;
+    }
+  }
+  return { minX, minY, maxX, maxY, minZ, maxZ, empty };
+}
+var DEFAULT_ROT_X, DEFAULT_ROT_Y, GCodeSVGRenderer;
+var init_GCodeSVGRenderer = __esm({
+  "src/svg/GCodeSVGRenderer.ts"() {
+    "use strict";
+    init_threejs_core();
+    init_types2();
+    DEFAULT_ROT_X = 0;
+    DEFAULT_ROT_Y = 0;
+    GCodeSVGRenderer = class {
+      constructor(container, options) {
+        this.viewBox = { x: 0, y: 0, w: 100, h: 100 };
+        // Camera
+        this.rotX = DEFAULT_ROT_X;
+        this.rotY = DEFAULT_ROT_Y;
+        this.centerX = 0;
+        this.centerY = 0;
+        this.centerZ = 0;
+        this.focalLength = 500;
+        // Cached trig — recomputed only when rotX/rotY change, not per-vertex
+        this.cosRotX = 1;
+        this.sinRotX = 0;
+        this.cosRotY = 1;
+        this.sinRotY = 0;
+        // Interaction
+        this.dragMode = "none";
+        this.dragLast = { x: 0, y: 0 };
+        this.rafPending = false;
+        // Geometry
+        this.rapidVerts = new Float32Array(0);
+        this.cutVerts = new Float32Array(0);
+        this.bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: true };
+        this.project = (x, y, z) => {
+          const dx = x - this.centerX;
+          const dy = y - this.centerY;
+          const dz = z - this.centerZ;
+          const rx = dx * this.cosRotY + dz * this.sinRotY;
+          const ry = dy;
+          const rz = -dx * this.sinRotY + dz * this.cosRotY;
+          const fx = rx;
+          const fy = ry * this.cosRotX - rz * this.sinRotX;
+          const fz = ry * this.sinRotX + rz * this.cosRotX;
+          if (this.options.projectionMode === "perspective") {
+            const s = this.focalLength / (this.focalLength + fz);
+            return { x: fx * s, y: -fy * s };
+          }
+          return { x: fx, y: -fy };
+        };
+        // ── Interaction ───────────────────────────────────────────────────────────
+        this.onWheel = (e) => {
+          e.preventDefault();
+          const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
+          const pt = this.svgPoint(e.clientX, e.clientY);
+          const { x, y, w, h } = this.viewBox;
+          this.viewBox = {
+            x: pt.x - (pt.x - x) * factor,
+            y: pt.y - (pt.y - y) * factor,
+            w: w * factor,
+            h: h * factor
+          };
+          this.applyViewBox();
+        };
+        this.onPointerDown = (e) => {
+          const isPan = e.button === 2 || e.shiftKey;
+          this.dragMode = isPan ? "pan" : "orbit";
+          this.dragLast = { x: e.clientX, y: e.clientY };
+          this.svg.setPointerCapture(e.pointerId);
+          this.svg.style.cursor = isPan ? "move" : "grabbing";
+          e.preventDefault();
+        };
+        this.onPointerMove = (e) => {
+          if (this.dragMode === "none") return;
+          const dx = e.clientX - this.dragLast.x;
+          const dy = e.clientY - this.dragLast.y;
+          this.dragLast = { x: e.clientX, y: e.clientY };
+          if (this.dragMode === "orbit") {
+            const rect = this.svg.getBoundingClientRect();
+            const sensitivity = Math.PI / Math.min(rect.width, rect.height);
+            this.rotY += dx * sensitivity;
+            this.rotX += dy * sensitivity;
+            this.rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.rotX));
+            this.updateTrig();
+            this.fitView();
+            this.scheduleDraw();
+          } else {
+            const rect = this.svg.getBoundingClientRect();
+            this.viewBox = {
+              ...this.viewBox,
+              x: this.viewBox.x - dx / rect.width * this.viewBox.w,
+              y: this.viewBox.y - dy / rect.height * this.viewBox.h
+            };
+            this.applyViewBox();
+          }
+        };
+        this.onPointerUp = (e) => {
+          if (this.dragMode === "none") return;
+          const wasOrbit = this.dragMode === "orbit";
+          this.dragMode = "none";
+          this.svg.releasePointerCapture(e.pointerId);
+          this.svg.style.cursor = "grab";
+          if (wasOrbit) {
+            this.rebuildAndRender(false);
+          }
+        };
+        this.onContextMenu = (e) => {
+          e.preventDefault();
+        };
+        this.options = { ...defaultGCodeSVGOptions, ...options };
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;";
+        this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        this.bboxPath = makePath();
+        this.rapidPath = makePath();
+        this.rapidPath.setAttribute("stroke-linecap", "round");
+        this.rapidPath.setAttribute("stroke-linejoin", "round");
+        this.cutPath = makePath();
+        this.cutPath.setAttribute("stroke-linecap", "round");
+        this.cutPath.setAttribute("stroke-linejoin", "round");
+        this.bboxLabelX = makeText("middle", "hanging");
+        this.bboxLabelY = makeText("middle", "hanging");
+        this.bboxLabelZ = makeText("start", "middle");
+        this.svg.appendChild(this.bboxPath);
+        this.svg.appendChild(this.rapidPath);
+        this.svg.appendChild(this.cutPath);
+        this.svg.appendChild(this.bboxLabelX);
+        this.svg.appendChild(this.bboxLabelY);
+        this.svg.appendChild(this.bboxLabelZ);
+        container.appendChild(this.svg);
+        this.applyOptions();
+        this.bindEvents();
+      }
+      // ── Public API ────────────────────────────────────────────────────────────
+      loadFromLines(lines) {
+        const { rapid, cutting } = buildMovementVerticesFromLines(lines, {
+          arcSegments: this.options.arcSegments
+        });
+        this.rapidVerts = rapid;
+        this.cutVerts = cutting;
+        this.bounds = computeBounds(rapid, cutting);
+        if (!this.bounds.empty) {
+          this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
+          this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
+          this.centerZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+          const diag = Math.hypot(
+            this.bounds.maxX - this.bounds.minX,
+            this.bounds.maxY - this.bounds.minY,
+            this.bounds.maxZ - this.bounds.minZ
+          );
+          this.focalLength = diag * 2;
+        }
+        this.rotX = DEFAULT_ROT_X;
+        this.rotY = DEFAULT_ROT_Y;
+        this.updateTrig();
+        this.fitView();
+        this.rebuildAndRender();
+      }
+      loadFromFile(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const text = e.target?.result;
+            if (typeof text !== "string") {
+              reject(new Error("Failed to read file"));
+              return;
+            }
+            this.loadFromText(text);
+            resolve();
+          };
+          reader.onerror = () => reject(new Error("FileReader error"));
+          reader.readAsText(file);
+        });
+      }
+      loadFromText(gcode) {
+        this.loadFromLines(gcode.split(/\r?\n/));
+      }
+      clear() {
+        this.rapidVerts = new Float32Array(0);
+        this.cutVerts = new Float32Array(0);
+        this.bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: true };
+        this.rebuildAndRender();
+      }
+      resetView() {
+        this.rotX = DEFAULT_ROT_X;
+        this.rotY = DEFAULT_ROT_Y;
+        this.updateTrig();
+        this.fitView();
+        this.rebuildAndRender();
+      }
+      setOptions(opts) {
+        this.options = { ...this.options, ...opts };
+        this.applyOptions();
+        this.rebuildAndRender();
+      }
+      setProjectionMode(mode) {
+        this.options = { ...this.options, projectionMode: mode };
+        this.rebuildAndRender();
+      }
+      getSVGElement() {
+        return this.svg;
+      }
+      dispose() {
+        this.svg.removeEventListener("wheel", this.onWheel);
+        this.svg.removeEventListener("pointerdown", this.onPointerDown);
+        this.svg.removeEventListener("pointermove", this.onPointerMove);
+        this.svg.removeEventListener("pointerup", this.onPointerUp);
+        this.svg.removeEventListener("pointercancel", this.onPointerUp);
+        this.svg.removeEventListener("contextmenu", this.onContextMenu);
+        this.svg.remove();
+      }
+      // ── Projection ────────────────────────────────────────────────────────────
+      updateTrig() {
+        this.cosRotX = Math.cos(this.rotX);
+        this.sinRotX = Math.sin(this.rotX);
+        this.cosRotY = Math.cos(this.rotY);
+        this.sinRotY = Math.sin(this.rotY);
+      }
+      // ── Rendering ─────────────────────────────────────────────────────────────
+      rebuildAndRender(draft = false) {
+        const fmt = draft ? fDraft : f;
+        this.rapidPath.setAttribute("d", verticesToPath(this.rapidVerts, this.project, fmt));
+        this.cutPath.setAttribute("d", verticesToPath(this.cutVerts, this.project, fmt));
+        this.renderBbox();
+        this.applyViewBox();
+      }
+      scheduleDraw() {
+        if (this.rafPending) return;
+        this.rafPending = true;
+        requestAnimationFrame(() => {
+          this.rafPending = false;
+          this.rebuildAndRender(true);
+        });
+      }
+      fitView() {
+        if (this.bounds.empty) {
+          this.viewBox = { x: -50, y: -50, w: 100, h: 100 };
+          return;
+        }
+        const { minX, maxX, minY, maxY, minZ, maxZ } = this.bounds;
+        const corners = [
+          this.project(minX, minY, minZ),
+          this.project(maxX, minY, minZ),
+          this.project(maxX, maxY, minZ),
+          this.project(minX, maxY, minZ),
+          this.project(minX, minY, maxZ),
+          this.project(maxX, minY, maxZ),
+          this.project(maxX, maxY, maxZ),
+          this.project(minX, maxY, maxZ)
+        ];
+        let pMinX = Infinity, pMinY = Infinity, pMaxX = -Infinity, pMaxY = -Infinity;
+        for (const c of corners) {
+          if (c.x < pMinX) pMinX = c.x;
+          if (c.y < pMinY) pMinY = c.y;
+          if (c.x > pMaxX) pMaxX = c.x;
+          if (c.y > pMaxY) pMaxY = c.y;
+        }
+        const p = this.options.padding;
+        this.viewBox = {
+          x: pMinX - p,
+          y: pMinY - p,
+          w: pMaxX - pMinX + p * 2,
+          h: pMaxY - pMinY + p * 2
+        };
+      }
+      applyViewBox() {
+        const { x, y, w, h } = this.viewBox;
+        this.svg.setAttribute("viewBox", `${f(x)} ${f(y)} ${f(w)} ${f(h)}`);
+      }
+      applyOptions() {
+        const { rapidColor, cutColor, boundingBoxColor, strokeWidth } = this.options;
+        this.rapidPath.setAttribute("stroke", rapidColor);
+        this.rapidPath.setAttribute("stroke-width", String(strokeWidth));
+        this.cutPath.setAttribute("stroke", cutColor);
+        this.cutPath.setAttribute("stroke-width", String(strokeWidth));
+        this.bboxPath.setAttribute("stroke", boundingBoxColor);
+        this.bboxPath.setAttribute("stroke-width", String(strokeWidth * 0.6));
+        this.bboxPath.setAttribute("fill", boundingBoxColor);
+        this.bboxPath.setAttribute("fill-opacity", "0.05");
+        for (const lbl of [this.bboxLabelX, this.bboxLabelY, this.bboxLabelZ]) {
+          lbl.setAttribute("fill", boundingBoxColor);
+        }
+      }
+      renderBbox() {
+        if (this.bounds.empty) {
+          this.bboxPath.setAttribute("d", "");
+          this.bboxLabelX.setAttribute("visibility", "hidden");
+          this.bboxLabelY.setAttribute("visibility", "hidden");
+          this.bboxLabelZ.setAttribute("visibility", "hidden");
+          return;
+        }
+        const { minX, maxX, minY, maxY, minZ, maxZ } = this.bounds;
+        const p = this.project;
+        const b0 = p(minX, minY, minZ), b1 = p(maxX, minY, minZ);
+        const b2 = p(maxX, maxY, minZ), b3 = p(minX, maxY, minZ);
+        const t0 = p(minX, minY, maxZ), t1 = p(maxX, minY, maxZ);
+        const t2 = p(maxX, maxY, maxZ), t3 = p(minX, maxY, maxZ);
+        const d = [
+          // bottom face
+          `M${f(b0.x)} ${f(b0.y)}L${f(b1.x)} ${f(b1.y)}L${f(b2.x)} ${f(b2.y)}L${f(b3.x)} ${f(b3.y)}Z`,
+          // top face
+          `M${f(t0.x)} ${f(t0.y)}L${f(t1.x)} ${f(t1.y)}L${f(t2.x)} ${f(t2.y)}L${f(t3.x)} ${f(t3.y)}Z`,
+          // vertical edges
+          `M${f(b0.x)} ${f(b0.y)}L${f(t0.x)} ${f(t0.y)}`,
+          `M${f(b1.x)} ${f(b1.y)}L${f(t1.x)} ${f(t1.y)}`,
+          `M${f(b2.x)} ${f(b2.y)}L${f(t2.x)} ${f(t2.y)}`,
+          `M${f(b3.x)} ${f(b3.y)}L${f(t3.x)} ${f(t3.y)}`
+        ].join("");
+        this.bboxPath.setAttribute("d", d);
+        const projW = Math.hypot(b1.x - b0.x, b1.y - b0.y);
+        const projH = Math.hypot(b3.x - b0.x, b3.y - b0.y);
+        const projZ = Math.hypot(t0.x - b0.x, t0.y - b0.y);
+        const fontSize = Math.max(projW, projH, projZ) * 0.07;
+        const gap = fontSize * 0.5;
+        setLabel(
+          this.bboxLabelX,
+          mid(b0, b1),
+          outward(mid(b0, b1), mid(b2, b3), gap),
+          fontSize,
+          `X: ${fd(maxX - minX)}`
+        );
+        setLabel(
+          this.bboxLabelY,
+          mid(b1, b2),
+          outward(mid(b1, b2), mid(b0, b3), gap),
+          fontSize,
+          `Y: ${fd(maxY - minY)}`
+        );
+        setLabel(
+          this.bboxLabelZ,
+          mid(b0, t0),
+          outward(mid(b0, t0), mid(b2, t2), gap),
+          fontSize,
+          `Z: ${fd(maxZ - minZ)}`
+        );
+      }
+      bindEvents() {
+        this.svg.addEventListener("wheel", this.onWheel, { passive: false });
+        this.svg.addEventListener("pointerdown", this.onPointerDown);
+        this.svg.addEventListener("pointermove", this.onPointerMove);
+        this.svg.addEventListener("pointerup", this.onPointerUp);
+        this.svg.addEventListener("pointercancel", this.onPointerUp);
+        this.svg.addEventListener("contextmenu", this.onContextMenu);
+      }
+      svgPoint(clientX, clientY) {
+        const rect = this.svg.getBoundingClientRect();
+        const { x, y, w, h } = this.viewBox;
+        return {
+          x: x + (clientX - rect.left) / rect.width * w,
+          y: y + (clientY - rect.top) / rect.height * h
+        };
+      }
+    };
+  }
+});
+
 // examples/threejs-viewer.ts
 var require_threejs_viewer = __commonJS({
   "examples/threejs-viewer.ts"() {
     init_viewer();
     init_virtualizer();
+    init_GCodeSVGRenderer();
     var container = document.querySelector("#viewer");
     if (!container) {
       throw new Error("Missing #viewer container.");
@@ -23514,6 +23993,55 @@ var require_threejs_viewer = __commonJS({
       }
     });
     var loadedLines = [];
+    var currentGCodeText = "";
+    var svgRenderer = null;
+    var svgMode = false;
+    var svgProjection = "isometric";
+    var threeViewerEl = document.querySelector("#viewer");
+    var svgViewerEl = document.querySelector("#svg-viewer");
+    var svgControlsRow = document.querySelector("#svg-controls");
+    var viewToggleBtn = document.querySelector("#view-toggle");
+    var svgResetBtn = document.querySelector("#svg-reset");
+    var svgProjectionBtn = document.querySelector("#svg-projection");
+    var stepperRow = document.querySelector(".hint__row--stepper");
+    var firstRow3dControls = document.querySelectorAll(".toggle, .select");
+    function getOrCreateSvgRenderer() {
+      if (!svgRenderer) {
+        svgRenderer = new GCodeSVGRenderer(svgViewerEl);
+      }
+      return svgRenderer;
+    }
+    function setViewMode(svg) {
+      svgMode = svg;
+      threeViewerEl.style.display = svg ? "none" : "";
+      svgViewerEl.style.display = svg ? "block" : "none";
+      svgControlsRow.style.display = svg ? "flex" : "none";
+      if (stepperRow) stepperRow.style.display = svg ? "none" : "";
+      firstRow3dControls.forEach((el) => {
+        el.style.display = svg ? "none" : "";
+      });
+      if (viewToggleBtn) viewToggleBtn.textContent = svg ? "3D View" : "SVG View";
+      if (!svg) {
+        viewer.resize();
+      }
+    }
+    viewToggleBtn?.addEventListener("click", () => {
+      if (!svgMode) {
+        const r = getOrCreateSvgRenderer();
+        if (currentGCodeText) r.loadFromText(currentGCodeText);
+        setViewMode(true);
+      } else {
+        setViewMode(false);
+      }
+    });
+    svgResetBtn?.addEventListener("click", () => svgRenderer?.resetView());
+    svgProjectionBtn?.addEventListener("click", () => {
+      svgProjection = svgProjection === "isometric" ? "perspective" : "isometric";
+      svgRenderer?.setProjectionMode(svgProjection);
+      if (svgProjectionBtn) {
+        svgProjectionBtn.textContent = svgProjection === "isometric" ? "Perspective" : "Isometric";
+      }
+    });
     var simPositions = [{ x: 0, y: 0, z: 0, a: 0 }];
     var simCursorLine = 1;
     var holdTimer = null;
@@ -23721,14 +24249,21 @@ var require_threejs_viewer = __commonJS({
         throw new Error(`Failed to load gcode: ${response.statusText}`);
       }
       const text = await response.text();
-      await viewer.loadFromText(text);
-      viewer.focusToModel();
+      currentGCodeText = text;
+      if (svgMode) {
+        getOrCreateSvgRenderer().loadFromText(text);
+      } else {
+        await viewer.loadFromText(text);
+        viewer.focusToModel();
+      }
       loadedLines = text.split(/\r?\n/);
       simPositions = buildSimPositions(loadedLines);
       simCursorLine = 1;
-      viewer.showAll();
-      viewer.resetColors();
-      viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+      if (!svgMode) {
+        viewer.showAll();
+        viewer.resetColors();
+        viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+      }
       updateSimUi();
       const elapsed = performance.now() - startTime;
       lastLoadTimeMs = elapsed;
@@ -23739,14 +24274,22 @@ var require_threejs_viewer = __commonJS({
       const startTime = performance.now();
       setProgressIndeterminate("Loading file...");
       const text = await file.text();
-      await viewer.loadFromText(text);
-      viewer.focusToModel();
+      currentGCodeText = text;
+      if (svgMode) {
+        getOrCreateSvgRenderer().loadFromText(text);
+        hideProgress();
+      } else {
+        await viewer.loadFromText(text);
+        viewer.focusToModel();
+      }
       loadedLines = text.split(/\r?\n/);
       simPositions = buildSimPositions(loadedLines);
       simCursorLine = 1;
-      viewer.showAll();
-      viewer.resetColors();
-      viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+      if (!svgMode) {
+        viewer.showAll();
+        viewer.resetColors();
+        viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+      }
       updateSimUi();
       const elapsed = performance.now() - startTime;
       lastLoadTimeMs = elapsed;

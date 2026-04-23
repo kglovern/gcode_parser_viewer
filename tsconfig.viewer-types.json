@@ -15,7 +15,10 @@
     "src/viewer/**/*.d.ts",
     "src/react/**/*.ts",
     "src/react/**/*.tsx",
-    "src/react/**/*.d.ts"
+    "src/react/**/*.d.ts",
+    "src/svg/**/*.ts",
+    "src/svg-react/**/*.ts",
+    "src/svg-react/**/*.tsx"
   ],
   "exclude": []
 }

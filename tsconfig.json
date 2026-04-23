@@ -10,5 +10,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/viewer/**", "src/react/**"]
+  "exclude": ["src/viewer/**", "src/react/**", "src/svg/**", "src/svg-react/**"]
 }

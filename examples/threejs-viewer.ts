@@ -1,6 +1,7 @@
 import { GCodeViewer, defaultGCodeViewerOptions, gCodeViewerThemePresets } from "../src/viewer";
 import type { GridUnits } from "../src/viewer";
 import { GCodeVirtualizer } from "../src/virtualizer";
+import { GCodeSVGRenderer } from "../src/svg/GCodeSVGRenderer";
 
 const container = document.querySelector<HTMLElement>("#viewer");
 if (!container) {
@@ -186,6 +187,67 @@ const viewer = new GCodeViewer({
 });
 
 let loadedLines: string[] = [];
+let currentGCodeText = "";
+
+// ── SVG view toggle ───────────────────────────────────────────────────────────
+
+let svgRenderer: GCodeSVGRenderer | null = null;
+let svgMode = false;
+let svgProjection: 'isometric' | 'perspective' = 'isometric';
+
+const threeViewerEl = document.querySelector<HTMLElement>("#viewer")!;
+const svgViewerEl = document.querySelector<HTMLElement>("#svg-viewer")!;
+const svgControlsRow = document.querySelector<HTMLElement>("#svg-controls")!;
+const viewToggleBtn = document.querySelector<HTMLButtonElement>("#view-toggle");
+const svgResetBtn = document.querySelector<HTMLButtonElement>("#svg-reset");
+const svgProjectionBtn = document.querySelector<HTMLButtonElement>("#svg-projection");
+const stepperRow = document.querySelector<HTMLElement>(".hint__row--stepper");
+const firstRow3dControls = document.querySelectorAll<HTMLElement>(".toggle, .select");
+
+function getOrCreateSvgRenderer(): GCodeSVGRenderer {
+  if (!svgRenderer) {
+    svgRenderer = new GCodeSVGRenderer(svgViewerEl);
+  }
+  return svgRenderer;
+}
+
+function setViewMode(svg: boolean): void {
+  svgMode = svg;
+  threeViewerEl.style.display = svg ? "none" : "";
+  svgViewerEl.style.display = svg ? "block" : "none";
+  svgControlsRow.style.display = svg ? "flex" : "none";
+  if (stepperRow) stepperRow.style.display = svg ? "none" : "";
+  firstRow3dControls.forEach(el => {
+    (el as HTMLElement).style.display = svg ? "none" : "";
+  });
+  if (viewToggleBtn) viewToggleBtn.textContent = svg ? "3D View" : "SVG View";
+  if (!svg) {
+    viewer.resize();
+  }
+}
+
+viewToggleBtn?.addEventListener("click", () => {
+  if (!svgMode) {
+    const r = getOrCreateSvgRenderer();
+    if (currentGCodeText) r.loadFromText(currentGCodeText);
+    setViewMode(true);
+  } else {
+    setViewMode(false);
+  }
+});
+
+svgResetBtn?.addEventListener("click", () => svgRenderer?.resetView());
+
+svgProjectionBtn?.addEventListener("click", () => {
+  svgProjection = svgProjection === 'isometric' ? 'perspective' : 'isometric';
+  svgRenderer?.setProjectionMode(svgProjection);
+  if (svgProjectionBtn) {
+    svgProjectionBtn.textContent = svgProjection === 'isometric' ? 'Perspective' : 'Isometric';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 let simPositions: { x: number; y: number; z: number; a?: number }[] = [{ x: 0, y: 0, z: 0, a: 0 }];
 let simCursorLine = 1;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
@@ -428,15 +490,22 @@ async function loadGCodeUrl(url: string): Promise<void> {
     throw new Error(`Failed to load gcode: ${response.statusText}`);
   }
   const text = await response.text();
+  currentGCodeText = text;
 
-  await viewer.loadFromText(text);
-  viewer.focusToModel();
+  if (svgMode) {
+    getOrCreateSvgRenderer().loadFromText(text);
+  } else {
+    await viewer.loadFromText(text);
+    viewer.focusToModel();
+  }
   loadedLines = text.split(/\r?\n/);
   simPositions = buildSimPositions(loadedLines);
   simCursorLine = 1;
-  viewer.showAll();
-  viewer.resetColors();
-  viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+  if (!svgMode) {
+    viewer.showAll();
+    viewer.resetColors();
+    viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+  }
   updateSimUi();
 
   const elapsed = performance.now() - startTime;
@@ -450,14 +519,23 @@ async function loadGCodeFile(file: File): Promise<void> {
   setProgressIndeterminate("Loading file...");
 
   const text = await file.text();
-  await viewer.loadFromText(text);
-  viewer.focusToModel();
+  currentGCodeText = text;
+
+  if (svgMode) {
+    getOrCreateSvgRenderer().loadFromText(text);
+    hideProgress();
+  } else {
+    await viewer.loadFromText(text);
+    viewer.focusToModel();
+  }
   loadedLines = text.split(/\r?\n/);
   simPositions = buildSimPositions(loadedLines);
   simCursorLine = 1;
-  viewer.showAll();
-  viewer.resetColors();
-  viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+  if (!svgMode) {
+    viewer.showAll();
+    viewer.resetColors();
+    viewer.setBitPosition(simPositions[0] ?? { x: 0, y: 0, z: 0, a: 0 }, { immediate: true });
+  }
   updateSimUi();
 
   const elapsed = performance.now() - startTime;
