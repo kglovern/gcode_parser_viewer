@@ -89,32 +89,24 @@ export default function App() {
     setCurrentLine(0);
     setLineInput("0");
 
-    // Always read as text so SVG renderer can use it (now or on later toggle)
+    // Read as text for the SVG renderer; load into 3D viewer in parallel
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = typeof ev.target?.result === "string" ? ev.target.result : "";
       gcodeTextRef.current = text;
-      if (svgMode) {
-        svgRef.current?.loadFromText(text);
-      }
+      svgRef.current?.loadFromText(text);
     };
     reader.readAsText(file);
 
-    if (!svgMode) {
-      ref.current?.loadFromFile(file).then(() => {
-        ref.current?.focusToModel();
-      });
-    }
+    ref.current?.loadFromFile(file).then(() => {
+      ref.current?.focusToModel();
+    });
   }
 
   function handleToggleSvgMode() {
     setSvgMode((prev) => {
       const next = !prev;
-      if (next && gcodeTextRef.current) {
-        setTimeout(() => svgRef.current?.loadFromText(gcodeTextRef.current), 0);
-      } else if (!next) {
-        setTimeout(() => ref.current?.resize(), 0);
-      }
+      if (!next) setTimeout(() => ref.current?.resize(), 0);
       return next;
     });
   }
@@ -434,10 +426,12 @@ export default function App() {
   return (
     <div className="app-layout">
       <div className="viewer-area">
-        {svgMode
-          ? <GCodeSVGVisualizer id="demo-svg" ref={svgRef} options={{ projectionMode: svgProjection }} />
-          : <GCodeVisualizer id="demo" ref={ref} options={options} callbacks={callbacks} />
-        }
+        <div style={{ width: "100%", height: "100%", display: svgMode ? "none" : "block" }}>
+          <GCodeVisualizer id="demo" ref={ref} options={options} callbacks={callbacks} style={{ width: "100%", height: "100%" }} />
+        </div>
+        <div style={{ width: "100%", height: "100%", display: svgMode ? "block" : "none" }}>
+          <GCodeSVGVisualizer id="demo-svg" ref={svgRef} options={{ projectionMode: svgProjection }} />
+        </div>
         {!svgMode && loadProgress.state !== "hidden" && (
           <div className="load-overlay">
             <div className="load-bar-wrap">
