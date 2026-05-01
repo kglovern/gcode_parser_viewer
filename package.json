@@ -2,6 +2,15 @@
   "name": "@sienci/gviewer",
   "version": "0.1.0",
   "description": "GCode visualization library using Three.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kglovern/gcode_parser_viewer"
+  },
+  "homepage": "https://github.com/kglovern/gcode_parser_viewer",
+  "bugs": {
+    "url": "https://github.com/kglovern/gcode_parser_viewer/issues"
+  },
+  "license": "MIT",
   "type": "module",
   "sideEffects": [
     "**/*.css"
