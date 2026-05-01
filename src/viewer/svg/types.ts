@@ -9,8 +9,8 @@ export type GCodeSVGOptions = {
 };
 
 export const defaultGCodeSVGOptions: GCodeSVGOptions = {
-  rapidColor: "#4a9eff",
-  cutColor: "#e05c00",
+  rapidColor: "#0ef6ae",
+  cutColor: "#3e85c7",
   boundingBoxColor: "#d0d0d0",
   strokeWidth: 0.5,
   arcSegments: 30,

@@ -184,9 +184,9 @@ export default function App() {
               Reset View
             </button>
             <div className="svg-legend">
-              <span className="svg-legend__swatch" style={{ background: "#4a9eff" }} />
+              <span className="svg-legend__swatch" style={{ background: "#0ef6ae" }} />
               G0 Rapid
-              <span className="svg-legend__swatch" style={{ background: "#e05c00", marginLeft: 8 }} />
+              <span className="svg-legend__swatch" style={{ background: "#3e85c7", marginLeft: 8 }} />
               G1/G2/G3 Cut
             </div>
             <div className="svg-hint">Drag · Shift+drag to pan · Scroll to zoom</div>
