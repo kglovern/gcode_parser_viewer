@@ -5,7 +5,7 @@ TypeScript library for parsing, virtualizing, and visualizing GCode toolpaths. B
 ## Installation
 
 ```bash
-npm install gviewer
+npm install @sienci/gviewer
 ```
 
 Peer dependencies — install whichever you need:
@@ -21,10 +21,10 @@ npm install react react-dom   # required for the React component
 
 | Path | Contents |
 |---|---|
-| `gviewer` | Parser, virtualizer, geometry builders, shared types |
-| `gviewer/viewer` | `GCodeViewer` class, themes, viewer types |
-| `gviewer/react` | `GCodeVisualizer` React component |
-| `gviewer/viewer/viewcube.css` | Stylesheet for the ViewCube overlay |
+| `@sienci/gviewer` | Parser, virtualizer, geometry builders, shared types |
+| `@sienci/gviewer/viewer` | `GCodeViewer` class, themes, viewer types |
+| `@sienci/gviewer/react` | `GCodeVisualizer` React component |
+| `@sienci/gviewer/viewer/viewcube.css` | Stylesheet for the ViewCube overlay |
 
 ---
 
@@ -34,9 +34,9 @@ npm install react react-dom   # required for the React component
 
 ```tsx
 import { useRef } from "react";
-import { GCodeVisualizer } from "gviewer/react";
-import type { GCodeViewerHandle } from "gviewer/viewer";
-import "gviewer/viewer/viewcube.css";
+import { GCodeVisualizer } from "@sienci/gviewer/react";
+import type { GCodeViewerHandle } from "@sienci/gviewer/viewer";
+import "@sienci/gviewer/viewer/viewcube.css";
 
 export function App() {
   const ref = useRef<GCodeViewerHandle>(null);
@@ -59,8 +59,8 @@ export function App() {
 ### Vanilla JS
 
 ```ts
-import { GCodeViewer } from "gviewer/viewer";
-import "gviewer/viewer/viewcube.css";
+import { GCodeViewer } from "@sienci/gviewer/viewer";
+import "@sienci/gviewer/viewer/viewcube.css";
 
 const viewer = new GCodeViewer({
   id: "main",
@@ -75,14 +75,14 @@ viewer.focusToModel();
 
 ## API reference
 
-### `gviewer` — core
+### `@sienci/gviewer` — core
 
 #### `GCodeParser`
 
 Stateless line-by-line parser. No state is kept between calls.
 
 ```ts
-import { GCodeParser } from "gviewer";
+import { GCodeParser } from "@sienci/gviewer";
 
 const parser = new GCodeParser();
 const result = parser.parseLine("G1 X10 Y5 F1200 ; move");
@@ -128,7 +128,7 @@ type Comment = {
 Stateful interpreter. Tracks modal state and machine position across calls to `processLine()`.
 
 ```ts
-import { GCodeVirtualizer } from "gviewer";
+import { GCodeVirtualizer } from "@sienci/gviewer";
 
 const virt = new GCodeVirtualizer({
   onLinearMove({ modals, start, end, transformedStart, transformedEnd }) {
@@ -181,7 +181,7 @@ Build Three.js-ready `Float32Array` position buffers from arrays of GCode lines.
 ##### `buildVerticesFromLines`
 
 ```ts
-import { buildVerticesFromLines } from "gviewer";
+import { buildVerticesFromLines } from "@sienci/gviewer";
 
 const positions: Float32Array = buildVerticesFromLines(lines, {
   arcSegments: 30,   // tessellation quality for arcs
@@ -194,7 +194,7 @@ const positions: Float32Array = buildVerticesFromLines(lines, {
 Separates rapid (G0) and cutting (G1/G2/G3) moves.
 
 ```ts
-import { buildMovementVerticesFromLines } from "gviewer";
+import { buildMovementVerticesFromLines } from "@sienci/gviewer";
 
 const { rapid, cutting } = buildMovementVerticesFromLines(lines);
 ```
@@ -204,7 +204,7 @@ const { rapid, cutting } = buildMovementVerticesFromLines(lines);
 Async, progress-reporting version that also tracks per-line vertex ranges.
 
 ```ts
-import { buildMovementGeometryFromLinesBatched } from "gviewer";
+import { buildMovementGeometryFromLinesBatched } from "@sienci/gviewer";
 
 const result = await buildMovementGeometryFromLinesBatched(lines, {
   arcSegments: 30,
@@ -228,7 +228,7 @@ const result = await buildMovementGeometryFromLinesBatched(lines, {
 Unified builder for both standard and laser modes. Returns separate rapid and per-power-bucket cut streams, each with per-line prefix arrays for progress visualization.
 
 ```ts
-import { buildToolpathGeometryFromLinesBatched } from "gviewer";
+import { buildToolpathGeometryFromLinesBatched } from "@sienci/gviewer";
 
 const result = await buildToolpathGeometryFromLinesBatched(lines, {
   laserMode: false,
@@ -247,7 +247,7 @@ const result = await buildToolpathGeometryFromLinesBatched(lines, {
 Laser-specific variant. Returns rapid positions plus opacity-bucketed cut streams.
 
 ```ts
-import { buildLaserGeometryFromLinesBatched } from "gviewer";
+import { buildLaserGeometryFromLinesBatched } from "@sienci/gviewer";
 
 const result = await buildLaserGeometryFromLinesBatched(lines, {
   bucketCount: 16,
@@ -263,15 +263,15 @@ const result = await buildLaserGeometryFromLinesBatched(lines, {
 
 ---
 
-### `gviewer/viewer` — Three.js viewer
+### `@sienci/gviewer/viewer` — Three.js viewer
 
 #### `GCodeViewer`
 
 Full 3D viewer with orbit controls, grid, bounding box, bit marker, and ViewCube.
 
 ```ts
-import { GCodeViewer } from "gviewer/viewer";
-import "gviewer/viewer/viewcube.css";
+import { GCodeViewer } from "@sienci/gviewer/viewer";
+import "@sienci/gviewer/viewer/viewcube.css";
 
 const viewer = new GCodeViewer({
   id: "my-viewer",
@@ -368,7 +368,7 @@ viewer.dispose();      // clean up Three.js resources and DOM elements
 ##### Themes
 
 ```ts
-import { gCodeViewerThemePresets } from "gviewer/viewer";
+import { gCodeViewerThemePresets } from "@sienci/gviewer/viewer";
 
 // Available presets:
 // "dark" | "light" | "flexoki-dark" | "tokyo-night"
@@ -411,12 +411,12 @@ type GCodeViewerOptions = {
 
 ---
 
-### `gviewer/react` — React component
+### `@sienci/gviewer/react` — React component
 
 ```tsx
-import { GCodeVisualizer } from "gviewer/react";
-import type { GCodeViewerHandle, GCodeViewerOptions } from "gviewer/viewer";
-import "gviewer/viewer/viewcube.css";
+import { GCodeVisualizer } from "@sienci/gviewer/react";
+import type { GCodeViewerHandle, GCodeViewerOptions } from "@sienci/gviewer/viewer";
+import "@sienci/gviewer/viewer/viewcube.css";
 ```
 
 #### Props

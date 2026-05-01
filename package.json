@@ -1,5 +1,5 @@
 {
-  "name": "gviewer",
+  "name": "@sienci/gviewer",
   "version": "0.1.0",
   "description": "GCode visualization library using Three.js",
   "type": "module",
@@ -30,6 +30,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
     "test": "vitest run",
