@@ -7,6 +7,7 @@ export declare class GCodeSVGRenderer {
     private bboxLabelY;
     private bboxLabelZ;
     private pathLayer;
+    private originMarker;
     private pathEls;
     private segmentGroups;
     private workerMode;
@@ -48,6 +49,7 @@ export declare class GCodeSVGRenderer {
     private applyViewBox;
     private applyOptions;
     private renderBbox;
+    private renderOriginMarker;
     private onWheel;
     private onPointerDown;
     private onPointerMove;

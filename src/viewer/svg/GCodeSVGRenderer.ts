@@ -18,6 +18,7 @@ export class GCodeSVGRenderer {
   private bboxLabelY: SVGTextElement;
   private bboxLabelZ: SVGTextElement;
   private pathLayer: SVGGElement;
+  private originMarker: SVGCircleElement;
   private pathEls: SVGPathElement[] = [];
   private segmentGroups: SegmentGroup[] = [];
   private workerMode = false;
@@ -59,14 +60,19 @@ export class GCodeSVGRenderer {
     this.pathLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
     this.bboxLabelX = makeText("middle", "hanging");
-    this.bboxLabelY = makeText("middle", "hanging");
-    this.bboxLabelZ = makeText("start", "middle");
+    this.bboxLabelY = makeText("start", "middle");
+    this.bboxLabelZ = makeText("middle", "auto");
+
+    this.originMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    this.originMarker.setAttribute("stroke-opacity", "0.4");
+    this.originMarker.setAttribute("visibility", "hidden");
 
     this.svg.appendChild(this.bboxPath);
     this.svg.appendChild(this.pathLayer);
     this.svg.appendChild(this.bboxLabelX);
     this.svg.appendChild(this.bboxLabelY);
     this.svg.appendChild(this.bboxLabelZ);
+    this.svg.appendChild(this.originMarker);
 
     container.appendChild(this.svg);
     this.applyOptions();
@@ -249,6 +255,7 @@ export class GCodeSVGRenderer {
     }
 
     this.renderBbox();
+    this.renderOriginMarker();
     this.applyViewBox();
   }
 
@@ -267,12 +274,29 @@ export class GCodeSVGRenderer {
       return;
     }
     const { minX, maxX, minY, maxY, minZ, maxZ } = this.bounds;
-    const corners: Pt2[] = [
-      this.project(minX, minY, minZ), this.project(maxX, minY, minZ),
-      this.project(maxX, maxY, minZ), this.project(minX, maxY, minZ),
-      this.project(minX, minY, maxZ), this.project(maxX, minY, maxZ),
-      this.project(maxX, maxY, maxZ), this.project(minX, maxY, maxZ),
-    ];
+    const p2 = this.project;
+    const b0 = p2(minX, minY, minZ), b1 = p2(maxX, minY, minZ);
+    const b2 = p2(maxX, maxY, minZ), b3 = p2(minX, maxY, minZ);
+    const t0 = p2(minX, minY, maxZ), t1 = p2(maxX, minY, maxZ);
+    const t2 = p2(maxX, maxY, maxZ), t3 = p2(minX, maxY, maxZ);
+
+    // Compute label positions (mirrors renderBbox) so fitView includes them
+    const projW = Math.hypot(b1.x - b0.x, b1.y - b0.y);
+    const projH = Math.hypot(b3.x - b0.x, b3.y - b0.y);
+    const projZ = Math.hypot(t0.x - b0.x, t0.y - b0.y);
+    const fontSize = Math.max(projW, projH, projZ) * 0.07;
+    const gap = fontSize * 0.5;
+    const labelX = outward(mid(b0, b1), mid(b2, b3), gap);
+    const allCorners = [b0, b1, b2, b3, t0, t1, t2, t3];
+    const screenMinY = Math.min(...allCorners.map(c => c.y));
+    const screenMaxY = Math.max(...allCorners.map(c => c.y));
+    const screenMinX = Math.min(...allCorners.map(c => c.x));
+    const screenMaxX = Math.max(...allCorners.map(c => c.x));
+    const labelY = { x: screenMaxX + gap, y: (screenMinY + screenMaxY) / 2 };
+    const labelYRight = { x: labelY.x + fontSize * 5, y: labelY.y };
+    const labelZ = { x: (screenMinX + screenMaxX) / 2, y: screenMinY - fontSize };
+
+    const corners: Pt2[] = [b0, b1, b2, b3, t0, t1, t2, t3, labelX, labelY, labelYRight, labelZ];
     let pMinX = Infinity, pMinY = Infinity, pMaxX = -Infinity, pMaxY = -Infinity;
     for (const c of corners) {
       if (c.x < pMinX) pMinX = c.x;
@@ -282,7 +306,7 @@ export class GCodeSVGRenderer {
     }
     const spanX = pMaxX - pMinX;
     const spanY = pMaxY - pMinY;
-    const pctPad = Math.max(spanX, spanY) * 0.15;
+    const pctPad = Math.max(spanX, spanY) * 0.08;
     const p = this.options.padding + pctPad;
     this.viewBox = {
       x: pMinX - p,
@@ -298,7 +322,7 @@ export class GCodeSVGRenderer {
   }
 
   private applyOptions(): void {
-    const { boundingBoxColor, strokeWidth } = this.options;
+    const { boundingBoxColor, strokeWidth, originColor } = this.options;
     if (!this.workerMode) {
       this.syncSegmentGroupsFromLines();
     }
@@ -309,6 +333,8 @@ export class GCodeSVGRenderer {
     for (const lbl of [this.bboxLabelX, this.bboxLabelY, this.bboxLabelZ]) {
       lbl.setAttribute("fill", boundingBoxColor);
     }
+    this.originMarker.setAttribute("fill", originColor);
+    this.originMarker.setAttribute("stroke", "#000000");
   }
 
   private renderBbox(): void {
@@ -345,8 +371,29 @@ export class GCodeSVGRenderer {
     const gap = fontSize * 0.5;
 
     setLabel(this.bboxLabelX, mid(b0, b1), outward(mid(b0, b1), mid(b2, b3), gap), fontSize, `X: ${fd(maxX - minX)}`);
-    setLabel(this.bboxLabelY, mid(b1, b2), outward(mid(b1, b2), mid(b0, b3), gap), fontSize, `Y: ${fd(maxY - minY)}`);
-    setLabel(this.bboxLabelZ, mid(b0, t0), outward(mid(b0, t0), mid(b2, t2), gap), fontSize, `Z: ${fd(maxZ - minZ)}`);
+    const allCorners = [b0, b1, b2, b3, t0, t1, t2, t3];
+    const screenMinY = Math.min(...allCorners.map(c => c.y));
+    const screenMaxY = Math.max(...allCorners.map(c => c.y));
+    const screenMinX = Math.min(...allCorners.map(c => c.x));
+    const screenMaxX = Math.max(...allCorners.map(c => c.x));
+    const yPos = { x: screenMaxX + gap, y: (screenMinY + screenMaxY) / 2 };
+    setLabel(this.bboxLabelY, yPos, yPos, fontSize, `Y: ${fd(maxY - minY)}`);
+    const zPos = { x: (screenMinX + screenMaxX) / 2, y: screenMinY - fontSize };
+    setLabel(this.bboxLabelZ, zPos, zPos, fontSize, `Z: ${fd(maxZ - minZ)}`);
+  }
+
+  private renderOriginMarker(): void {
+    if (!this.options.showOrigin || this.bounds.empty) {
+      this.originMarker.setAttribute("visibility", "hidden");
+      return;
+    }
+    const pt = this.project(0, 0, 0);
+    const r = Math.min(this.viewBox.w, this.viewBox.h) * 0.018;
+    this.originMarker.setAttribute("cx", f(pt.x));
+    this.originMarker.setAttribute("cy", f(pt.y));
+    this.originMarker.setAttribute("r", f(r));
+    this.originMarker.setAttribute("stroke-width", f(r * 0.25));
+    this.originMarker.setAttribute("visibility", "visible");
   }
 
   // ── Interaction ───────────────────────────────────────────────────────────
