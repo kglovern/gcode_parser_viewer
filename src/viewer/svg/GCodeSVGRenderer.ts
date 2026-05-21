@@ -40,7 +40,9 @@ export class GCodeSVGRenderer {
 
   // Interaction
   private dragMode: 'none' | 'orbit' | 'pan' = 'none';
-  private dragLast = { x: 0, y: 0 };
+  private activePointers = new Map<number, Pt2>();
+  private pinchLastDist = 0;
+  private pinchLastMid: Pt2 = { x: 0, y: 0 };
   private rafPending = false;
 
   // Geometry
@@ -52,7 +54,7 @@ export class GCodeSVGRenderer {
     this.options = { ...defaultGCodeSVGOptions, ...options };
 
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;";
+    this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none;";
     this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
@@ -413,19 +415,63 @@ export class GCodeSVGRenderer {
   };
 
   private onPointerDown = (e: PointerEvent): void => {
-    const isPan = e.button === 2 || e.shiftKey;
-    this.dragMode = isPan ? 'pan' : 'orbit';
-    this.dragLast = { x: e.clientX, y: e.clientY };
+    this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.svg.setPointerCapture(e.pointerId);
-    this.svg.style.cursor = isPan ? 'move' : 'grabbing';
     e.preventDefault();
+
+    if (this.activePointers.size === 1) {
+      const isPan = e.button === 2 || e.shiftKey;
+      this.dragMode = isPan ? 'pan' : 'orbit';
+      this.svg.style.cursor = isPan ? 'move' : 'grabbing';
+    } else if (this.activePointers.size === 2) {
+      this.dragMode = 'pan';
+      this.svg.style.cursor = 'move';
+      const [a, b] = Array.from(this.activePointers.values());
+      this.pinchLastDist = Math.hypot(b.x - a.x, b.y - a.y);
+      this.pinchLastMid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
   };
 
   private onPointerMove = (e: PointerEvent): void => {
+    if (!this.activePointers.has(e.pointerId)) return;
+    const prev = this.activePointers.get(e.pointerId)!;
+    this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (this.activePointers.size === 2) {
+      const [a, b] = Array.from(this.activePointers.values());
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+      if (this.pinchLastDist > 0) {
+        const factor = this.pinchLastDist / dist;
+        const pt = this.svgPoint(mid.x, mid.y);
+        const { x, y, w, h } = this.viewBox;
+        this.viewBox = {
+          x: pt.x - (pt.x - x) * factor,
+          y: pt.y - (pt.y - y) * factor,
+          w: w * factor,
+          h: h * factor,
+        };
+      }
+
+      const rect = this.svg.getBoundingClientRect();
+      const dmx = mid.x - this.pinchLastMid.x;
+      const dmy = mid.y - this.pinchLastMid.y;
+      this.viewBox = {
+        ...this.viewBox,
+        x: this.viewBox.x - (dmx / rect.width) * this.viewBox.w,
+        y: this.viewBox.y - (dmy / rect.height) * this.viewBox.h,
+      };
+
+      this.pinchLastDist = dist;
+      this.pinchLastMid = mid;
+      this.applyViewBox();
+      return;
+    }
+
     if (this.dragMode === 'none') return;
-    const dx = e.clientX - this.dragLast.x;
-    const dy = e.clientY - this.dragLast.y;
-    this.dragLast = { x: e.clientX, y: e.clientY };
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
 
     if (this.dragMode === 'orbit') {
       const rect = this.svg.getBoundingClientRect();
@@ -448,13 +494,20 @@ export class GCodeSVGRenderer {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    if (this.dragMode === 'none') return;
     const wasOrbit = this.dragMode === 'orbit';
-    this.dragMode = 'none';
+    this.activePointers.delete(e.pointerId);
     this.svg.releasePointerCapture(e.pointerId);
-    this.svg.style.cursor = 'grab';
-    if (wasOrbit) {
-      this.rebuildAndRender(false);
+
+    if (this.activePointers.size === 1) {
+      // One finger lifted — reinitialise single-pointer state from the remaining finger
+      const [remaining] = this.activePointers.values();
+      this.pinchLastMid = { x: remaining.x, y: remaining.y };
+      this.dragMode = 'orbit';
+      this.svg.style.cursor = 'grabbing';
+    } else if (this.activePointers.size === 0) {
+      this.dragMode = 'none';
+      this.svg.style.cursor = 'grab';
+      if (wasOrbit) this.rebuildAndRender(false);
     }
   };
 

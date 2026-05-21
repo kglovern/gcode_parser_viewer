@@ -24,7 +24,9 @@ export declare class GCodeSVGRenderer {
     private cosRotY;
     private sinRotY;
     private dragMode;
-    private dragLast;
+    private activePointers;
+    private pinchLastDist;
+    private pinchLastMid;
     private rafPending;
     private rapidVerts;
     private cutVerts;
