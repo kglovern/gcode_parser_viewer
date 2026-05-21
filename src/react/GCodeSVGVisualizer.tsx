@@ -1,11 +1,13 @@
 import * as React from "react";
 import { GCodeSVGRenderer } from "../viewer/svg/GCodeSVGRenderer";
 import type { GCodeSVGOptions } from "../viewer/svg/types";
+import type { WorkerGeometryData } from "../types";
 
 export type GCodeSVGRendererHandle = {
   loadFromLines(lines: string[]): void;
   loadFromFile(file: File): Promise<void>;
   loadFromText(gcode: string): void;
+  loadFromWorkerData(data: WorkerGeometryData): void;
   clear(): void;
   resetView(): void;
   setOptions(opts: Partial<GCodeSVGOptions>): void;
@@ -53,6 +55,7 @@ export const GCodeSVGVisualizer = React.forwardRef<GCodeSVGRendererHandle, GCode
         loadFromLines: (lines) => get().loadFromLines(lines),
         loadFromFile: (file) => get().loadFromFile(file),
         loadFromText: (gcode) => get().loadFromText(gcode),
+        loadFromWorkerData: (data) => get().loadFromWorkerData(data),
         clear: () => get().clear(),
         resetView: () => get().resetView(),
         setOptions: (opts) => get().setOptions(opts),

@@ -1,4 +1,4 @@
-import { ArcMoveCallback, LinearMoveCallback, PlaneMode, Position } from "./types";
+import { ArcMoveCallback, LinearMoveCallback, PlaneMode, Position, WorkerGeometryData } from "./types";
 import { GCodeParser } from "./parser";
 import { GCodeVirtualizer } from "./virtualizer";
 
@@ -790,4 +790,57 @@ function bucketOpacity(index: number, bucketCount: number, baseOpacity: number):
   }
   const normalized = index / (bucketCount - 1);
   return baseOpacity * normalized;
+}
+
+// ── Worker geometry conversion ────────────────────────────────────────────────
+
+export type WorkerSegmentGroup = {
+  hexColor: string;
+  opacity: number;
+  positions: Float32Array;
+  rgbColors: Float32Array;
+};
+
+export function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmentGroup[] {
+  const vertices = new Float32Array(data.vertices);
+  const frames = new Uint32Array(data.frames);
+  const colorArray = new Float32Array(data.colorArrayBuffer);
+  const { verticesLen, framesLen } = data;
+
+  const groupData = new Map<string, { hexColor: string; opacity: number; pos: number[]; rgb: number[] }>();
+
+  for (let i = 0; i < framesLen; i++) {
+    const startVtx = frames[i];
+    const endVtx = i < framesLen - 1 ? frames[i + 1] : verticesLen;
+    if (endVtx <= startVtx + 1) continue;
+
+    const ci = startVtx * 4;
+    const r = colorArray[ci], g = colorArray[ci + 1], b = colorArray[ci + 2], a = colorArray[ci + 3];
+    const hexColor = workerRgbToHex(r, g, b);
+    const key = `${hexColor}|${Math.round(a * 100)}`;
+
+    let group = groupData.get(key);
+    if (!group) {
+      group = { hexColor, opacity: a, pos: [], rgb: [] };
+      groupData.set(key, group);
+    }
+
+    for (let j = startVtx; j < endVtx - 1; j++) {
+      const j0 = j * 3, j1 = (j + 1) * 3;
+      group.pos.push(vertices[j0], vertices[j0 + 1], vertices[j0 + 2], vertices[j1], vertices[j1 + 1], vertices[j1 + 2]);
+      group.rgb.push(r, g, b, r, g, b);
+    }
+  }
+
+  return Array.from(groupData.values()).map(({ hexColor, opacity, pos, rgb }) => ({
+    hexColor,
+    opacity,
+    positions: new Float32Array(pos),
+    rgbColors: new Float32Array(rgb),
+  }));
+}
+
+function workerRgbToHex(r: number, g: number, b: number): string {
+  const toHex = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }

@@ -1,4 +1,5 @@
-import { buildMovementVerticesFromLines } from "../../geometry";
+import { buildMovementVerticesFromLines, buildWorkerSegmentGroups } from "../../geometry";
+import type { WorkerGeometryData } from "../../types";
 import { GCodeSVGOptions, defaultGCodeSVGOptions } from "./types";
 
 type ViewBox = { x: number; y: number; w: number; h: number };
@@ -8,14 +9,18 @@ type Pt2 = { x: number; y: number };
 const DEFAULT_ROT_X = 0;
 const DEFAULT_ROT_Y = 0;
 
+type SegmentGroup = { color: string; opacity: number; verts: Float32Array };
+
 export class GCodeSVGRenderer {
   private svg: SVGSVGElement;
   private bboxPath: SVGPathElement;
   private bboxLabelX: SVGTextElement;
   private bboxLabelY: SVGTextElement;
   private bboxLabelZ: SVGTextElement;
-  private rapidPath: SVGPathElement;
-  private cutPath: SVGPathElement;
+  private pathLayer: SVGGElement;
+  private pathEls: SVGPathElement[] = [];
+  private segmentGroups: SegmentGroup[] = [];
+  private workerMode = false;
   private options: GCodeSVGOptions;
 
   private viewBox: ViewBox = { x: 0, y: 0, w: 100, h: 100 };
@@ -51,20 +56,14 @@ export class GCodeSVGRenderer {
     this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
     this.bboxPath = makePath();
-    this.rapidPath = makePath();
-    this.rapidPath.setAttribute("stroke-linecap", "round");
-    this.rapidPath.setAttribute("stroke-linejoin", "round");
-    this.cutPath = makePath();
-    this.cutPath.setAttribute("stroke-linecap", "round");
-    this.cutPath.setAttribute("stroke-linejoin", "round");
+    this.pathLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
     this.bboxLabelX = makeText("middle", "hanging");
     this.bboxLabelY = makeText("middle", "hanging");
     this.bboxLabelZ = makeText("start", "middle");
 
     this.svg.appendChild(this.bboxPath);
-    this.svg.appendChild(this.rapidPath);
-    this.svg.appendChild(this.cutPath);
+    this.svg.appendChild(this.pathLayer);
     this.svg.appendChild(this.bboxLabelX);
     this.svg.appendChild(this.bboxLabelY);
     this.svg.appendChild(this.bboxLabelZ);
@@ -82,6 +81,8 @@ export class GCodeSVGRenderer {
     });
     this.rapidVerts = rapid;
     this.cutVerts = cutting;
+    this.workerMode = false;
+    this.syncSegmentGroupsFromLines();
     this.bounds = computeBounds(rapid, cutting);
     if (!this.bounds.empty) {
       this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
@@ -122,8 +123,42 @@ export class GCodeSVGRenderer {
   clear(): void {
     this.rapidVerts = new Float32Array(0);
     this.cutVerts = new Float32Array(0);
+    this.workerMode = false;
+    this.segmentGroups = [];
     this.bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: true };
     this.rebuildAndRender();
+  }
+
+  loadFromWorkerData(data: WorkerGeometryData): void {
+    const groups = buildWorkerSegmentGroups(data);
+    this.workerMode = true;
+    this.rapidVerts = new Float32Array(0);
+    this.cutVerts = new Float32Array(0);
+    this.segmentGroups = groups.map(g => ({ color: g.hexColor, opacity: g.opacity, verts: g.positions }));
+    this.bounds = computeBounds(...groups.map(g => g.positions));
+    if (!this.bounds.empty) {
+      this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
+      this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
+      this.centerZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+      const diag = Math.hypot(
+        this.bounds.maxX - this.bounds.minX,
+        this.bounds.maxY - this.bounds.minY,
+        this.bounds.maxZ - this.bounds.minZ
+      );
+      this.focalLength = diag * 2;
+    }
+    this.rotX = DEFAULT_ROT_X;
+    this.rotY = DEFAULT_ROT_Y;
+    this.updateTrig();
+    this.fitView();
+    this.rebuildAndRender();
+  }
+
+  private syncSegmentGroupsFromLines(): void {
+    this.segmentGroups = [
+      { color: this.options.rapidColor, opacity: 0.5, verts: this.rapidVerts },
+      { color: this.options.cutColor, opacity: 1.0, verts: this.cutVerts },
+    ];
   }
 
   resetView(): void {
@@ -191,8 +226,28 @@ export class GCodeSVGRenderer {
 
   private rebuildAndRender(draft = false): void {
     const fmt = draft ? fDraft : f;
-    this.rapidPath.setAttribute("d", verticesToPath(this.rapidVerts, this.project, fmt));
-    this.cutPath.setAttribute("d", verticesToPath(this.cutVerts, this.project, fmt));
+    const sw = String(this.options.strokeWidth);
+
+    while (this.pathEls.length < this.segmentGroups.length) {
+      const el = makePath();
+      this.pathLayer.appendChild(el);
+      this.pathEls.push(el);
+    }
+    while (this.pathEls.length > this.segmentGroups.length) {
+      this.pathLayer.removeChild(this.pathEls.pop()!);
+    }
+
+    for (let i = 0; i < this.segmentGroups.length; i++) {
+      const { color, opacity, verts } = this.segmentGroups[i];
+      const el = this.pathEls[i];
+      el.setAttribute("stroke", color);
+      el.setAttribute("stroke-opacity", String(opacity));
+      el.setAttribute("stroke-width", sw);
+      el.setAttribute("stroke-linecap", "round");
+      el.setAttribute("stroke-linejoin", "round");
+      el.setAttribute("d", verticesToPath(verts, this.project, fmt));
+    }
+
     this.renderBbox();
     this.applyViewBox();
   }
@@ -243,11 +298,10 @@ export class GCodeSVGRenderer {
   }
 
   private applyOptions(): void {
-    const { rapidColor, cutColor, boundingBoxColor, strokeWidth } = this.options;
-    this.rapidPath.setAttribute("stroke", rapidColor);
-    this.rapidPath.setAttribute("stroke-width", String(strokeWidth));
-    this.cutPath.setAttribute("stroke", cutColor);
-    this.cutPath.setAttribute("stroke-width", String(strokeWidth));
+    const { boundingBoxColor, strokeWidth } = this.options;
+    if (!this.workerMode) {
+      this.syncSegmentGroupsFromLines();
+    }
     this.bboxPath.setAttribute("stroke", boundingBoxColor);
     this.bboxPath.setAttribute("stroke-width", String(strokeWidth * 0.6));
     this.bboxPath.setAttribute("fill", boundingBoxColor);

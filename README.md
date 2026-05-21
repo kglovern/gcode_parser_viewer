@@ -21,9 +21,9 @@ npm install react react-dom   # required for the React component
 
 | Path | Contents |
 |---|---|
-| `@sienci/gviewer` | Parser, virtualizer, geometry builders, shared types |
-| `@sienci/gviewer/viewer` | `GCodeViewer` class, themes, viewer types |
-| `@sienci/gviewer/react` | `GCodeVisualizer` React component |
+| `@sienci/gviewer` | Parser, virtualizer, geometry builders, `WorkerGeometryData`, shared types |
+| `@sienci/gviewer/viewer` | `GCodeViewer`, `GCodeSVGRenderer`, themes, viewer types, `WorkerGeometryData` |
+| `@sienci/gviewer/react` | `GCodeVisualizer`, `GCodeSVGVisualizer` React components |
 | `@sienci/gviewer/viewer/viewcube.css` | Stylesheet for the ViewCube overlay |
 
 ---
@@ -261,6 +261,34 @@ const result = await buildLaserGeometryFromLinesBatched(lines, {
 // result.buckets[i].prefixEndVertex
 ```
 
+##### `buildWorkerSegmentGroups`
+
+Converts the pre-parsed payload from an external worker (e.g. gSender's `Visualize.worker`) into groups of stride-6 line segments, each with a hex color and opacity. Segments with the same color and opacity are merged into a single group. This is the conversion step used internally by `loadFromWorkerData()` on both the 3D viewer and the SVG renderer.
+
+```ts
+import { buildWorkerSegmentGroups } from "@sienci/gviewer";
+import type { WorkerGeometryData } from "@sienci/gviewer";
+
+const groups = buildWorkerSegmentGroups(workerData);
+// groups[i].hexColor  — e.g. "#0ef6ae"
+// groups[i].opacity   — 0.5 for rapid moves, 1.0 for cutting moves
+// groups[i].positions — Float32Array stride-6: [x0,y0,z0, x1,y1,z1, ...]
+// groups[i].rgbColors — Float32Array stride-3 per vertex (2 per segment, same length as positions)
+```
+
+`WorkerGeometryData` matches the relevant fields of the `geometryReady` worker message:
+
+```ts
+type WorkerGeometryData = {
+  vertices: ArrayBuffer;         // Float32Array stride-3: individual 3D points
+  frames: ArrayBuffer;           // Uint32Array: vertex index at the start of each motion segment
+  colorArrayBuffer: ArrayBuffer; // Float32Array stride-4: r,g,b,opacity per vertex (values 0–1)
+  verticesLen: number;
+  framesLen: number;
+  colorLen: number;
+};
+```
+
 ---
 
 ### `@sienci/gviewer/viewer` — Three.js viewer
@@ -297,6 +325,28 @@ await viewer.loadFromText("G21\nG0 X10 Y10\n...");
 await viewer.loadFromLines(["G21", "G0 X10 Y10"]);
 viewer.unload();
 ```
+
+##### Loading from pre-parsed worker data
+
+If GCode has already been parsed by an external worker (e.g. gSender's `Visualize.worker`), pass the `geometryReady` payload directly to skip re-parsing. Per-vertex colors — including tool-change palette cycling — are preserved.
+
+```ts
+import type { WorkerGeometryData } from "@sienci/gviewer/viewer";
+
+// workerData comes from the worker's geometryReady message
+const workerData: WorkerGeometryData = {
+  vertices: msg.vertices,               // ArrayBuffer (Float32Array stride-3: x,y,z per point)
+  frames: msg.frames,                   // ArrayBuffer (Uint32Array: vertex index per motion segment)
+  colorArrayBuffer: msg.colorArrayBuffer, // ArrayBuffer (Float32Array stride-4: r,g,b,opacity per vertex)
+  verticesLen: msg.verticesLen,
+  framesLen: msg.framesLen,
+  colorLen: msg.colorLen,
+};
+
+await viewer.loadFromWorkerData(workerData);
+```
+
+> **Note:** `seekToLine()` and `hideUntilLine()` are no-ops when data is loaded this way, because per-line vertex ranges are not included in the worker response. Pass GCode text to `loadFromLines()` if you need those features.
 
 ##### Camera
 
@@ -411,6 +461,66 @@ type GCodeViewerOptions = {
 
 ---
 
+### `GCodeSVGRenderer` — SVG viewer
+
+Lightweight 2D/isometric SVG renderer. No Three.js dependency — works in any environment that has a DOM. Supports orbit (drag to rotate), pan (right-click drag or Shift+drag), and scroll-to-zoom.
+
+```ts
+import { GCodeSVGRenderer } from "@sienci/gviewer/viewer";
+import type { GCodeSVGOptions } from "@sienci/gviewer/viewer";
+
+const renderer = new GCodeSVGRenderer(
+  document.getElementById("container")!,
+  { /* Partial<GCodeSVGOptions> */ }
+);
+```
+
+##### Loading GCode
+
+```ts
+renderer.loadFromText("G21\nG0 X10 Y10\n...");
+renderer.loadFromLines(["G21", "G0 X10 Y10"]);
+await renderer.loadFromFile(fileInputElement.files[0]);
+renderer.clear();
+```
+
+##### Loading from pre-parsed worker data
+
+Pass the `geometryReady` payload directly to avoid re-parsing. Tool-change colors from the worker are rendered as separate colored paths.
+
+```ts
+import type { WorkerGeometryData } from "@sienci/gviewer/viewer";
+
+renderer.loadFromWorkerData(workerData);
+```
+
+##### Controls
+
+```ts
+renderer.resetView();                         // reset rotation and re-fit
+renderer.setProjectionMode("isometric");      // "isometric" (default) | "perspective"
+renderer.getSVGElement();                     // returns the <svg> element (for export, etc.)
+renderer.dispose();                           // remove event listeners and DOM element
+```
+
+##### Options
+
+```ts
+renderer.setOptions({
+  rapidColor: "#0ef6ae",        // G0 rapid move color
+  cutColor: "#3e85c7",          // G1/G2/G3 cutting move color
+  boundingBoxColor: "#d0d0d0",  // wireframe bounding box color
+  strokeWidth: 0.5,             // path stroke width in SVG units
+  arcSegments: 30,              // arc tessellation quality
+  padding: 5,                   // fixed padding around the fit view (SVG units)
+  projectionMode: "isometric",  // "isometric" | "perspective"
+});
+```
+
+> **Note:** When data is loaded via `loadFromWorkerData()`, `rapidColor` and `cutColor` are ignored — colors come from the worker payload. Other options (stroke width, padding, projection mode) apply in both modes.
+
+---
+
 ### `@sienci/gviewer/react` — React component
 
 ```tsx
@@ -440,6 +550,7 @@ const ref = useRef<GCodeViewerHandle>(null);
 
 // Later:
 ref.current?.loadFromText(gcode);
+ref.current?.loadFromWorkerData(workerData);
 ref.current?.focusToModel();
 ref.current?.hideUntilLine(currentLine, "grey");
 ref.current?.snapCameraToView("top");
@@ -447,6 +558,34 @@ ref.current?.setBitPosition({ x, y, z });
 ```
 
 `options` and `callbacks` props are synced to the viewer whenever they change (via `useEffect`).
+
+#### `GCodeSVGVisualizer`
+
+React wrapper for `GCodeSVGRenderer`.
+
+```tsx
+import { GCodeSVGVisualizer } from "@sienci/gviewer/react";
+import type { GCodeSVGRendererHandle } from "@sienci/gviewer/react";
+import type { GCodeSVGOptions } from "@sienci/gviewer/viewer";
+
+const ref = useRef<GCodeSVGRendererHandle>(null);
+
+<GCodeSVGVisualizer
+  id="svg-viewer"
+  ref={ref}
+  options={{ strokeWidth: 0.5, projectionMode: "isometric" }}
+  style={{ width: "100%", height: "400px" }}
+/>
+
+// Load via any method:
+ref.current?.loadFromText(gcode);
+ref.current?.loadFromWorkerData(workerData);
+ref.current?.resetView();
+ref.current?.setProjectionMode("perspective");
+ref.current?.getSVGElement();   // access raw <svg> for export
+```
+
+`GCodeSVGRendererHandle` exposes: `loadFromLines`, `loadFromFile`, `loadFromText`, `loadFromWorkerData`, `clear`, `resetView`, `setOptions`, `setProjectionMode`, `getSVGElement`, `dispose`.
 
 ---
 

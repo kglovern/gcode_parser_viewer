@@ -95,6 +95,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           loadFromLines(lines: readonly string[]) {
             return getViewer().loadFromLines(lines);
           },
+          loadFromWorkerData(data) {
+            return getViewer().loadFromWorkerData(data);
+          },
           unload() {
             getViewer().unload();
           },

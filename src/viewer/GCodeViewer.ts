@@ -2,7 +2,9 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   buildToolpathGeometryFromLinesBatched,
+  buildWorkerSegmentGroups,
 } from "../geometry";
+import type { WorkerGeometryData } from "../types";
 import { GCodeVirtualizer } from "../virtualizer";
 import {
   applyStreamGreyCursor,
@@ -321,6 +323,42 @@ export class GCodeViewer implements GCodeViewerHandle {
   async loadFromLines(lines: readonly string[]): Promise<void> {
     this.currentLines = Array.from(lines);
     await this.renderScene();
+  }
+
+  async loadFromWorkerData(data: WorkerGeometryData): Promise<void> {
+    this.currentLines = [];
+    const groups = buildWorkerSegmentGroups(data);
+
+    const rapidPos: Float32Array[] = [];
+    const rapidRgb: Float32Array[] = [];
+    const cutPos: Float32Array[] = [];
+    const cutRgb: Float32Array[] = [];
+
+    for (const g of groups) {
+      if (g.opacity < 0.75) {
+        rapidPos.push(g.positions);
+        rapidRgb.push(g.rgbColors);
+      } else {
+        cutPos.push(g.positions);
+        cutRgb.push(g.rgbColors);
+      }
+    }
+
+    this.setToolpathGeometry({
+      rapid: {
+        positions: mergeFloat32Arrays(rapidPos),
+        prefixEndVertex: new Int32Array(0),
+        colors: mergeFloat32Arrays(rapidRgb),
+      },
+      cuts: [{
+        positions: mergeFloat32Arrays(cutPos),
+        prefixEndVertex: new Int32Array(0),
+        colors: mergeFloat32Arrays(cutRgb),
+      }],
+      cutBucketCount: 1,
+    });
+
+    this.focusToModel();
   }
 
   unload(): void {
@@ -690,8 +728,8 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private setToolpathGeometry(args: {
-    rapid: { positions: Float32Array; prefixEndVertex: Int32Array };
-    cuts: { positions: Float32Array; prefixEndVertex: Int32Array }[];
+    rapid: { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array };
+    cuts: { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array }[];
     cutBucketCount: number;
   }): void {
     this.setGeometryEmpty();
@@ -703,6 +741,7 @@ export class GCodeViewer implements GCodeViewerHandle {
         cutBucketIndex: null,
         positions: args.rapid.positions,
         prefixEndVertex: args.rapid.prefixEndVertex,
+        colors: args.rapid.colors,
         opacity: clamp01(this.options.render.theme.rapidOpacity ?? 0.3),
       },
       ...args.cuts.map((cut, index) => ({
@@ -710,6 +749,7 @@ export class GCodeViewer implements GCodeViewerHandle {
         cutBucketIndex: index,
         positions: cut.positions,
         prefixEndVertex: cut.prefixEndVertex,
+        colors: cut.colors,
         opacity: this.cutBucketOpacity(index),
       })),
     ];
@@ -983,6 +1023,17 @@ function clamp01(value: number): number {
     return 0;
   }
   return Math.max(0, Math.min(1, value));
+}
+
+function mergeFloat32Arrays(arrays: Float32Array[]): Float32Array {
+  const total = arrays.reduce((sum, a) => sum + a.length, 0);
+  const out = new Float32Array(total);
+  let offset = 0;
+  for (const a of arrays) {
+    out.set(a, offset);
+    offset += a.length;
+  }
+  return out;
 }
 
 function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions {

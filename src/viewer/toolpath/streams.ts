@@ -20,6 +20,7 @@ export type ToolpathStreamSpec = {
   positions: Float32Array;
   prefixEndVertex: Int32Array;
   opacity: number;
+  colors?: Float32Array;
 };
 
 export function createToolpathStreams(args: {
@@ -36,7 +37,7 @@ export function createToolpathStreams(args: {
     }
 
     const totalVertices = spec.positions.length / 3;
-    const baseColors = buildStreamBaseColors(spec.kind, totalVertices, args.options);
+    const baseColors = spec.colors ? spec.colors.slice() : buildStreamBaseColors(spec.kind, totalVertices, args.options);
     const simColors = new Float32Array(baseColors.length);
     simColors.set(baseColors);
 

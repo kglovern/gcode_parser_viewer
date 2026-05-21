@@ -1,23 +1,23 @@
 import * as o from "react";
-import { a as w, G as V } from "./GCodeSVGRenderer-4ldREPgA.js";
+import { a as F, G as w } from "./GCodeSVGRenderer-CngadZdh.js";
 const C = o.forwardRef(
   function(u, c) {
-    const { id: l, options: n, callbacks: a, className: f, style: d } = u, i = o.useRef(null), t = o.useRef(null);
+    const { id: a, options: n, callbacks: l, className: f, style: d } = u, i = o.useRef(null), t = o.useRef(null);
     return o.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const m = new w({ id: l, container: e, options: n, callbacks: a });
+      const m = new F({ id: a, container: e, options: n, callbacks: l });
       return t.current = m, () => {
         t.current = null, m.dispose();
       };
-    }, [l]), o.useEffect(() => {
+    }, [a]), o.useEffect(() => {
       var e;
       (e = t.current) == null || e.setOptions(n ?? {});
     }, [n]), o.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setCallbacks(a ?? {});
-    }, [a]), o.useImperativeHandle(
+      (e = t.current) == null || e.setCallbacks(l ?? {});
+    }, [l]), o.useImperativeHandle(
       c,
       () => {
         const e = () => {
@@ -28,7 +28,7 @@ const C = o.forwardRef(
         };
         return {
           get id() {
-            return l;
+            return a;
           },
           setCallbacks(r) {
             e().setCallbacks(r);
@@ -69,6 +69,9 @@ const C = o.forwardRef(
           loadFromLines(r) {
             return e().loadFromLines(r);
           },
+          loadFromWorkerData(r) {
+            return e().loadFromWorkerData(r);
+          },
           unload() {
             e().unload();
           },
@@ -95,16 +98,16 @@ const C = o.forwardRef(
           }
         };
       },
-      [l]
+      [a]
     ), o.createElement("div", { ref: i, className: f, style: d });
   }
 ), G = o.forwardRef(
   function(u, c) {
-    const { id: l, options: n, className: a, style: f } = u, d = o.useRef(null), i = o.useRef(null);
+    const { id: a, options: n, className: l, style: f } = u, d = o.useRef(null), i = o.useRef(null);
     return o.useEffect(() => {
       const t = d.current;
       if (!t) return;
-      const e = new V(t, n);
+      const e = new w(t, n);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
@@ -121,6 +124,7 @@ const C = o.forwardRef(
         loadFromLines: (e) => t().loadFromLines(e),
         loadFromFile: (e) => t().loadFromFile(e),
         loadFromText: (e) => t().loadFromText(e),
+        loadFromWorkerData: (e) => t().loadFromWorkerData(e),
         clear: () => t().clear(),
         resetView: () => t().resetView(),
         setOptions: (e) => t().setOptions(e),
@@ -130,7 +134,7 @@ const C = o.forwardRef(
       };
     }, []), o.createElement("div", {
       ref: d,
-      className: a,
+      className: l,
       style: { width: "100%", height: "100%", ...f }
     });
   }
