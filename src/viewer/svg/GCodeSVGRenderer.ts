@@ -225,12 +225,15 @@ export class GCodeSVGRenderer {
       if (c.x > pMaxX) pMaxX = c.x;
       if (c.y > pMaxY) pMaxY = c.y;
     }
-    const p = this.options.padding;
+    const spanX = pMaxX - pMinX;
+    const spanY = pMaxY - pMinY;
+    const pctPad = Math.max(spanX, spanY) * 0.15;
+    const p = this.options.padding + pctPad;
     this.viewBox = {
       x: pMinX - p,
       y: pMinY - p,
-      w: pMaxX - pMinX + p * 2,
-      h: pMaxY - pMinY + p * 2,
+      w: spanX + p * 2,
+      h: spanY + p * 2,
     };
   }
 
