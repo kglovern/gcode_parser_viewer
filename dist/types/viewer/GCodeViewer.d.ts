@@ -1,3 +1,4 @@
+import type { WorkerGeometryData } from "../types";
 import { GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
@@ -52,6 +53,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): Promise<void>;
     loadFromLines(lines: readonly string[]): Promise<void>;
+    loadFromWorkerData(data: WorkerGeometryData): Promise<void>;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;

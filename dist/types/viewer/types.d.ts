@@ -1,3 +1,4 @@
+import type { WorkerGeometryData } from "../types";
 export type GridUnits = "mm" | "in";
 export type GCodeViewerTheme = {
     background: string;
@@ -153,6 +154,7 @@ export type GCodeViewerHandle = {
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): Promise<void>;
     loadFromLines(lines: readonly string[]): Promise<void>;
+    loadFromWorkerData(data: WorkerGeometryData): Promise<void>;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;

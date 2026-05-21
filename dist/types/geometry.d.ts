@@ -1,4 +1,4 @@
-import { ArcMoveCallback, LinearMoveCallback, Position } from "./types";
+import { ArcMoveCallback, LinearMoveCallback, Position, WorkerGeometryData } from "./types";
 export type VertexCollector = {
     onLinearMove?: (args: Parameters<LinearMoveCallback>[0], vertices: number[]) => void;
     onArcMove?: (args: Parameters<ArcMoveCallback>[0], vertices: number[]) => void;
@@ -90,3 +90,10 @@ export declare function buildLaserGeometryFromLinesBatched(lines: readonly strin
     batch?: BatchBuildOptions;
 }): Promise<LaserGeometry>;
 export declare function pushXYZ(vertices: number[], position: Position): void;
+export type WorkerSegmentGroup = {
+    hexColor: string;
+    opacity: number;
+    positions: Float32Array;
+    rgbColors: Float32Array;
+};
+export declare function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmentGroup[];

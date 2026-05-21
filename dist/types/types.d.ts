@@ -69,3 +69,11 @@ export type VirtualizeResult = {
     movement: "none" | "linear" | "arc";
     arcMax?: Position;
 };
+export type WorkerGeometryData = {
+    vertices: ArrayBuffer;
+    frames: ArrayBuffer;
+    colorArrayBuffer: ArrayBuffer;
+    verticesLen: number;
+    framesLen: number;
+    colorLen: number;
+};

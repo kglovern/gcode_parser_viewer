@@ -17,6 +17,7 @@ export type ToolpathStreamSpec = {
     positions: Float32Array;
     prefixEndVertex: Int32Array;
     opacity: number;
+    colors?: Float32Array;
 };
 export declare function createToolpathStreams(args: {
     specs: readonly ToolpathStreamSpec[];

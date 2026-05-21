@@ -1,3 +1,4 @@
+import type { WorkerGeometryData } from "../../types";
 import { GCodeSVGOptions } from "./types";
 export declare class GCodeSVGRenderer {
     private svg;
@@ -5,8 +6,10 @@ export declare class GCodeSVGRenderer {
     private bboxLabelX;
     private bboxLabelY;
     private bboxLabelZ;
-    private rapidPath;
-    private cutPath;
+    private pathLayer;
+    private pathEls;
+    private segmentGroups;
+    private workerMode;
     private options;
     private viewBox;
     private rotX;
@@ -30,6 +33,8 @@ export declare class GCodeSVGRenderer {
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): void;
     clear(): void;
+    loadFromWorkerData(data: WorkerGeometryData): void;
+    private syncSegmentGroupsFromLines;
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;
     setProjectionMode(mode: 'perspective' | 'isometric'): void;
