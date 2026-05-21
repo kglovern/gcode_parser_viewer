@@ -6,5 +6,7 @@ export type GCodeSVGOptions = {
     arcSegments: number;
     padding: number;
     projectionMode: 'perspective' | 'isometric';
+    showOrigin: boolean;
+    originColor: string;
 };
 export declare const defaultGCodeSVGOptions: GCodeSVGOptions;
