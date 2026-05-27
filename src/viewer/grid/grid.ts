@@ -33,10 +33,10 @@ export function createUnitGrid(args: {
 
   const group = new THREE.Group();
   if (gridVertices.length > 0) {
-    group.add(createLineSegments(gridVertices, args.theme.colors.grid.minor, 0.5));
+    group.add(createLineSegments(gridVertices, args.theme.colors.grid.minor, 0.25));
   }
   if (centerVertices.length > 0) {
-    group.add(createLineSegments(centerVertices, args.theme.colors.grid.major, 0.6));
+    group.add(createLineSegments(centerVertices, args.theme.colors.grid.major, 0.4));
   }
   return group;
 }

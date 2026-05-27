@@ -536,7 +536,7 @@ function KQ(P) {
     c(w, -B, w, B, s === 0 ? T : t);
   }
   const z = new E.Group();
-  return t.length > 0 && z.add(TQ(t, P.theme.colors.grid.minor, 0.5)), T.length > 0 && z.add(TQ(T, P.theme.colors.grid.major, 0.6)), z;
+  return t.length > 0 && z.add(TQ(t, P.theme.colors.grid.minor, 0.25)), T.length > 0 && z.add(TQ(T, P.theme.colors.grid.major, 0.4)), z;
 }
 function TQ(P, Q, B) {
   const A = new E.BufferGeometry();
