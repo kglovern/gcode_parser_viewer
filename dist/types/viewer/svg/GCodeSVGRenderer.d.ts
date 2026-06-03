@@ -37,6 +37,12 @@ export declare class GCodeSVGRenderer {
     loadFromText(gcode: string): void;
     clear(): void;
     loadFromWorkerData(data: WorkerGeometryData): void;
+    loadFromPrecomputedGroups(groups: {
+        hexColor: string;
+        opacity: number;
+        positionsBuffer: ArrayBuffer;
+        positionsLen: number;
+    }[]): void;
     private syncSegmentGroupsFromLines;
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;

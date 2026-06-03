@@ -162,6 +162,36 @@ export class GCodeSVGRenderer {
     this.rebuildAndRender();
   }
 
+  loadFromPrecomputedGroups(
+    groups: { hexColor: string; opacity: number; positionsBuffer: ArrayBuffer; positionsLen: number }[]
+  ): void {
+    this.workerMode = true;
+    this.rapidVerts = new Float32Array(0);
+    this.cutVerts = new Float32Array(0);
+    this.segmentGroups = groups.map(g => ({
+      color: g.hexColor,
+      opacity: g.opacity,
+      verts: new Float32Array(g.positionsBuffer, 0, g.positionsLen),
+    }));
+    this.bounds = computeBounds(...this.segmentGroups.map(g => g.verts));
+    if (!this.bounds.empty) {
+      this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
+      this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
+      this.centerZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
+      const diag = Math.hypot(
+        this.bounds.maxX - this.bounds.minX,
+        this.bounds.maxY - this.bounds.minY,
+        this.bounds.maxZ - this.bounds.minZ
+      );
+      this.focalLength = diag * 2;
+    }
+    this.rotX = DEFAULT_ROT_X;
+    this.rotY = DEFAULT_ROT_Y;
+    this.updateTrig();
+    this.fitView();
+    this.rebuildAndRender();
+  }
+
   private syncSegmentGroupsFromLines(): void {
     this.segmentGroups = [
       { color: this.options.rapidColor, opacity: 0.5, verts: this.rapidVerts },

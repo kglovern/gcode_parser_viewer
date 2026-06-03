@@ -6,6 +6,12 @@ export type GCodeSVGRendererHandle = {
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): void;
     loadFromWorkerData(data: WorkerGeometryData): void;
+    loadFromPrecomputedGroups(groups: {
+        hexColor: string;
+        opacity: number;
+        positionsBuffer: ArrayBuffer;
+        positionsLen: number;
+    }[]): void;
     clear(): void;
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;

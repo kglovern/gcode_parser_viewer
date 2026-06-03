@@ -1,27 +1,27 @@
-import * as o from "react";
-import { a as F, G as w } from "./GCodeSVGRenderer-DBuIVjIT.js";
-const C = o.forwardRef(
+import * as t from "react";
+import { a as F, G as w } from "./GCodeSVGRenderer-DUQ-WgJi.js";
+const C = t.forwardRef(
   function(u, c) {
-    const { id: a, options: n, callbacks: l, className: f, style: d } = u, i = o.useRef(null), t = o.useRef(null);
-    return o.useEffect(() => {
+    const { id: a, options: n, callbacks: l, className: m, style: d } = u, i = t.useRef(null), o = t.useRef(null);
+    return t.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const m = new F({ id: a, container: e, options: n, callbacks: l });
-      return t.current = m, () => {
-        t.current = null, m.dispose();
+      const f = new F({ id: a, container: e, options: n, callbacks: l });
+      return o.current = f, () => {
+        o.current = null, f.dispose();
       };
-    }, [a]), o.useEffect(() => {
+    }, [a]), t.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setOptions(n ?? {});
-    }, [n]), o.useEffect(() => {
+      (e = o.current) == null || e.setOptions(n ?? {});
+    }, [n]), t.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setCallbacks(l ?? {});
-    }, [l]), o.useImperativeHandle(
+      (e = o.current) == null || e.setCallbacks(l ?? {});
+    }, [l]), t.useImperativeHandle(
       c,
       () => {
         const e = () => {
-          const r = t.current;
+          const r = o.current;
           if (!r)
             throw new Error("GCodeViewer is not ready.");
           return r;
@@ -99,43 +99,44 @@ const C = o.forwardRef(
         };
       },
       [a]
-    ), o.createElement("div", { ref: i, className: f, style: d });
+    ), t.createElement("div", { ref: i, className: m, style: d });
   }
-), G = o.forwardRef(
+), G = t.forwardRef(
   function(u, c) {
-    const { id: a, options: n, className: l, style: f } = u, d = o.useRef(null), i = o.useRef(null);
-    return o.useEffect(() => {
-      const t = d.current;
-      if (!t) return;
-      const e = new w(t, n);
+    const { id: a, options: n, className: l, style: m } = u, d = t.useRef(null), i = t.useRef(null);
+    return t.useEffect(() => {
+      const o = d.current;
+      if (!o) return;
+      const e = new w(o, n);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
-    }, []), o.useEffect(() => {
-      var t;
-      n && ((t = i.current) == null || t.setOptions(n));
-    }, [n]), o.useImperativeHandle(c, () => {
-      const t = () => {
+    }, []), t.useEffect(() => {
+      var o;
+      n && ((o = i.current) == null || o.setOptions(n));
+    }, [n]), t.useImperativeHandle(c, () => {
+      const o = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
         return e;
       };
       return {
-        loadFromLines: (e) => t().loadFromLines(e),
-        loadFromFile: (e) => t().loadFromFile(e),
-        loadFromText: (e) => t().loadFromText(e),
-        loadFromWorkerData: (e) => t().loadFromWorkerData(e),
-        clear: () => t().clear(),
-        resetView: () => t().resetView(),
-        setOptions: (e) => t().setOptions(e),
-        setProjectionMode: (e) => t().setProjectionMode(e),
-        getSVGElement: () => t().getSVGElement(),
-        dispose: () => t().dispose()
+        loadFromLines: (e) => o().loadFromLines(e),
+        loadFromFile: (e) => o().loadFromFile(e),
+        loadFromText: (e) => o().loadFromText(e),
+        loadFromWorkerData: (e) => o().loadFromWorkerData(e),
+        loadFromPrecomputedGroups: (e) => o().loadFromPrecomputedGroups(e),
+        clear: () => o().clear(),
+        resetView: () => o().resetView(),
+        setOptions: (e) => o().setOptions(e),
+        setProjectionMode: (e) => o().setProjectionMode(e),
+        getSVGElement: () => o().getSVGElement(),
+        dispose: () => o().dispose()
       };
-    }, []), o.createElement("div", {
+    }, []), t.createElement("div", {
       ref: d,
       className: l,
-      style: { width: "100%", height: "100%", ...f }
+      style: { width: "100%", height: "100%", ...m }
     });
   }
 );
