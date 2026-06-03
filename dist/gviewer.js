@@ -642,7 +642,7 @@ function O(o, e, n) {
 function le(o) {
   const e = new Float32Array(o.vertices), n = new Uint32Array(o.frames), t = new Float32Array(o.colorArrayBuffer), { verticesLen: s, framesLen: r } = o, i = /* @__PURE__ */ new Map();
   for (let a = 0; a < r; a++) {
-    const c = n[a], u = a < r - 1 ? n[a + 1] : s;
+    const c = n[a], u = a < r - 1 ? n[a + 1] : s / 3;
     if (u <= c + 1) continue;
     const f = c * 4, d = t[f], y = t[f + 1], l = t[f + 2], p = t[f + 3], x = te(d, y, l), A = `${x}|${Math.round(p * 100)}`;
     let w = i.get(A);

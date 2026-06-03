@@ -811,7 +811,7 @@ export function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmen
 
   for (let i = 0; i < framesLen; i++) {
     const startVtx = frames[i];
-    const endVtx = i < framesLen - 1 ? frames[i + 1] : verticesLen;
+    const endVtx = i < framesLen - 1 ? frames[i + 1] : verticesLen / 3;
     if (endVtx <= startVtx + 1) continue;
 
     const ci = startVtx * 4;
