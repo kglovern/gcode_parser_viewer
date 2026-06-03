@@ -1,7 +1,8 @@
-import { useRef, useState, useMemo, useEffect } from "react";
+import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { GCodeVisualizer, GCodeSVGVisualizer, type GCodeSVGRendererHandle } from "@src/react";
 import { gCodeViewerThemePresets, type GCodeViewerThemePresetName } from "@src/viewer/themes";
 import type { GCodeViewerHandle, GCodeViewerOptions, GCodeViewerCallbacks } from "@src/viewer/types";
+import { GCodeVirtualizer } from "@src/virtualizer";
 import "@src/viewer/viewcube.css";
 import "./App.css";
 
@@ -37,6 +38,7 @@ export default function App() {
   const ref = useRef<GCodeViewerHandle>(null);
   const svgRef = useRef<GCodeSVGRendererHandle>(null);
   const gcodeTextRef = useRef<string>("");
+  const linePositionsRef = useRef<Float32Array | null>(null);
   const [svgMode, setSvgMode] = useState(false);
   const [svgProjection, setSvgProjection] = useState<'isometric' | 'perspective'>('isometric');
   const [options, setOptions] = useState<Options>({
@@ -54,6 +56,40 @@ export default function App() {
   function patchOptions(patch: Partial<GCodeViewerOptions>) {
     setOptions((prev) => deepMerge(prev as Record<string, unknown>, patch as Record<string, unknown>) as Options);
   }
+
+  function buildLinePositions(lines: string[]): Float32Array {
+    const count = lines.length;
+    const positions = new Float32Array(count * 3);
+    let lastX = 0, lastY = 0, lastZ = 0;
+    const virtualizer = new GCodeVirtualizer({
+      onLinearMove: (args) => {
+        const end = args.transformedEnd ?? args.end;
+        lastX = end.X; lastY = end.Y; lastZ = end.Z;
+      },
+      onArcMove: (args) => {
+        const end = args.transformedEnd ?? args.end;
+        lastX = end.X; lastY = end.Y; lastZ = end.Z;
+      },
+    });
+    for (let i = 0; i < count; i++) {
+      if (lines[i]) virtualizer.processLine(lines[i]);
+      positions[i * 3] = lastX;
+      positions[i * 3 + 1] = lastY;
+      positions[i * 3 + 2] = lastZ;
+    }
+    return positions;
+  }
+
+  const updateSvgCrosshair = useCallback((lineIndex: number, bitType?: string) => {
+    const type = bitType ?? options.bit?.type;
+    const pos = linePositionsRef.current;
+    if (!svgRef.current || !pos || type !== "crosshair") {
+      svgRef.current?.setBitVisible(false);
+      return;
+    }
+    const i = Math.min(lineIndex, (pos.length / 3) - 1);
+    svgRef.current.setBitPosition({ x: pos[i * 3], y: pos[i * 3 + 1], z: pos[i * 3 + 2] });
+  }, [options.bit?.type]);
 
   const callbacks = useMemo<GCodeViewerCallbacks>(
     () => ({
@@ -82,6 +118,15 @@ export default function App() {
     }
   }, [options.progress?.mode]);
 
+  // Sync SVG crosshair visibility when bit type changes
+  useEffect(() => {
+    if (options.bit?.type === "crosshair" && currentLine > 0) {
+      updateSvgCrosshair(currentLine, "crosshair");
+    } else {
+      svgRef.current?.setBitVisible(false);
+    }
+  }, [options.bit?.type]);
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -94,6 +139,8 @@ export default function App() {
     reader.onload = (ev) => {
       const text = typeof ev.target?.result === "string" ? ev.target.result : "";
       gcodeTextRef.current = text;
+      const lines = text.split(/\r?\n/);
+      linePositionsRef.current = buildLinePositions(lines);
       svgRef.current?.loadFromText(text);
     };
     reader.readAsText(file);
@@ -120,26 +167,27 @@ export default function App() {
   function handleLineInput(val: string) {
     setLineInput(val);
     const n = parseInt(val, 10);
-    if (!isNaN(n) && n >= 0 && ref.current) {
+    if (!isNaN(n) && n >= 0) {
       const clamped = Math.min(n, totalLines);
       setCurrentLine(clamped);
-      ref.current.seekToLine(clamped, options.progress?.mode);
+      ref.current?.seekToLine(clamped, options.progress?.mode);
+      updateSvgCrosshair(clamped);
     }
   }
 
   function stepLine(delta: number) {
-    if (!ref.current) return;
     const next = Math.max(0, Math.min(currentLine + delta, totalLines));
     setCurrentLine(next);
     setLineInput(String(next));
-    ref.current.seekToLine(next, options.progress?.mode);
+    ref.current?.seekToLine(next, options.progress?.mode);
+    updateSvgCrosshair(next);
   }
 
   function handleReset() {
-    if (!ref.current) return;
-    ref.current.showAll();
+    ref.current?.showAll();
     setCurrentLine(0);
     setLineInput("0");
+    svgRef.current?.setBitVisible(false);
   }
 
   function handleARotation(val: string) {
@@ -189,7 +237,7 @@ export default function App() {
               <span className="svg-legend__swatch" style={{ background: "#3e85c7", marginLeft: 8 }} />
               G1/G2/G3 Cut
             </div>
-            <div className="svg-hint">Drag · Shift+drag to pan · Scroll to zoom</div>
+            <div className="svg-hint">Drag to pan · Scroll to zoom</div>
           </>
         )}
       </section>
@@ -350,6 +398,7 @@ export default function App() {
             <option value="laser">laser</option>
             <option value="circle">circle</option>
             <option value="triangle">triangle</option>
+            <option value="crosshair">crosshair (SVG)</option>
           </select>
         </label>
       </section>

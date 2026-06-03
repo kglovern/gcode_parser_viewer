@@ -24,7 +24,7 @@ export type GCodeViewerTheme = {
   };
 };
 
-export type GCodeViewerBitType = "circle" | "triangle" | "drill" | "laser";
+export type GCodeViewerBitType = "circle" | "triangle" | "drill" | "laser" | "crosshair";
 
 export type GCodeViewerBitPosition = {
   x: number;

@@ -8,6 +8,9 @@ export declare class GCodeSVGRenderer {
     private bboxLabelZ;
     private pathLayer;
     private originMarker;
+    private crosshairEl;
+    private crosshairPos;
+    private crosshairVisible;
     private pathEls;
     private segmentGroups;
     private workerMode;
@@ -48,6 +51,12 @@ export declare class GCodeSVGRenderer {
     setOptions(opts: Partial<GCodeSVGOptions>): void;
     setProjectionMode(mode: 'perspective' | 'isometric'): void;
     getSVGElement(): SVGSVGElement;
+    setBitPosition(pos: {
+        x: number;
+        y: number;
+        z: number;
+    }): void;
+    setBitVisible(visible: boolean): void;
     dispose(): void;
     private updateTrig;
     private project;
@@ -58,6 +67,7 @@ export declare class GCodeSVGRenderer {
     private applyOptions;
     private renderBbox;
     private renderOriginMarker;
+    private renderCrosshairMarker;
     private onWheel;
     private onPointerDown;
     private onPointerMove;

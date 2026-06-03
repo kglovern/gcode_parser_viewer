@@ -13,6 +13,8 @@ export type GCodeSVGRendererHandle = {
   resetView(): void;
   setOptions(opts: Partial<GCodeSVGOptions>): void;
   setProjectionMode(mode: 'perspective' | 'isometric'): void;
+  setBitPosition(pos: { x: number; y: number; z: number }): void;
+  setBitVisible(visible: boolean): void;
   getSVGElement(): SVGSVGElement;
   dispose(): void;
 };
@@ -62,6 +64,8 @@ export const GCodeSVGVisualizer = React.forwardRef<GCodeSVGRendererHandle, GCode
         resetView: () => get().resetView(),
         setOptions: (opts) => get().setOptions(opts),
         setProjectionMode: (mode) => get().setProjectionMode(mode),
+        setBitPosition: (pos) => get().setBitPosition(pos),
+        setBitVisible: (visible) => get().setBitVisible(visible),
         getSVGElement: () => get().getSVGElement(),
         dispose: () => get().dispose(),
       };

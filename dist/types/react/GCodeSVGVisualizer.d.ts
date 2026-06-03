@@ -16,6 +16,12 @@ export type GCodeSVGRendererHandle = {
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;
     setProjectionMode(mode: 'perspective' | 'isometric'): void;
+    setBitPosition(pos: {
+        x: number;
+        y: number;
+        z: number;
+    }): void;
+    setBitVisible(visible: boolean): void;
     getSVGElement(): SVGSVGElement;
     dispose(): void;
 };

@@ -8,6 +8,7 @@ export type GCodeSVGOptions = {
   projectionMode: 'perspective' | 'isometric';
   showOrigin: boolean;
   originColor: string;
+  crosshairColor: string;
 };
 
 export const defaultGCodeSVGOptions: GCodeSVGOptions = {
@@ -20,4 +21,5 @@ export const defaultGCodeSVGOptions: GCodeSVGOptions = {
   projectionMode: 'isometric',
   showOrigin: true,
   originColor: "#ffffff",
+  crosshairColor: "#ffffff",
 };

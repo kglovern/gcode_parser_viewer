@@ -19,6 +19,9 @@ export class GCodeSVGRenderer {
   private bboxLabelZ: SVGTextElement;
   private pathLayer: SVGGElement;
   private originMarker: SVGCircleElement;
+  private crosshairEl: SVGPathElement;
+  private crosshairPos: { x: number; y: number; z: number } | null = null;
+  private crosshairVisible = false;
   private pathEls: SVGPathElement[] = [];
   private segmentGroups: SegmentGroup[] = [];
   private workerMode = false;
@@ -69,12 +72,17 @@ export class GCodeSVGRenderer {
     this.originMarker.setAttribute("stroke-opacity", "0.4");
     this.originMarker.setAttribute("visibility", "hidden");
 
+    this.crosshairEl = makePath();
+    this.crosshairEl.setAttribute("fill", "none");
+    this.crosshairEl.setAttribute("visibility", "hidden");
+
     this.svg.appendChild(this.bboxPath);
     this.svg.appendChild(this.pathLayer);
     this.svg.appendChild(this.bboxLabelX);
     this.svg.appendChild(this.bboxLabelY);
     this.svg.appendChild(this.bboxLabelZ);
     this.svg.appendChild(this.originMarker);
+    this.svg.appendChild(this.crosshairEl);
 
     container.appendChild(this.svg);
     this.applyOptions();
@@ -222,6 +230,17 @@ export class GCodeSVGRenderer {
     return this.svg;
   }
 
+  setBitPosition(pos: { x: number; y: number; z: number }): void {
+    this.crosshairPos = pos;
+    this.crosshairVisible = true;
+    this.rebuildAndRender();
+  }
+
+  setBitVisible(visible: boolean): void {
+    this.crosshairVisible = visible;
+    this.rebuildAndRender();
+  }
+
   dispose(): void {
     this.svg.removeEventListener("wheel", this.onWheel);
     this.svg.removeEventListener("pointerdown", this.onPointerDown);
@@ -288,6 +307,7 @@ export class GCodeSVGRenderer {
 
     this.renderBbox();
     this.renderOriginMarker();
+    this.renderCrosshairMarker();
     this.applyViewBox();
   }
 
@@ -367,6 +387,7 @@ export class GCodeSVGRenderer {
     }
     this.originMarker.setAttribute("fill", originColor);
     this.originMarker.setAttribute("stroke", "#000000");
+    this.crosshairEl.setAttribute("stroke", this.options.crosshairColor);
   }
 
   private renderBbox(): void {
@@ -428,6 +449,28 @@ export class GCodeSVGRenderer {
     this.originMarker.setAttribute("visibility", "visible");
   }
 
+  private renderCrosshairMarker(): void {
+    if (!this.crosshairVisible || this.crosshairPos === null) {
+      this.crosshairEl.setAttribute("visibility", "hidden");
+      return;
+    }
+    const { x, y, z } = this.crosshairPos;
+    const pt = this.project(x, y, z);
+    const r = Math.min(this.viewBox.w, this.viewBox.h) * 0.025;
+    const g = r * 0.25;
+    const cx = pt.x, cy = pt.y;
+    const d = [
+      `M${f(cx - r)} ${f(cy)}L${f(cx - g)} ${f(cy)}`,
+      `M${f(cx + g)} ${f(cy)}L${f(cx + r)} ${f(cy)}`,
+      `M${f(cx)} ${f(cy - r)}L${f(cx)} ${f(cy - g)}`,
+      `M${f(cx)} ${f(cy + g)}L${f(cx)} ${f(cy + r)}`,
+    ].join("");
+    this.crosshairEl.setAttribute("d", d);
+    this.crosshairEl.setAttribute("stroke-width", f(this.options.strokeWidth * 2));
+    this.crosshairEl.setAttribute("stroke-linecap", "round");
+    this.crosshairEl.setAttribute("visibility", "visible");
+  }
+
   // ── Interaction ───────────────────────────────────────────────────────────
 
   private onWheel = (e: WheelEvent): void => {
@@ -450,9 +493,8 @@ export class GCodeSVGRenderer {
     e.preventDefault();
 
     if (this.activePointers.size === 1) {
-      const isPan = e.button === 2 || e.shiftKey;
-      this.dragMode = isPan ? 'pan' : 'orbit';
-      this.svg.style.cursor = isPan ? 'move' : 'grabbing';
+      this.dragMode = 'pan';
+      this.svg.style.cursor = 'grabbing';
     } else if (this.activePointers.size === 2) {
       this.dragMode = 'pan';
       this.svg.style.cursor = 'move';
@@ -524,7 +566,6 @@ export class GCodeSVGRenderer {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    const wasOrbit = this.dragMode === 'orbit';
     this.activePointers.delete(e.pointerId);
     this.svg.releasePointerCapture(e.pointerId);
 
@@ -532,12 +573,11 @@ export class GCodeSVGRenderer {
       // One finger lifted — reinitialise single-pointer state from the remaining finger
       const [remaining] = this.activePointers.values();
       this.pinchLastMid = { x: remaining.x, y: remaining.y };
-      this.dragMode = 'orbit';
+      this.dragMode = 'pan';
       this.svg.style.cursor = 'grabbing';
     } else if (this.activePointers.size === 0) {
       this.dragMode = 'none';
       this.svg.style.cursor = 'grab';
-      if (wasOrbit) this.rebuildAndRender(false);
     }
   };
 

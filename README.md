@@ -376,7 +376,7 @@ viewer.setBitPosition({ x: 10, y: 5, z: 0 }, { immediate: true });
 viewer.setBitVisible(false);
 ```
 
-The bit type is controlled via `options.bit.type`. Four types are available:
+The bit type is controlled via `options.bit.type`. Five types are available:
 
 | Type | Description |
 |---|---|
@@ -384,6 +384,7 @@ The bit type is controlled via `options.bit.type`. Four types are available:
 | `"laser"` | Tapered beam with additive purple glow. Set automatically when `mode.laser` is enabled. |
 | `"circle"` | Simple sphere. |
 | `"triangle"` | Cone. |
+| `"crosshair"` | 2D crosshair — intended for use with `GCodeSVGRenderer`. See [Crosshair marker](#crosshair-marker). |
 
 **Laser mode auto-switch:** when `mode.laser` is set to `true`, the bit type automatically switches to `"laser"`. When `mode.laser` is set back to `false`, the bit reverts to whatever type was active before laser mode was enabled.
 
@@ -435,7 +436,7 @@ type GCodeViewerOptions = {
   mode: { laser: boolean };
   bit: {
     enabled: boolean;
-    type: "drill" | "laser" | "circle" | "triangle";  // default: "drill"
+    type: "drill" | "laser" | "circle" | "triangle" | "crosshair";  // default: "drill"
     size: number;        // world units (default: 4.05)
     opacity: number;     // 0–1
     tweenMs: number;     // animation duration
@@ -463,7 +464,7 @@ type GCodeViewerOptions = {
 
 ### `GCodeSVGRenderer` — SVG viewer
 
-Lightweight 2D/isometric SVG renderer. No Three.js dependency — works in any environment that has a DOM. Supports orbit (drag to rotate), pan (right-click drag or Shift+drag), and scroll-to-zoom.
+Lightweight 2D/isometric SVG renderer. No Three.js dependency — works in any environment that has a DOM. Supports pan (drag) and scroll-to-zoom.
 
 ```ts
 import { GCodeSVGRenderer } from "@sienci/gviewer/viewer";
@@ -497,11 +498,28 @@ renderer.loadFromWorkerData(workerData);
 ##### Controls
 
 ```ts
-renderer.resetView();                         // reset rotation and re-fit
+renderer.resetView();                         // re-fit view
 renderer.setProjectionMode("isometric");      // "isometric" (default) | "perspective"
 renderer.getSVGElement();                     // returns the <svg> element (for export, etc.)
 renderer.dispose();                           // remove event listeners and DOM element
 ```
+
+##### Crosshair marker
+
+A 2D crosshair can be shown at any world position — useful for indicating the current machine/tool location during job execution. Call `setBitPosition` with the work position (in the same coordinate space as the GCode) and the crosshair will project correctly as the view is panned or zoomed.
+
+```ts
+// Show the crosshair at a work position
+renderer.setBitPosition({ x: 25, y: 50, z: 0 });
+
+// Hide without losing the stored position
+renderer.setBitVisible(false);
+
+// Show again at the last set position
+renderer.setBitVisible(true);
+```
+
+The crosshair starts hidden and becomes visible on the first `setBitPosition` call. Its color is controlled via `crosshairColor` in `GCodeSVGOptions`.
 
 ##### Options
 
@@ -514,6 +532,7 @@ renderer.setOptions({
   arcSegments: 30,              // arc tessellation quality
   padding: 5,                   // fixed padding around the fit view (SVG units)
   projectionMode: "isometric",  // "isometric" | "perspective"
+  crosshairColor: "#ffffff",    // crosshair marker color (default: "#ffffff")
 });
 ```
 
@@ -582,10 +601,14 @@ ref.current?.loadFromText(gcode);
 ref.current?.loadFromWorkerData(workerData);
 ref.current?.resetView();
 ref.current?.setProjectionMode("perspective");
-ref.current?.getSVGElement();   // access raw <svg> for export
+ref.current?.getSVGElement();                 // access raw <svg> for export
+
+// Crosshair — show current machine position during job execution:
+ref.current?.setBitPosition({ x: 25, y: 50, z: 0 });
+ref.current?.setBitVisible(false);
 ```
 
-`GCodeSVGRendererHandle` exposes: `loadFromLines`, `loadFromFile`, `loadFromText`, `loadFromWorkerData`, `clear`, `resetView`, `setOptions`, `setProjectionMode`, `getSVGElement`, `dispose`.
+`GCodeSVGRendererHandle` exposes: `loadFromLines`, `loadFromFile`, `loadFromText`, `loadFromWorkerData`, `clear`, `resetView`, `setOptions`, `setProjectionMode`, `setBitPosition`, `setBitVisible`, `getSVGElement`, `dispose`.
 
 ---
 
