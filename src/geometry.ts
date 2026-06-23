@@ -844,3 +844,77 @@ function workerRgbToHex(r: number, g: number, b: number): string {
   const toHex = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+export type WorkerToolpathStream = {
+  positions: Float32Array;
+  colors: Float32Array;
+  prefixEndVertex: Int32Array;
+};
+
+export type WorkerToolpathStreams = {
+  rapid: WorkerToolpathStream;
+  cut: WorkerToolpathStream;
+};
+
+/**
+ * Builds two line-ordered toolpath streams (rapid + cut) from worker geometry,
+ * preserving per-vertex colours and producing per-stream `prefixEndVertex`
+ * arrays (indexed by source line) so `hideUntilLine`/progress greying works on
+ * the worker-data path.
+ *
+ * Unlike `buildWorkerSegmentGroups`, segments are appended in source-line order
+ * (driven by `frames`) rather than grouped by colour, which is what the
+ * cumulative `prefixEndVertex` cursor requires.
+ */
+export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerToolpathStreams {
+  const vertices = new Float32Array(data.vertices);
+  const frames = new Uint32Array(data.frames);
+  const colorArray = new Float32Array(data.colorArrayBuffer); // RGBA, stride 4
+  const { verticesLen, framesLen } = data;
+
+  const rapidPos: number[] = [];
+  const rapidRgb: number[] = [];
+  const cutPos: number[] = [];
+  const cutRgb: number[] = [];
+  const rapidPrefixEndVertex = new Int32Array(framesLen);
+  const cutPrefixEndVertex = new Int32Array(framesLen);
+
+  for (let i = 0; i < framesLen; i++) {
+    const startVtx = frames[i];
+    const endVtx = i < framesLen - 1 ? frames[i + 1] : verticesLen / 3;
+
+    if (endVtx > startVtx + 1) {
+      // Route the whole line by its first vertex's opacity (rapid moves are dimmer).
+      const isRapid = colorArray[startVtx * 4 + 3] < 0.75;
+      const pos = isRapid ? rapidPos : cutPos;
+      const rgb = isRapid ? rapidRgb : cutRgb;
+
+      for (let j = startVtx; j < endVtx - 1; j++) {
+        const j0 = j * 3;
+        const j1 = (j + 1) * 3;
+        pos.push(vertices[j0], vertices[j0 + 1], vertices[j0 + 2], vertices[j1], vertices[j1 + 1], vertices[j1 + 2]);
+        const c0 = j * 4;
+        const c1 = (j + 1) * 4;
+        rgb.push(colorArray[c0], colorArray[c0 + 1], colorArray[c0 + 2], colorArray[c1], colorArray[c1 + 1], colorArray[c1 + 2]);
+      }
+    }
+
+    // Cumulative vertex count per stream through this line (carry-forward for
+    // lines that contributed nothing to a given stream).
+    rapidPrefixEndVertex[i] = rapidPos.length / 3;
+    cutPrefixEndVertex[i] = cutPos.length / 3;
+  }
+
+  return {
+    rapid: {
+      positions: Float32Array.from(rapidPos),
+      colors: Float32Array.from(rapidRgb),
+      prefixEndVertex: rapidPrefixEndVertex,
+    },
+    cut: {
+      positions: Float32Array.from(cutPos),
+      colors: Float32Array.from(cutRgb),
+      prefixEndVertex: cutPrefixEndVertex,
+    },
+  };
+}

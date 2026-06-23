@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   buildToolpathGeometryFromLinesBatched,
-  buildWorkerSegmentGroups,
+  buildWorkerToolpathStreams,
 } from "../geometry";
 import type { WorkerGeometryData } from "../types";
 import { GCodeVirtualizer } from "../virtualizer";
@@ -326,34 +326,23 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   async loadFromWorkerData(data: WorkerGeometryData): Promise<void> {
+    // Worker data carries no source-line strings, so seek-by-line bit motion
+    // (which re-derives positions from currentLines) stays disabled; the host
+    // app drives the bit from the live DRO instead. Per-line `prefixEndVertex`
+    // is still built from `frames` so progress greying/hiding works.
     this.currentLines = [];
-    const groups = buildWorkerSegmentGroups(data);
-
-    const rapidPos: Float32Array[] = [];
-    const rapidRgb: Float32Array[] = [];
-    const cutPos: Float32Array[] = [];
-    const cutRgb: Float32Array[] = [];
-
-    for (const g of groups) {
-      if (g.opacity < 0.75) {
-        rapidPos.push(g.positions);
-        rapidRgb.push(g.rgbColors);
-      } else {
-        cutPos.push(g.positions);
-        cutRgb.push(g.rgbColors);
-      }
-    }
+    const { rapid, cut } = buildWorkerToolpathStreams(data);
 
     this.setToolpathGeometry({
       rapid: {
-        positions: mergeFloat32Arrays(rapidPos),
-        prefixEndVertex: new Int32Array(0),
-        colors: mergeFloat32Arrays(rapidRgb),
+        positions: rapid.positions,
+        prefixEndVertex: rapid.prefixEndVertex,
+        colors: rapid.colors,
       },
       cuts: [{
-        positions: mergeFloat32Arrays(cutPos),
-        prefixEndVertex: new Int32Array(0),
-        colors: mergeFloat32Arrays(cutRgb),
+        positions: cut.positions,
+        prefixEndVertex: cut.prefixEndVertex,
+        colors: cut.colors,
       }],
       cutBucketCount: 1,
     });
@@ -1023,17 +1012,6 @@ function clamp01(value: number): number {
     return 0;
   }
   return Math.max(0, Math.min(1, value));
-}
-
-function mergeFloat32Arrays(arrays: Float32Array[]): Float32Array {
-  const total = arrays.reduce((sum, a) => sum + a.length, 0);
-  const out = new Float32Array(total);
-  let offset = 0;
-  for (const a of arrays) {
-    out.set(a, offset);
-    offset += a.length;
-  }
-  return out;
 }
 
 function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions {

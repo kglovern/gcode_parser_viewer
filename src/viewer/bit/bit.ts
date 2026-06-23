@@ -138,11 +138,15 @@ function createBitGeometry(options: GCodeViewerOptions): THREE.BufferGeometry {
   return createCircleGeometry(size);
 }
 
+function resolveDrillColor(options: GCodeViewerOptions): string {
+  return options.bit.colorSource === "custom" ? options.bit.color : DRILL_COLOR;
+}
+
 function createDrillMesh(options: GCodeViewerOptions): THREE.Mesh {
   const opacity = clamp01(options.bit.opacity);
   const geometry = createDrillGeometry(Math.max(0.001, options.bit.size));
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(DRILL_COLOR),
+    color: new THREE.Color(resolveDrillColor(options)),
     metalness: 0.75,
     roughness: 0.3,
     transparent: opacity < 1,
@@ -237,7 +241,7 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
     } else {
       const mesh = bitObject as THREE.Mesh;
       const material = mesh.material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial;
-      material.color = new THREE.Color(nextType === "drill" ? DRILL_COLOR : BIT_COLOR);
+      material.color = new THREE.Color(nextType === "drill" ? resolveDrillColor(nextOptions) : BIT_COLOR);
       material.opacity = nextOpacity;
       material.transparent = nextOpacity < 1;
       material.needsUpdate = true;
