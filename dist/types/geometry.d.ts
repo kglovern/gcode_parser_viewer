@@ -97,3 +97,23 @@ export type WorkerSegmentGroup = {
     rgbColors: Float32Array;
 };
 export declare function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmentGroup[];
+export type WorkerToolpathStream = {
+    positions: Float32Array;
+    colors: Float32Array;
+    prefixEndVertex: Int32Array;
+};
+export type WorkerToolpathStreams = {
+    rapid: WorkerToolpathStream;
+    cut: WorkerToolpathStream;
+};
+/**
+ * Builds two line-ordered toolpath streams (rapid + cut) from worker geometry,
+ * preserving per-vertex colours and producing per-stream `prefixEndVertex`
+ * arrays (indexed by source line) so `hideUntilLine`/progress greying works on
+ * the worker-data path.
+ *
+ * Unlike `buildWorkerSegmentGroups`, segments are appended in source-line order
+ * (driven by `frames`) rather than grouped by colour, which is what the
+ * cumulative `prefixEndVertex` cursor requires.
+ */
+export declare function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerToolpathStreams;
