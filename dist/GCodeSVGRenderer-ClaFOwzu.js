@@ -41,7 +41,7 @@ function MQ(P, Q) {
     const A = eQ(B.kind, B.totalVertices, Q);
     B.baseColors = A, B.simColors.set(A), B.greyCursorVertex = 0;
     const v = B.line.geometry.getAttribute("color");
-    v.updateRange.offset = 0, v.updateRange.count = B.simColors.length, v.needsUpdate = !0;
+    v.clearUpdateRanges(), v.addUpdateRange(0, B.simColors.length), v.needsUpdate = !0;
   }
 }
 function FQ(P) {
@@ -73,7 +73,7 @@ function GQ(P) {
     const z = B * 3, E = A * 3;
     P.stream.simColors.set(P.stream.baseColors.subarray(z, E), z);
   }
-  v.updateRange.offset = t * 3, v.updateRange.count = (c - t) * 3, v.needsUpdate = !0, P.stream.greyCursorVertex = B;
+  v.clearUpdateRanges(), v.addUpdateRange(t * 3, (c - t) * 3), v.needsUpdate = !0, P.stream.greyCursorVertex = B;
 }
 function eQ(P, Q, B) {
   const A = B.render.theme.colors, v = B.mode.laser ? A.laser ?? A.cutting : A.cutting, T = new s.Color(P === "rapid" ? A.rapid : v), t = new Float32Array(Q * 3);
@@ -855,7 +855,7 @@ class kB {
     for (const Q of this.toolpathStreams) {
       Q.greyCursorVertex = 0, Q.simColors.set(Q.baseColors);
       const B = Q.line.geometry.getAttribute("color");
-      B.updateRange.offset = 0, B.updateRange.count = Q.simColors.length, B.needsUpdate = !0;
+      B.clearUpdateRanges(), B.addUpdateRange(0, Q.simColors.length), B.needsUpdate = !0;
     }
   }
   snapCameraToView(Q, B = {}) {

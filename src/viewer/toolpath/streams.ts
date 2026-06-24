@@ -94,8 +94,8 @@ export function refreshToolpathStreamColors(
     stream.simColors.set(nextBase);
     stream.greyCursorVertex = 0;
     const attr = stream.line.geometry.getAttribute("color") as THREE.BufferAttribute;
-    attr.updateRange.offset = 0;
-    attr.updateRange.count = stream.simColors.length;
+    attr.clearUpdateRanges();
+    attr.addUpdateRange(0, stream.simColors.length);
     attr.needsUpdate = true;
   }
 }
@@ -151,8 +151,8 @@ export function applyStreamGreyCursor(args: {
     args.stream.simColors.set(args.stream.baseColors.subarray(startOff, endOff), startOff);
   }
 
-  attr.updateRange.offset = startVertex * 3;
-  attr.updateRange.count = (endVertex - startVertex) * 3;
+  attr.clearUpdateRanges();
+  attr.addUpdateRange(startVertex * 3, (endVertex - startVertex) * 3);
   attr.needsUpdate = true;
   args.stream.greyCursorVertex = next;
 }

@@ -256,8 +256,8 @@ export class GCodeViewer implements GCodeViewerHandle {
       stream.greyCursorVertex = 0;
       stream.simColors.set(stream.baseColors);
       const attr = stream.line.geometry.getAttribute("color") as THREE.BufferAttribute;
-      attr.updateRange.offset = 0;
-      attr.updateRange.count = stream.simColors.length;
+      attr.clearUpdateRanges();
+      attr.addUpdateRange(0, stream.simColors.length);
       attr.needsUpdate = true;
     }
   }
