@@ -3009,13 +3009,11 @@ class Hi {
     this.setToolpathGeometry({
       rapid: {
         positions: B.positions,
-        prefixEndVertex: B.prefixEndVertex,
-        colors: B.colors
+        prefixEndVertex: B.prefixEndVertex
       },
       cuts: [{
         positions: A.positions,
-        prefixEndVertex: A.prefixEndVertex,
-        colors: A.colors
+        prefixEndVertex: A.prefixEndVertex
       }],
       cutBucketCount: 1
     }), this.focusToModel();
@@ -3503,7 +3501,11 @@ class ji {
   }
   loadFromWorkerData(Q) {
     const B = EP(Q);
-    if (this.workerMode = !0, this.rapidVerts = new Float32Array(0), this.cutVerts = new Float32Array(0), this.segmentGroups = B.map((A) => ({ color: A.hexColor, opacity: A.opacity, verts: A.positions })), this.bounds = BA(...B.map((A) => A.positions)), !this.bounds.empty) {
+    if (this.workerMode = !0, this.rapidVerts = new Float32Array(0), this.cutVerts = new Float32Array(0), this.segmentGroups = B.map((A) => ({
+      color: A.opacity < 0.75 ? this.options.rapidColor : this.options.cutColor,
+      opacity: A.opacity,
+      verts: A.positions
+    })), this.bounds = BA(...B.map((A) => A.positions)), !this.bounds.empty) {
       this.centerX = (this.bounds.minX + this.bounds.maxX) / 2, this.centerY = (this.bounds.minY + this.bounds.maxY) / 2, this.centerZ = (this.bounds.minZ + this.bounds.maxZ) / 2;
       const A = Math.hypot(
         this.bounds.maxX - this.bounds.minX,

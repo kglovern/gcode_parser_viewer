@@ -346,16 +346,20 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentLines = [];
     const { rapid, cut } = buildWorkerToolpathStreams(data);
 
+    // Worker data carries per-vertex RGB baked by the host app's own legacy
+    // theme system (kept only for rapid/cut classification — see
+    // buildWorkerToolpathStreams). Omit `colors` here so createToolpathStreams
+    // falls back to buildStreamBaseColors(), which derives colors from
+    // options.render.theme — otherwise the baked colors win and the toolpath
+    // never reflects the selected gviewer theme.
     this.setToolpathGeometry({
       rapid: {
         positions: rapid.positions,
         prefixEndVertex: rapid.prefixEndVertex,
-        colors: rapid.colors,
       },
       cuts: [{
         positions: cut.positions,
         prefixEndVertex: cut.prefixEndVertex,
-        colors: cut.colors,
       }],
       cutBucketCount: 1,
     });
