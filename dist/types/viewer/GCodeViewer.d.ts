@@ -36,6 +36,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
         immediate?: boolean;
     }): void;
     setBitVisible(visible: boolean): void;
+    setBitSpinning(spinning: boolean): void;
     setToolpathRotationA(aDegrees: number): void;
     setCallbacks(callbacks: GCodeViewerCallbacks): void;
     hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;

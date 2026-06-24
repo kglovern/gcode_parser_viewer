@@ -1,3 +1,4 @@
+import gsap from "gsap";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import type { GCodeViewerBitPosition, GCodeViewerOptions } from "../types";
@@ -10,7 +11,10 @@ export type BitMarker = {
   setVisible(visible: boolean): void;
   setOptions(options: GCodeViewerOptions): void;
   setTarget(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void;
+  setSpinning(spinning: boolean): void;
 };
+
+const SPIN_RAMP_SECONDS = 0.3;
 
 type TweenState = {
   startedAt: number;
@@ -210,6 +214,22 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
   root.add(bitObject);
 
   let tween: TweenState | null = null;
+  let spinning = false;
+  let spinTween: gsap.core.Tween | null = null;
+  let spinRampTween: gsap.core.Tween | null = null;
+
+  const createSpinTween = (rpm: number): gsap.core.Tween => {
+    const safeRpm = Math.max(1, rpm);
+    return gsap.to(bitObject.rotation, {
+      z: `+=${Math.PI * 2}`,
+      duration: 60 / safeRpm,
+      repeat: -1,
+      ease: "none",
+      paused: true,
+    });
+  };
+
+  spinTween = createSpinTween(currentOptions.bit.spinRpm);
 
   const setMeshOptions = (nextOptions: GCodeViewerOptions): void => {
     const nextType = nextOptions.bit.type;
@@ -228,6 +248,15 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
       disposeBitObject(bitObject);
       bitObject = createBitObject(nextOptions);
       root.add(bitObject);
+
+      // The spin tween targets the old bitObject's rotation — rebuild it
+      // against the new mesh, preserving current spin state.
+      spinRampTween?.kill();
+      spinTween?.kill();
+      spinTween = createSpinTween(nextOptions.bit.spinRpm);
+      if (spinning) {
+        spinTween.timeScale(1).play();
+      }
     } else if (nextType === "laser") {
       // Update laser opacity in place
       const group = bitObject as THREE.Group;
@@ -279,6 +308,29 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
     },
     setOptions: (options) => setMeshOptions(options),
     setTarget,
+    setSpinning: (next) => {
+      const nextSpinning = Boolean(next);
+      if (nextSpinning === spinning) return;
+      spinning = nextSpinning;
+
+      spinRampTween?.kill();
+      if (spinning) {
+        spinTween?.play();
+        spinRampTween = gsap.to(spinTween, {
+          timeScale: 1,
+          duration: SPIN_RAMP_SECONDS,
+          ease: "power1.out",
+        });
+      } else {
+        const tweenToStop = spinTween;
+        spinRampTween = gsap.to(spinTween, {
+          timeScale: 0,
+          duration: SPIN_RAMP_SECONDS,
+          ease: "power1.in",
+          onComplete: () => tweenToStop?.pause(),
+        });
+      }
+    },
     update: (nowMs) => {
       if (!tween) return;
       const t = (nowMs - tween.startedAt) / tween.duration;
@@ -296,6 +348,8 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
       }
     },
     dispose: () => {
+      spinRampTween?.kill();
+      spinTween?.kill();
       root.remove(bitObject);
       disposeBitObject(bitObject);
     },

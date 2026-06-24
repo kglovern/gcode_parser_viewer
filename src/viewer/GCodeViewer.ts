@@ -196,6 +196,11 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.bitMarker?.setVisible(visible);
   }
 
+  setBitSpinning(spinning: boolean): void {
+    this.ensureBitMarker();
+    this.bitMarker?.setSpinning(spinning);
+  }
+
   setToolpathRotationA(aDegrees: number): void {
     const next = Number(aDegrees) || 0;
     this.toolpathRotationA = next;

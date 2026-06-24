@@ -9,5 +9,6 @@ export type BitMarker = {
     setTarget(position: GCodeViewerBitPosition, options?: {
         immediate?: boolean;
     }): void;
+    setSpinning(spinning: boolean): void;
 };
 export declare function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker;

@@ -1,5 +1,5 @@
 import * as o from "react";
-import { a as F, G as w } from "./GCodeSVGRenderer-ClaFOwzu.js";
+import { a as F, G as w } from "./GCodeSVGRenderer-BXg8RkJP.js";
 const C = o.forwardRef(
   function(u, c) {
     const { id: a, options: n, callbacks: l, className: m, style: d } = u, i = o.useRef(null), t = o.useRef(null);
@@ -41,6 +41,9 @@ const C = o.forwardRef(
           },
           setBitVisible(r) {
             e().setBitVisible(r);
+          },
+          setBitSpinning(r) {
+            e().setBitSpinning(r);
           },
           setToolpathRotationA(r) {
             e().setToolpathRotationA(r);

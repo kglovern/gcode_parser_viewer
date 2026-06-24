@@ -55,6 +55,7 @@ export type GCodeViewerOptions = {
     tweenMs: number;
     colorSource: "cutting" | "rapid" | "custom";
     color: string;
+    spinRpm: number;
   };
   progress: {
     mode: "hide" | "grey";
@@ -116,6 +117,7 @@ export const defaultGCodeViewerOptions: GCodeViewerOptions = {
     tweenMs: 140,
     colorSource: "cutting",
     color: defaultGCodeViewerTheme.colors.cutting,
+    spinRpm: 300,
   },
   progress: { mode: "grey" },
   grid: { size: 1000, axisDepth: 200, labels: true },
@@ -159,6 +161,7 @@ export type GCodeViewerHandle = {
   ): void;
   setBitPosition(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void;
   setBitVisible(visible: boolean): void;
+  setBitSpinning(spinning: boolean): void;
   setToolpathRotationA(aDegrees: number): void;
   hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
   seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
