@@ -130,8 +130,16 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.renderer.setClearColor(this.options.render.theme.background, 1);
 
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    this.scene.add(new THREE.DirectionalLight(0xffffff, 0.6));
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    // Two-sided directional lighting (positions matter for a Z-up scene —
+    // the default (0,1,0) position barely grazes metal surfaces like the
+    // bit marker) so PBR materials get real shading instead of looking flat.
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(1, -1, 1.5);
+    this.scene.add(keyLight);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    fillLight.position.set(-1, 1, 1);
+    this.scene.add(fillLight);
 
     this.toolpathRoot = new THREE.Group();
     this.toolpathRoot.name = "gviewer:toolpath-root";

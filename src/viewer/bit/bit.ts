@@ -57,6 +57,26 @@ function createCircleGeometry(size: number): THREE.BufferGeometry {
   return geometry;
 }
 
+// Cylindrical UV unwrap (u = angle around the drill's Z axis, v = height) so a
+// tiling texture (flutes/brushed-metal grain) can be mapped onto the STL mesh,
+// which ships with no UVs of its own.
+function applyCylindricalUVs(geometry: THREE.BufferGeometry, vRepeat: number): void {
+  geometry.computeBoundingBox();
+  const bbox = geometry.boundingBox!;
+  const height = Math.max(1e-6, bbox.max.z - bbox.min.z);
+
+  const positions = geometry.getAttribute("position");
+  const uv = new Float32Array(positions.count * 2);
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const y = positions.getY(i);
+    const z = positions.getZ(i);
+    uv[i * 2] = Math.atan2(y, x) / (2 * Math.PI) + 0.5;
+    uv[i * 2 + 1] = ((z - bbox.min.z) / height) * vRepeat;
+  }
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+}
+
 function createDrillGeometry(size: number): THREE.BufferGeometry {
   const binary = atob(DRILL_STL_BASE64);
   const bytes = new Uint8Array(binary.length);
@@ -81,7 +101,53 @@ function createDrillGeometry(size: number): THREE.BufferGeometry {
     -(bbox1.min.y + bbox1.max.y) / 2,
     -bbox1.min.z
   );
+  applyCylindricalUVs(geometry, 6);
+  geometry.computeVertexNormals();
   return geometry;
+}
+
+let brushedMetalTexture: THREE.CanvasTexture | null = null;
+
+// Small tiling canvas pattern (vertical streaks + fine noise) used as a
+// bump/roughness map so the drill bit reads as machined metal with flutes
+// rather than a flat-colored blob.
+function getBrushedMetalTexture(): THREE.CanvasTexture {
+  if (brushedMetalTexture) return brushedMetalTexture;
+
+  const width = 64;
+  const height = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, width, height);
+
+  // Vertical flute streaks
+  const streakCount = 10;
+  for (let i = 0; i < streakCount; i++) {
+    const x = (i / streakCount) * width;
+    const shade = i % 2 === 0 ? 150 : 90;
+    ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+    ctx.fillRect(x, 0, width / streakCount / 2, height);
+  }
+
+  // Fine grain noise on top
+  const imageData = ctx.getImageData(0, 0, width, height);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 40;
+    imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + noise));
+    imageData.data[i + 1] = imageData.data[i];
+    imageData.data[i + 2] = imageData.data[i];
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  brushedMetalTexture = texture;
+  return texture;
 }
 
 function createLaserObject(size: number, opacity: number): THREE.Group {
@@ -149,10 +215,20 @@ function resolveDrillColor(options: GCodeViewerOptions): string {
 function createDrillMesh(options: GCodeViewerOptions): THREE.Mesh {
   const opacity = clamp01(options.bit.opacity);
   const geometry = createDrillGeometry(Math.max(0.001, options.bit.size));
+  const drillColor = new THREE.Color(resolveDrillColor(options));
+  const texture = getBrushedMetalTexture();
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(resolveDrillColor(options)),
-    metalness: 0.75,
-    roughness: 0.3,
+    color: drillColor,
+    metalness: 0.8,
+    roughness: 0.35,
+    roughnessMap: texture,
+    bumpMap: texture,
+    bumpScale: 0.03,
+    // Self-illuminate slightly so the bit stays legible as a UI marker
+    // regardless of viewing angle/lighting, matching the old visualizer's
+    // brighter, always-visible look.
+    emissive: drillColor,
+    emissiveIntensity: 0.12,
     transparent: opacity < 1,
     opacity,
     depthTest: false,
@@ -270,7 +346,11 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
     } else {
       const mesh = bitObject as THREE.Mesh;
       const material = mesh.material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial;
-      material.color = new THREE.Color(nextType === "drill" ? resolveDrillColor(nextOptions) : BIT_COLOR);
+      const nextColor = new THREE.Color(nextType === "drill" ? resolveDrillColor(nextOptions) : BIT_COLOR);
+      material.color = nextColor;
+      if (nextType === "drill") {
+        (material as THREE.MeshStandardMaterial).emissive = nextColor;
+      }
       material.opacity = nextOpacity;
       material.transparent = nextOpacity < 1;
       material.needsUpdate = true;
