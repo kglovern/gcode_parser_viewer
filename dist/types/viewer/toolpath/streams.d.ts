@@ -10,6 +10,9 @@ export type ToolpathStreamState = {
     greyCursorVertex: number;
     kind: ToolpathStreamKind;
     cutBucketIndex: number | null;
+    /** Set when colors came from the worker's pre-baked colorArrayBuffer (e.g. toolchange palette).
+     *  refreshToolpathStreamColors skips these streams so theme changes don't flatten per-tool colors. */
+    workerColors?: Float32Array;
 };
 export type ToolpathStreamSpec = {
     kind: ToolpathStreamKind;

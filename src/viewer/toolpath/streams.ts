@@ -12,6 +12,9 @@ export type ToolpathStreamState = {
   greyCursorVertex: number;
   kind: ToolpathStreamKind;
   cutBucketIndex: number | null;
+  /** Set when colors came from the worker's pre-baked colorArrayBuffer (e.g. toolchange palette).
+   *  refreshToolpathStreamColors skips these streams so theme changes don't flatten per-tool colors. */
+  workerColors?: Float32Array;
 };
 
 export type ToolpathStreamSpec = {
@@ -66,6 +69,7 @@ export function createToolpathStreams(args: {
       greyCursorVertex: 0,
       kind: spec.kind,
       cutBucketIndex: spec.cutBucketIndex,
+      workerColors: spec.colors ? baseColors : undefined,
     });
 
     if (geometry.boundingBox) {
@@ -89,6 +93,8 @@ export function refreshToolpathStreamColors(
   options: Readonly<GCodeViewerOptions>
 ): void {
   for (const stream of streams) {
+    // Worker-baked streams carry per-tool palette colors — don't flatten them to a uniform theme color.
+    if (stream.workerColors) continue;
     const nextBase = buildStreamBaseColors(stream.kind, stream.totalVertices, options);
     stream.baseColors = nextBase;
     stream.simColors.set(nextBase);

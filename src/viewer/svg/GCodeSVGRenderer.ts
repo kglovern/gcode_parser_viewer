@@ -150,12 +150,11 @@ export class GCodeSVGRenderer {
     this.workerMode = true;
     this.rapidVerts = new Float32Array(0);
     this.cutVerts = new Float32Array(0);
-    // Worker groups carry baked RGB (host app's legacy theme system, kept
-    // only for rapid/cut bucketing via opacity) — use this renderer's own
-    // theme-derived colors instead, same as the non-worker `loadFromLines`
-    // path, so the SVG preview reflects the selected theme.
+    // Use the per-group hex color baked by the worker so toolchange palette
+    // segments render with distinct colors. setOptions won't overwrite these
+    // because applyOptions skips syncSegmentGroupsFromLines in workerMode.
     this.segmentGroups = groups.map(g => ({
-      color: g.opacity < 0.75 ? this.options.rapidColor : this.options.cutColor,
+      color: g.hexColor,
       opacity: g.opacity,
       verts: g.positions,
     }));

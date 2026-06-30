@@ -27,7 +27,8 @@ function hP(r) {
       totalVertices: t,
       greyCursorVertex: 0,
       kind: A.kind,
-      cutBucketIndex: A.cutBucketIndex
+      cutBucketIndex: A.cutBucketIndex,
+      workerColors: A.colors ? P : void 0
     }), i.boundingBox && (B = B ? B.union(i.boundingBox) : i.boundingBox.clone());
   }
   return { streams: Q, bounds: B };
@@ -38,6 +39,7 @@ function kP(r, Q) {
 }
 function lP(r, Q) {
   for (const B of r) {
+    if (B.workerColors) continue;
     const A = ot(B.kind, B.totalVertices, Q);
     B.baseColors = A, B.simColors.set(A), B.greyCursorVertex = 0;
     const t = B.line.geometry.getAttribute("color");
@@ -3009,10 +3011,12 @@ class Hi {
     this.setToolpathGeometry({
       rapid: {
         positions: B.positions,
+        colors: B.colors,
         prefixEndVertex: B.prefixEndVertex
       },
       cuts: [{
         positions: A.positions,
+        colors: A.colors,
         prefixEndVertex: A.prefixEndVertex
       }],
       cutBucketCount: 1
@@ -3502,7 +3506,7 @@ class ji {
   loadFromWorkerData(Q) {
     const B = EP(Q);
     if (this.workerMode = !0, this.rapidVerts = new Float32Array(0), this.cutVerts = new Float32Array(0), this.segmentGroups = B.map((A) => ({
-      color: A.opacity < 0.75 ? this.options.rapidColor : this.options.cutColor,
+      color: A.hexColor,
       opacity: A.opacity,
       verts: A.positions
     })), this.bounds = BA(...B.map((A) => A.positions)), !this.bounds.empty) {

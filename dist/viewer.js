@@ -1,4 +1,4 @@
-import { G as e, a as d, V as i, d as c, b as s } from "./GCodeSVGRenderer-BwCewdRn.js";
+import { G as e, a as d, V as i, d as c, b as s } from "./GCodeSVGRenderer-CCA3LUSq.js";
 const a = {
   dark: {
     background: "#111827",
