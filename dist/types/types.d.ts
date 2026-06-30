@@ -76,4 +76,7 @@ export type WorkerGeometryData = {
     verticesLen: number;
     framesLen: number;
     colorLen: number;
+    savedColorsBuffer?: ArrayBuffer;
+    savedColorLen?: number;
+    isLaser?: boolean;
 };

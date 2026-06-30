@@ -468,7 +468,12 @@ export class GCodeViewer implements GCodeViewerHandle {
       }
       this.ensureBitMarker();
       this.bitMarker?.setOptions(this.options);
-      void this.renderScene();
+      // When geometry was loaded from worker data, currentLines is empty and
+      // renderScene() would wipe the canvas. Skip it — the host app will call
+      // loadFromWorkerData again (via worker re-parse) to apply the new options.
+      if (this.currentLines.length > 0) {
+        void this.renderScene();
+      }
     }
 
     if (previous.mode.sim3d !== this.options.mode.sim3d) {

@@ -869,7 +869,13 @@ export type WorkerToolpathStreams = {
 export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerToolpathStreams {
   const vertices = new Float32Array(data.vertices);
   const frames = new Uint32Array(data.frames);
-  const colorArray = new Float32Array(data.colorArrayBuffer); // RGBA, stride 4
+  const colorArray = new Float32Array(data.colorArrayBuffer); // RGBA, stride 4 — used for rapid/cut classification
+  // In laser mode the worker bakes power-proportional opacity into savedColorsBuffer;
+  // use it for display colors while keeping colorArray for rapid/cut routing.
+  const savedColorArray = (data.isLaser && data.savedColorsBuffer && data.savedColorLen)
+    ? new Float32Array(data.savedColorsBuffer)
+    : null;
+  const srcColor = savedColorArray ?? colorArray;
   const { verticesLen, framesLen } = data;
 
   const rapidPos: number[] = [];
@@ -895,7 +901,7 @@ export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerTool
         pos.push(vertices[j0], vertices[j0 + 1], vertices[j0 + 2], vertices[j1], vertices[j1 + 1], vertices[j1 + 2]);
         const c0 = j * 4;
         const c1 = (j + 1) * 4;
-        rgb.push(colorArray[c0], colorArray[c0 + 1], colorArray[c0 + 2], colorArray[c1], colorArray[c1 + 1], colorArray[c1 + 2]);
+        rgb.push(srcColor[c0], srcColor[c0 + 1], srcColor[c0 + 2], srcColor[c1], srcColor[c1 + 1], srcColor[c1 + 2]);
       }
     }
 

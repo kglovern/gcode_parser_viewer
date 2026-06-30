@@ -152,9 +152,9 @@ function getBrushedMetalTexture(): THREE.CanvasTexture {
 
 function createLaserObject(size: number, opacity: number): THREE.Group {
   const clampedSize = Math.max(0.001, size);
-  const height = clampedSize * 3.0;
-  const innerRadius = clampedSize * 0.15;
-  const outerRadius = clampedSize * 0.35;
+  const height = clampedSize * 1.6;
+  const innerRadius = clampedSize * 0.08;
+  const outerRadius = clampedSize * 0.187;
   const clampedOpacity = clamp01(opacity);
 
   // radiusTop=0 ends up at z=0 (workpiece/tip) after rotateX + translate
