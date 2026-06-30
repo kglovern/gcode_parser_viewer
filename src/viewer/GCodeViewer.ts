@@ -86,6 +86,10 @@ export class GCodeViewer implements GCodeViewerHandle {
   private toolpathCutBucketCount = 1;
   private toolpathRotationA = 0;
 
+  // Last position handed to setBitPosition. Used as the default pick plane in
+  // screenToWorld so a click lands on the plane the bit is currently sitting on.
+  private lastBitPosition: GCodeViewerBitPosition = { x: 0, y: 0, z: 0, a: 0 };
+
   private sim3dHandle: {
     data: Sim3dData;
     slab: SlabHandle;
@@ -196,6 +200,7 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   setBitPosition(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void {
     this.ensureBitMarker();
+    this.lastBitPosition = { ...this.lastBitPosition, ...position };
     this.bitMarker?.setTarget(position, options);
   }
 
@@ -281,6 +286,62 @@ export class GCodeViewer implements GCodeViewerHandle {
     const currentDistance = this.camera.position.distanceTo(target);
     const distance = Math.max(1e-6, options.distance ?? currentDistance);
     this.startSnapToView(view, target, distance, durationMs);
+  }
+
+  /**
+   * Enable or disable orbit *rotation* while leaving pan and zoom untouched.
+   *
+   * Used to pin the camera to a fixed view (e.g. top-down) so a press-and-hold
+   * gesture is not interpreted as a rotate-drag and the picked plane stays
+   * stable under the cursor. Picking (screenToWorld) works from any camera
+   * orientation, so this is a UX lock, not a correctness requirement.
+   */
+  setRotateEnabled(enabled: boolean): void {
+    this.controls.enableRotate = enabled;
+  }
+
+  /**
+   * Convert a viewport pixel (clientX/clientY, e.g. from a PointerEvent) into a
+   * point on a horizontal toolpath plane, in the scene's coordinate space.
+   *
+   * A ray is cast from the camera through the pixel and intersected with the
+   * plane Z = `planeZ`, which defaults to the bit's current Z so the pick lands
+   * on the plane the tool is sitting on. Returns null when the pixel is outside
+   * a laid-out canvas or the ray is parallel to the plane (no intersection).
+   *
+   * The result is in world/scene space. The toolpath root sits at the origin,
+   * so for a normal (non-rotary) file this equals the gcode work coordinate.
+   * For a rotary file the toolpath root is rotated about X, so the returned XY
+   * is not a meaningful work coordinate — callers supporting only XY moves
+   * should gate on file type.
+   */
+  screenToWorld(
+    clientX: number,
+    clientY: number,
+    options?: { planeZ?: number },
+  ): { x: number; y: number; z: number } | null {
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      return null;
+    }
+
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(ndc, this.camera);
+
+    const planeZ = options?.planeZ ?? this.lastBitPosition.z ?? 0;
+    // Plane normal·p + constant = 0 → for z = planeZ, constant = -planeZ.
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
+    const hit = new THREE.Vector3();
+    if (!raycaster.ray.intersectPlane(plane, hit)) {
+      return null;
+    }
+
+    return { x: hit.x, y: hit.y, z: hit.z };
   }
 
   private startSnapToView(

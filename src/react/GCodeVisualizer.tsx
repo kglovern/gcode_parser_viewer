@@ -62,6 +62,12 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           snapCameraToView(view, snapOptions) {
             getViewer().snapCameraToView(view, snapOptions);
           },
+          setRotateEnabled(enabled: boolean) {
+            getViewer().setRotateEnabled(enabled);
+          },
+          screenToWorld(clientX: number, clientY: number, worldOptions?: { planeZ?: number }) {
+            return getViewer().screenToWorld(clientX, clientY, worldOptions);
+          },
           setBitPosition(position, bitOptions) {
             getViewer().setBitPosition(position, bitOptions);
           },
