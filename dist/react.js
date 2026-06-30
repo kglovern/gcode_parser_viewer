@@ -1,64 +1,58 @@
 import * as o from "react";
-import { a as w, G as V } from "./GCodeSVGRenderer-Bhp37_Ph.js";
-const G = o.forwardRef(
+import { a as F, G as w } from "./GCodeSVGRenderer-AJzTt7mi.js";
+const C = o.forwardRef(
   function(u, c) {
-    const { id: a, options: n, callbacks: l, className: m, style: d } = u, i = o.useRef(null), r = o.useRef(null);
+    const { id: a, options: n, callbacks: l, className: m, style: d } = u, i = o.useRef(null), t = o.useRef(null);
     return o.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const f = new w({ id: a, container: e, options: n, callbacks: l });
-      return r.current = f, () => {
-        r.current = null, f.dispose();
+      const f = new F({ id: a, container: e, options: n, callbacks: l });
+      return t.current = f, () => {
+        t.current = null, f.dispose();
       };
     }, [a]), o.useEffect(() => {
       var e;
-      (e = r.current) == null || e.setOptions(n ?? {});
+      (e = t.current) == null || e.setOptions(n ?? {});
     }, [n]), o.useEffect(() => {
       var e;
-      (e = r.current) == null || e.setCallbacks(l ?? {});
+      (e = t.current) == null || e.setCallbacks(l ?? {});
     }, [l]), o.useImperativeHandle(
       c,
       () => {
         const e = () => {
-          const t = r.current;
-          if (!t)
+          const r = t.current;
+          if (!r)
             throw new Error("GCodeViewer is not ready.");
-          return t;
+          return r;
         };
         return {
           get id() {
             return a;
           },
-          setCallbacks(t) {
-            e().setCallbacks(t);
+          setCallbacks(r) {
+            e().setCallbacks(r);
           },
-          snapCameraToView(t, s) {
-            e().snapCameraToView(t, s);
+          snapCameraToView(r, s) {
+            e().snapCameraToView(r, s);
           },
-          setRotateEnabled(t) {
-            e().setRotateEnabled(t);
+          setBitPosition(r, s) {
+            e().setBitPosition(r, s);
           },
-          screenToWorld(t, s, F) {
-            return e().screenToWorld(t, s, F);
+          setBitVisible(r) {
+            e().setBitVisible(r);
           },
-          setBitPosition(t, s) {
-            e().setBitPosition(t, s);
+          setBitSpinning(r) {
+            e().setBitSpinning(r);
           },
-          setBitVisible(t) {
-            e().setBitVisible(t);
+          setToolpathRotationA(r) {
+            e().setToolpathRotationA(r);
           },
-          setBitSpinning(t) {
-            e().setBitSpinning(t);
+          hideUntilLine(r, s) {
+            e().hideUntilLine(r, s);
           },
-          setToolpathRotationA(t) {
-            e().setToolpathRotationA(t);
-          },
-          hideUntilLine(t, s) {
-            e().hideUntilLine(t, s);
-          },
-          seekToLine(t, s) {
-            e().seekToLine(t, s);
+          seekToLine(r, s) {
+            e().seekToLine(r, s);
           },
           showAll() {
             e().showAll();
@@ -66,26 +60,26 @@ const G = o.forwardRef(
           resetColors() {
             e().resetColors();
           },
-          loadFromUrl(t, s) {
-            return e().loadFromUrl(t, s);
+          loadFromUrl(r, s) {
+            return e().loadFromUrl(r, s);
           },
-          loadFromFile(t) {
-            return e().loadFromFile(t);
+          loadFromFile(r) {
+            return e().loadFromFile(r);
           },
-          loadFromText(t) {
-            return e().loadFromText(t);
+          loadFromText(r) {
+            return e().loadFromText(r);
           },
-          loadFromLines(t) {
-            return e().loadFromLines(t);
+          loadFromLines(r) {
+            return e().loadFromLines(r);
           },
-          loadFromWorkerData(t) {
-            return e().loadFromWorkerData(t);
+          loadFromWorkerData(r) {
+            return e().loadFromWorkerData(r);
           },
           unload() {
             e().unload();
           },
-          setOptions(t) {
-            e().setOptions(t);
+          setOptions(r) {
+            e().setOptions(r);
           },
           getOptions() {
             return e().getOptions();
@@ -110,39 +104,39 @@ const G = o.forwardRef(
       [a]
     ), o.createElement("div", { ref: i, className: m, style: d });
   }
-), R = o.forwardRef(
+), G = o.forwardRef(
   function(u, c) {
     const { id: a, options: n, className: l, style: m } = u, d = o.useRef(null), i = o.useRef(null);
     return o.useEffect(() => {
-      const r = d.current;
-      if (!r) return;
-      const e = new V(r, n);
+      const t = d.current;
+      if (!t) return;
+      const e = new w(t, n);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
     }, []), o.useEffect(() => {
-      var r;
-      n && ((r = i.current) == null || r.setOptions(n));
+      var t;
+      n && ((t = i.current) == null || t.setOptions(n));
     }, [n]), o.useImperativeHandle(c, () => {
-      const r = () => {
+      const t = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
         return e;
       };
       return {
-        loadFromLines: (e) => r().loadFromLines(e),
-        loadFromFile: (e) => r().loadFromFile(e),
-        loadFromText: (e) => r().loadFromText(e),
-        loadFromWorkerData: (e) => r().loadFromWorkerData(e),
-        loadFromPrecomputedGroups: (e) => r().loadFromPrecomputedGroups(e),
-        clear: () => r().clear(),
-        resetView: () => r().resetView(),
-        setOptions: (e) => r().setOptions(e),
-        setProjectionMode: (e) => r().setProjectionMode(e),
-        setBitPosition: (e) => r().setBitPosition(e),
-        setBitVisible: (e) => r().setBitVisible(e),
-        getSVGElement: () => r().getSVGElement(),
-        dispose: () => r().dispose()
+        loadFromLines: (e) => t().loadFromLines(e),
+        loadFromFile: (e) => t().loadFromFile(e),
+        loadFromText: (e) => t().loadFromText(e),
+        loadFromWorkerData: (e) => t().loadFromWorkerData(e),
+        loadFromPrecomputedGroups: (e) => t().loadFromPrecomputedGroups(e),
+        clear: () => t().clear(),
+        resetView: () => t().resetView(),
+        setOptions: (e) => t().setOptions(e),
+        setProjectionMode: (e) => t().setProjectionMode(e),
+        setBitPosition: (e) => t().setBitPosition(e),
+        setBitVisible: (e) => t().setBitVisible(e),
+        getSVGElement: () => t().getSVGElement(),
+        dispose: () => t().dispose()
       };
     }, []), o.createElement("div", {
       ref: d,
@@ -152,6 +146,6 @@ const G = o.forwardRef(
   }
 );
 export {
-  R as GCodeSVGVisualizer,
-  G as GCodeVisualizer
+  G as GCodeSVGVisualizer,
+  C as GCodeVisualizer
 };

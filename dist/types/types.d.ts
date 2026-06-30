@@ -79,4 +79,5 @@ export type WorkerGeometryData = {
     savedColorsBuffer?: ArrayBuffer;
     savedColorLen?: number;
     isLaser?: boolean;
+    toolchangeCount?: number;
 };
