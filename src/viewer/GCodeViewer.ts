@@ -345,19 +345,20 @@ export class GCodeViewer implements GCodeViewerHandle {
     // is still built from `frames` so progress greying/hiding works.
     this.currentLines = [];
     const { rapid, cut } = buildWorkerToolpathStreams(data);
+    // Only lock cut stream colors when the file has actual toolchanges (palette
+    // cycling). Rapids and single-tool cuts always follow the live theme so that
+    // theme changes update them without requiring a full re-parse.
+    const hasToolchangeColors = (data.toolchangeCount ?? 0) > 0;
 
-    // Pass worker-baked per-vertex colors through so toolchange palette segments
-    // render with distinct colors. refreshToolpathStreamColors skips streams
-    // that carry workerColors, so theme changes won't flatten them.
     this.setToolpathGeometry({
       rapid: {
         positions: rapid.positions,
-        colors: rapid.colors,
+        colors: undefined,
         prefixEndVertex: rapid.prefixEndVertex,
       },
       cuts: [{
         positions: cut.positions,
-        colors: cut.colors,
+        colors: hasToolchangeColors ? cut.colors : undefined,
         prefixEndVertex: cut.prefixEndVertex,
       }],
       cutBucketCount: 1,

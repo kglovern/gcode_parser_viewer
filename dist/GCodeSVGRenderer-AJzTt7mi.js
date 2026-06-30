@@ -3007,16 +3007,16 @@ class Hi {
   }
   async loadFromWorkerData(Q) {
     this.currentLines = [];
-    const { rapid: B, cut: A } = TP(Q);
+    const { rapid: B, cut: A } = TP(Q), t = (Q.toolchangeCount ?? 0) > 0;
     this.setToolpathGeometry({
       rapid: {
         positions: B.positions,
-        colors: B.colors,
+        colors: void 0,
         prefixEndVertex: B.prefixEndVertex
       },
       cuts: [{
         positions: A.positions,
-        colors: A.colors,
+        colors: t ? A.colors : void 0,
         prefixEndVertex: A.prefixEndVertex
       }],
       cutBucketCount: 1
