@@ -362,8 +362,6 @@ export class GCodeViewer implements GCodeViewerHandle {
       }],
       cutBucketCount: 1,
     });
-
-    this.focusToModel();
   }
 
   unload(): void {

@@ -3020,7 +3020,7 @@ class Hi {
         prefixEndVertex: A.prefixEndVertex
       }],
       cutBucketCount: 1
-    }), this.focusToModel();
+    });
   }
   unload() {
     this.currentLines = [], this.setGeometryEmpty(), this.emitProgress({ state: "hidden" });
