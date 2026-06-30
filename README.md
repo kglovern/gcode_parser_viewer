@@ -358,6 +358,31 @@ viewer.snapCameraToView("front", { durationMs: 300 });
 //        | "front-top-left" | "front-top-right" | ... (14 presets)
 ```
 
+##### Picking & interaction
+
+```ts
+// Lock orbit rotation while keeping pan + zoom (e.g. to pin a top-down view
+// so a click maps predictably onto the XY plane). Picking works from any
+// camera angle, so this is a UX lock, not a correctness requirement.
+viewer.setRotateEnabled(false);
+
+// Convert a viewport pixel (e.g. PointerEvent clientX/clientY) into a point on
+// a horizontal toolpath plane. planeZ defaults to the bit's current Z.
+const hit = viewer.screenToWorld(event.clientX, event.clientY);
+if (hit) {
+  // hit.x / hit.y are in the GCode's coordinate space (work coords for a
+  // non-rotary file, since the toolpath root sits at the origin).
+  console.log(hit.x, hit.y, hit.z);
+}
+// Pick against an explicit plane height instead of the bit's Z:
+viewer.screenToWorld(event.clientX, event.clientY, { planeZ: 0 });
+```
+
+> Returns `null` when the canvas has no layout yet or the ray is parallel to
+> the plane. For rotary files the toolpath root is rotated about X, so the
+> returned XY is not a meaningful work coordinate — gate on file type if you
+> only support XY moves.
+
 ##### Progress / simulation
 
 ```ts

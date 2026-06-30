@@ -1,4 +1,4 @@
-import * as h from "three";
+import * as a from "three";
 import { OrbitControls as oP } from "three/examples/jsm/controls/OrbitControls.js";
 import { GCodeVirtualizer as AA, buildWorkerToolpathStreams as TP, buildToolpathGeometryFromLinesBatched as zP, buildMovementVerticesFromLines as wP, buildWorkerSegmentGroups as EP } from "./gviewer.js";
 import { STLLoader as aP } from "three/examples/jsm/loaders/STLLoader.js";
@@ -10,15 +10,15 @@ function hP(r) {
       continue;
     const t = A.positions.length / 3, P = A.colors ? A.colors.slice() : ot(A.kind, t, r.options), e = new Float32Array(P.length);
     e.set(P);
-    const i = new h.BufferGeometry();
-    i.setAttribute("position", new h.BufferAttribute(A.positions, 3));
-    const s = new h.BufferAttribute(e, 3);
-    s.setUsage(h.DynamicDrawUsage), i.setAttribute("color", s), i.computeBoundingBox();
-    const v = new h.LineBasicMaterial({
+    const i = new a.BufferGeometry();
+    i.setAttribute("position", new a.BufferAttribute(A.positions, 3));
+    const s = new a.BufferAttribute(e, 3);
+    s.setUsage(a.DynamicDrawUsage), i.setAttribute("color", s), i.computeBoundingBox();
+    const v = new a.LineBasicMaterial({
       vertexColors: !0,
       transparent: !0,
       opacity: A.opacity
-    }), c = new h.LineSegments(i, v);
+    }), c = new a.LineSegments(i, v);
     r.scene.add(c), Q.push({
       line: c,
       baseColors: P,
@@ -78,7 +78,7 @@ function DP(r) {
   t.clearUpdateRanges(), t.addUpdateRange(e * 3, (i - e) * 3), t.needsUpdate = !0, r.stream.greyCursorVertex = B;
 }
 function ot(r, Q, B) {
-  const A = B.render.theme.colors, t = B.mode.laser ? A.laser ?? A.cutting : A.cutting, P = new h.Color(r === "rapid" ? A.rapid : t), e = new Float32Array(Q * 3);
+  const A = B.render.theme.colors, t = B.mode.laser ? A.laser ?? A.cutting : A.cutting, P = new a.Color(r === "rapid" ? A.rapid : t), e = new Float32Array(Q * 3);
   for (let i = 0; i < Q; i += 1) {
     const s = i * 3;
     e[s] = P.r, e[s + 1] = P.g, e[s + 2] = P.b;
@@ -86,7 +86,7 @@ function ot(r, Q, B) {
   return e;
 }
 function uP(r) {
-  const Q = r.render.theme.colors, B = new h.Color(r.render.theme.background), A = new h.Color(Q.processed ?? Q.cutting), t = B.clone().lerp(A, 0.65);
+  const Q = r.render.theme.colors, B = new a.Color(r.render.theme.background), A = new a.Color(Q.processed ?? Q.cutting), t = B.clone().lerp(A, 0.65);
   return { r: t.r, g: t.g, b: t.b };
 }
 function CP(r) {
@@ -169,9 +169,9 @@ async function OP(r, Q, B, A) {
     E.processLine(d);
   isFinite(c) || (c = -1, n = 1, T = -1, z = 1, w = 0, o = 0), c === n && (c -= Q * 2, n += Q * 2), T === z && (T -= Q * 2, z += Q * 2), c -= Q, n += Q, T -= Q, z += Q;
   const k = o;
-  let a = w - Q;
-  a >= k && (a = k - 1);
-  const U = { xMin: c, xMax: n, yMin: T, yMax: z, zTop: k, zBot: a }, D = new Float32Array(t * t).fill(k), l = /* @__PURE__ */ new Map();
+  let h = w - Q;
+  h >= k && (h = k - 1);
+  const U = { xMin: c, xMax: n, yMin: T, yMax: z, zTop: k, zBot: h }, D = new Float32Array(t * t).fill(k), l = /* @__PURE__ */ new Map();
   l.set(0, new Float32Array(D));
   const O = [];
   let u = 0, N = 0;
@@ -206,9 +206,9 @@ async function OP(r, Q, B, A) {
 function PA(r, Q, B, A, t) {
   const P = (B.xMax - B.xMin) / t, e = (B.yMax - B.yMin) / t, i = Math.hypot(r.x1 - r.x0, r.y1 - r.y0), s = Math.max(1e-3, Math.min(P, e) * 0.5), v = Math.max(1, Math.ceil(i / s)), c = Math.ceil(A / P), n = Math.ceil(A / e), T = A * A;
   for (let z = 0; z <= v; z++) {
-    const w = z / v, o = r.x0 + (r.x1 - r.x0) * w, E = r.y0 + (r.y1 - r.y0) * w, k = r.z0 + (r.z1 - r.z0) * w, a = Math.floor((o - B.xMin) / P), U = Math.floor((E - B.yMin) / e);
+    const w = z / v, o = r.x0 + (r.x1 - r.x0) * w, E = r.y0 + (r.y1 - r.y0) * w, k = r.z0 + (r.z1 - r.z0) * w, h = Math.floor((o - B.xMin) / P), U = Math.floor((E - B.yMin) / e);
     for (let D = -c; D <= c; D++) {
-      const l = a + D;
+      const l = h + D;
       if (l < 0 || l >= t) continue;
       const O = B.xMin + (l + 0.5) * P, u = (O - o) * (O - o);
       if (!(u > T))
@@ -266,7 +266,7 @@ function dP(r, Q, B, A, t, P) {
   const w = [];
   let o = { ...r };
   for (let E = 1; E <= e; E++) {
-    const k = E / e, a = n + z * k, U = k, D = B[i] + c * Math.cos(a), l = B[s] + c * Math.sin(a), O = r[v] + (Q[v] - r[v]) * U, u = { X: 0, Y: 0, Z: 0 };
+    const k = E / e, h = n + z * k, U = k, D = B[i] + c * Math.cos(h), l = B[s] + c * Math.sin(h), O = r[v] + (Q[v] - r[v]) * U, u = { X: 0, Y: 0, Z: 0 };
     u[i] = D, u[s] = l, u[v] = O, w.push({
       x0: o.X,
       y0: o.Y,
@@ -299,52 +299,52 @@ function LP() {
       e + i * 0.15
     ), B.stroke();
   }
-  return uB = new h.CanvasTexture(Q), uB;
+  return uB = new a.CanvasTexture(Q), uB;
 }
 function MP(r, Q) {
-  const B = new h.Group();
+  const B = new a.Group();
   B.name = "gviewer:sim3d-slab";
   const A = r.xMax - r.xMin, t = r.yMax - r.yMin, P = r.zTop - r.zBot, e = (r.xMin + r.xMax) / 2, i = (r.yMin + r.yMax) / 2, s = (r.zBot + r.zTop) / 2, v = LP();
-  v.wrapS = h.RepeatWrapping, v.wrapT = h.RepeatWrapping, v.repeat.set(A / 100, t / 100);
-  const c = new h.MeshStandardMaterial({
+  v.wrapS = a.RepeatWrapping, v.wrapT = a.RepeatWrapping, v.repeat.set(A / 100, t / 100);
+  const c = new a.MeshStandardMaterial({
     map: v,
     roughness: 0.85,
     metalness: 0,
-    side: h.FrontSide
-  }), n = new h.MeshStandardMaterial({
+    side: a.FrontSide
+  }), n = new a.MeshStandardMaterial({
     color: 8016432,
     roughness: 0.9,
     metalness: 0,
-    side: h.DoubleSide
-  }), T = new h.MeshStandardMaterial({
+    side: a.DoubleSide
+  }), T = new a.MeshStandardMaterial({
     color: 7030822,
     roughness: 0.9,
     metalness: 0
-  }), z = new h.PlaneGeometry(A, t, Q - 1, Q - 1), w = Q * Q, o = new Float32Array(w * 3), E = z.attributes.position;
+  }), z = new a.PlaneGeometry(A, t, Q - 1, Q - 1), w = Q * Q, o = new Float32Array(w * 3), E = z.attributes.position;
   for (let j = 0; j < w; j++)
     o[j * 3] = E.getX(j), o[j * 3 + 1] = E.getY(j), o[j * 3 + 2] = 0;
-  const k = new h.BufferAttribute(o, 3);
-  k.usage = h.DynamicDrawUsage, z.setAttribute("position", k), z.computeVertexNormals();
-  const a = new h.Mesh(z, c);
-  a.name = "gviewer:sim3d-top", a.position.set(e, i, r.zTop), B.add(a);
-  const U = new h.PlaneGeometry(A, P);
+  const k = new a.BufferAttribute(o, 3);
+  k.usage = a.DynamicDrawUsage, z.setAttribute("position", k), z.computeVertexNormals();
+  const h = new a.Mesh(z, c);
+  h.name = "gviewer:sim3d-top", h.position.set(e, i, r.zTop), B.add(h);
+  const U = new a.PlaneGeometry(A, P);
   U.rotateX(Math.PI / 2);
-  const D = new h.Mesh(U, n);
+  const D = new a.Mesh(U, n);
   D.position.set(e, r.yMax, s), B.add(D);
-  const l = new h.PlaneGeometry(A, P);
+  const l = new a.PlaneGeometry(A, P);
   l.rotateX(Math.PI / 2);
-  const O = new h.Mesh(l, n);
+  const O = new a.Mesh(l, n);
   O.position.set(e, r.yMin, s), B.add(O);
-  const u = new h.PlaneGeometry(P, t);
+  const u = new a.PlaneGeometry(P, t);
   u.rotateY(-Math.PI / 2);
-  const N = new h.Mesh(u, n);
+  const N = new a.Mesh(u, n);
   N.position.set(r.xMax, i, s), B.add(N);
-  const C = new h.PlaneGeometry(P, t);
+  const C = new a.PlaneGeometry(P, t);
   C.rotateY(-Math.PI / 2);
-  const M = new h.Mesh(C, n);
+  const M = new a.Mesh(C, n);
   M.position.set(r.xMin, i, s), B.add(M);
-  const b = new h.Mesh(new h.PlaneGeometry(A, t), T);
-  return b.position.set(e, i, r.zBot), B.add(b), { group: B, topMesh: a, topPositionAttr: k, slabBounds: r, resolution: Q };
+  const b = new a.Mesh(new a.PlaneGeometry(A, t), T);
+  return b.position.set(e, i, r.zBot), B.add(b), { group: B, topMesh: h, topPositionAttr: k, slabBounds: r, resolution: Q };
 }
 function IB(r, Q) {
   const { topPositionAttr: B, slabBounds: A, resolution: t } = r, P = t * t;
@@ -356,7 +356,7 @@ function IB(r, Q) {
 }
 function HP(r) {
   r.group.traverse((Q) => {
-    if (Q instanceof h.Mesh) {
+    if (Q instanceof a.Mesh) {
       Q.geometry.dispose();
       const B = Q.material;
       Array.isArray(B) ? B.forEach((A) => {
@@ -398,27 +398,27 @@ class jP {
   }
 }
 function OQ(r, Q, B = {}) {
-  const { opacity: A = 1, size: t = 10 } = B, P = new h.Object3D(), e = 100, i = document.createElement("canvas"), s = i.getContext("2d");
+  const { opacity: A = 1, size: t = 10 } = B, P = new a.Object3D(), e = 100, i = document.createElement("canvas"), s = i.getContext("2d");
   if (!s)
     throw new Error("Missing canvas 2D context.");
   s.font = `normal ${e}px Arial`;
   const c = s.measureText(r).width;
   i.width = c, i.height = e, s.font = `normal ${e}px Arial`, s.textAlign = "center", s.textBaseline = "middle", s.fillStyle = Q, s.fillText(r, c / 2, e / 2);
-  const n = new h.Texture(i);
-  n.needsUpdate = !0, n.minFilter = h.LinearFilter;
-  const T = new h.SpriteMaterial({
+  const n = new a.Texture(i);
+  n.needsUpdate = !0, n.minFilter = a.LinearFilter;
+  const T = new a.SpriteMaterial({
     map: n,
     transparent: !0,
     opacity: A
   });
   P.textHeight = t, P.textWidth = c / e * P.textHeight, B.textAlign === "left" ? P.position.x = (B.x ?? 0) + (P.textWidth ?? 0) / 2 : B.textAlign === "right" ? P.position.x = (B.x ?? 0) - (P.textWidth ?? 0) / 2 : P.position.x = B.x ?? 0, B.textBaseline === "top" ? P.position.y = (B.y ?? 0) - (P.textHeight ?? 0) / 2 : B.textBaseline === "bottom" ? P.position.y = (B.y ?? 0) + (P.textHeight ?? 0) / 2 : P.position.y = B.y ?? 0, P.position.z = B.z ?? 0;
-  const z = new h.Sprite(T);
+  const z = new a.Sprite(T);
   return z.scale.set(c / e * t, t, 1), P.add(z), P;
 }
 function FP(r) {
   r.traverse((Q) => {
     var A;
-    if (!(Q instanceof h.Sprite))
+    if (!(Q instanceof a.Sprite))
       return;
     const B = Q.material;
     (A = B.map) == null || A.dispose(), B.dispose();
@@ -426,28 +426,28 @@ function FP(r) {
 }
 const GP = 25.4;
 function fP(r, Q) {
-  const B = new h.Group(), A = new h.Box3Helper(
+  const B = new a.Group(), A = new a.Box3Helper(
     r.clone(),
-    new h.Color(Q.render.theme.colors.boundingBox)
+    new a.Color(Q.render.theme.colors.boundingBox)
   ), t = A.material;
   return t.transparent = !0, t.opacity = 0.12, t.depthWrite = !1, B.add(A), Q.boundingBox.labels && B.add(...bP(r.clone(), Q)), B;
 }
 function bP(r, Q) {
-  const B = Q.render.theme.colors.boundingBox, A = 0.32, t = (U) => Math.abs(U) < 1e-9 ? "0" : U.toFixed(3), P = (U) => Q.units === "in" ? `${t(U / GP)} in` : `${t(U)} mm`, e = r.min, i = r.max, s = (U) => OQ(U, B, { size: 4, opacity: A }), v = s(P(e.x)), c = s(P(i.x)), n = s(P(e.y)), T = s(P(i.y)), z = s(P(e.z)), w = s(P(i.z)), o = new h.Vector3();
+  const B = Q.render.theme.colors.boundingBox, A = 0.32, t = (U) => Math.abs(U) < 1e-9 ? "0" : U.toFixed(3), P = (U) => Q.units === "in" ? `${t(U / GP)} in` : `${t(U)} mm`, e = r.min, i = r.max, s = (U) => OQ(U, B, { size: 4, opacity: A }), v = s(P(e.x)), c = s(P(i.x)), n = s(P(e.y)), T = s(P(i.y)), z = s(P(e.z)), w = s(P(i.z)), o = new a.Vector3();
   r.getSize(o);
-  const E = Math.max(2, Math.max(o.x, o.y, o.z) * 0.02), k = (e.x + i.x) / 2, a = (e.y + i.y) / 2;
-  return v.position.set(e.x - E, a, e.z - E), c.position.set(i.x + E, a, e.z - E), n.position.set(k, e.y - E, e.z - E), T.position.set(k, i.y + E, e.z - E), z.position.set(k, a, e.z - E), w.position.set(k, a, i.z + E), [v, c, n, T, z, w];
+  const E = Math.max(2, Math.max(o.x, o.y, o.z) * 0.02), k = (e.x + i.x) / 2, h = (e.y + i.y) / 2;
+  return v.position.set(e.x - E, h, e.z - E), c.position.set(i.x + E, h, e.z - E), n.position.set(k, e.y - E, e.z - E), T.position.set(k, i.y + E, e.z - E), z.position.set(k, h, e.z - E), w.position.set(k, h, i.z + E), [v, c, n, T, z, w];
 }
 function gP(r) {
   r.traverse((Q) => {
     var B;
-    if (Q instanceof h.LineSegments || Q instanceof h.Line) {
+    if (Q instanceof a.LineSegments || Q instanceof a.Line) {
       Q.geometry.dispose();
       const A = Q.material;
       Array.isArray(A) ? A.forEach((t) => t.dispose()) : A.dispose();
       return;
     }
-    if (Q instanceof h.Sprite) {
+    if (Q instanceof a.Sprite) {
       const A = Q.material;
       (B = A.map) == null || B.dispose(), A.dispose();
     }
@@ -464,13 +464,13 @@ function xP(r) {
   return 1 - Q * Q * Q / 2;
 }
 function mA(r) {
-  const Q = new h.Vector3(), B = {
-    right: new h.Vector3(1, 0, 0),
-    left: new h.Vector3(-1, 0, 0),
-    front: new h.Vector3(0, -1, 0),
-    back: new h.Vector3(0, 1, 0),
-    top: new h.Vector3(0, 0, 1),
-    bottom: new h.Vector3(0, 0, -1)
+  const Q = new a.Vector3(), B = {
+    right: new a.Vector3(1, 0, 0),
+    left: new a.Vector3(-1, 0, 0),
+    front: new a.Vector3(0, -1, 0),
+    back: new a.Vector3(0, 1, 0),
+    top: new a.Vector3(0, 0, 1),
+    bottom: new a.Vector3(0, 0, -1)
   };
   switch (r) {
     case "front":
@@ -538,23 +538,23 @@ function yP(r) {
     const c = v * A;
     i(c, -B, c, B, v === 0 ? P : e);
   }
-  const s = new h.Group();
+  const s = new a.Group();
   return e.length > 0 && s.add(yA(e, r.theme.colors.grid.minor, 0.25)), P.length > 0 && s.add(yA(P, r.theme.colors.grid.major, 0.4)), s;
 }
 function yA(r, Q, B) {
-  const A = new h.BufferGeometry();
-  A.setAttribute("position", new h.Float32BufferAttribute(r, 3));
-  const t = new h.LineBasicMaterial({
-    color: new h.Color(Q),
+  const A = new a.BufferGeometry();
+  A.setAttribute("position", new a.Float32BufferAttribute(r, 3));
+  const t = new a.LineBasicMaterial({
+    color: new a.Color(Q),
     transparent: !0,
     opacity: B,
     depthWrite: !1
   });
-  return new h.LineSegments(A, t);
+  return new a.LineSegments(A, t);
 }
 function IP(r) {
   r.traverse((Q) => {
-    if (!(Q instanceof h.LineSegments))
+    if (!(Q instanceof a.LineSegments))
       return;
     Q.geometry.dispose();
     const B = Q.material;
@@ -562,33 +562,33 @@ function IP(r) {
   });
 }
 function SP(r) {
-  const Q = new h.Group(), B = Math.max(1, r.sizeWorld) / 2, A = Math.max(1, r.depthWorld), t = Math.max(1, Math.min(B / 12, 30)), P = t * 0.6, e = (w) => new h.LineDashedMaterial({
-    color: new h.Color(w),
+  const Q = new a.Group(), B = Math.max(1, r.sizeWorld) / 2, A = Math.max(1, r.depthWorld), t = Math.max(1, Math.min(B / 12, 30)), P = t * 0.6, e = (w) => new a.LineDashedMaterial({
+    color: new a.Color(w),
     dashSize: t,
     gapSize: P,
     transparent: !0,
     opacity: 0.75,
     depthWrite: !1
-  }), i = new h.Line(
-    new h.BufferGeometry().setFromPoints([
-      new h.Vector3(-B, 0, 0),
-      new h.Vector3(B, 0, 0)
+  }), i = new a.Line(
+    new a.BufferGeometry().setFromPoints([
+      new a.Vector3(-B, 0, 0),
+      new a.Vector3(B, 0, 0)
     ]),
     e(r.theme.colors.axes.x)
   );
   i.computeLineDistances();
-  const s = new h.Line(
-    new h.BufferGeometry().setFromPoints([
-      new h.Vector3(0, -B, 0),
-      new h.Vector3(0, B, 0)
+  const s = new a.Line(
+    new a.BufferGeometry().setFromPoints([
+      new a.Vector3(0, -B, 0),
+      new a.Vector3(0, B, 0)
     ]),
     e(r.theme.colors.axes.y)
   );
   s.computeLineDistances();
-  const v = new h.Line(
-    new h.BufferGeometry().setFromPoints([
-      new h.Vector3(0, 0, 0),
-      new h.Vector3(0, 0, A)
+  const v = new a.Line(
+    new a.BufferGeometry().setFromPoints([
+      new a.Vector3(0, 0, 0),
+      new a.Vector3(0, 0, A)
     ]),
     e(r.theme.colors.axes.z)
   );
@@ -603,32 +603,32 @@ function SP(r) {
 function YP(r) {
   r.traverse((Q) => {
     var B;
-    if (Q instanceof h.Line) {
+    if (Q instanceof a.Line) {
       Q.geometry.dispose();
       const A = Q.material;
       Array.isArray(A) ? A.forEach((t) => t.dispose()) : A.dispose();
       return;
     }
-    if (Q instanceof h.Sprite) {
+    if (Q instanceof a.Sprite) {
       const A = Q.material;
       (B = A.map) == null || B.dispose(), A.dispose();
     }
   });
 }
 function VP(r) {
-  const Q = new h.Group(), B = Math.max(1, r.sizeMm) / 2, A = r.units === "mm" ? 10 : 1, t = A, P = r.units === "mm" ? B : B / eA, e = A * 2, i = r.units === "mm" ? 1 : eA, s = 0.5, v = 4, c = 0.1, n = 5;
+  const Q = new a.Group(), B = Math.max(1, r.sizeMm) / 2, A = r.units === "mm" ? 10 : 1, t = A, P = r.units === "mm" ? B : B / eA, e = A * 2, i = r.units === "mm" ? 1 : eA, s = 0.5, v = 4, c = 0.1, n = 5;
   for (let T = t; T <= P + 1e-6; T += e) {
     const z = T * i;
     if (z > B + 1e-6)
       continue;
     const w = r.theme.colors.axes.x, o = r.theme.colors.axes.y, E = { opacity: s, size: v }, k = OQ(String(T), w, E);
     k.position.set(z, n, c);
-    const a = OQ(String(-T), w, E);
-    a.position.set(-z, n, c);
+    const h = OQ(String(-T), w, E);
+    h.position.set(-z, n, c);
     const U = OQ(String(T), o, E);
     U.position.set(-n, z, c);
     const D = OQ(String(-T), o, E);
-    D.position.set(-n, -z, c), Q.add(k, a, U, D);
+    D.position.set(-n, -z, c), Q.add(k, h, U, D);
   }
   return Q;
 }
@@ -909,15 +909,15 @@ var sQ = {
     edges: 0.5,
     end: 1
   }[t] || 0 : !i && s && (c = t[0], n = t[1]), function(T, z, w) {
-    var o = (w || B).length, E = e[o], k, a, U, D, l, O, u, N, C;
+    var o = (w || B).length, E = e[o], k, h, U, D, l, O, u, N, C;
     if (!E) {
       if (C = B.grid === "auto" ? 0 : (B.grid || [1, zQ])[1], !C) {
         for (u = -zQ; u < (u = w[C++].getBoundingClientRect().left) && C < o; )
           ;
         C < o && C--;
       }
-      for (E = e[o] = [], k = s ? Math.min(C, o) * c - 0.5 : t % C, a = C === zQ ? 0 : s ? o * n / C - 0.5 : t / C | 0, u = 0, N = zQ, O = 0; O < o; O++)
-        U = O % C - k, D = a - (O / C | 0), E[O] = l = v ? Math.abs(v === "y" ? D : U) : zt(U * U + D * D), l > u && (u = l), l < N && (N = l);
+      for (E = e[o] = [], k = s ? Math.min(C, o) * c - 0.5 : t % C, h = C === zQ ? 0 : s ? o * n / C - 0.5 : t / C | 0, u = 0, N = zQ, O = 0; O < o; O++)
+        U = O % C - k, D = h - (O / C | 0), E[O] = l = v ? Math.abs(v === "y" ? D : U) : zt(U * U + D * D), l > u && (u = l), l < N && (N = l);
       t === "random" && jt(E), E.max = u - N, E.min = N, E.v = o = (parseFloat(B.amount) || parseFloat(B.each) * (C > o ? o - 1 : v ? v === "y" ? o / C : C : Math.max(C, o / C)) || 0) * (t === "edges" ? -1 : 1), E.b = o < 0 ? P - o : P, E.u = W(B.amount || B.each) || 0, A = A && o < 0 ? Ce(A) : A;
     }
     return o = (E[T] - E.min) / E.max || 0, y(E.b + (A ? A(o) : o) * E.v) + E.u;
@@ -1118,8 +1118,8 @@ var sQ = {
     return A = he.test(B), Q[1] = XA(Q[1], A), Q[0] = XA(Q[0], A, yt(Q[1])), !0;
 }, aB, eQ = function() {
   var r = Date.now, Q = 500, B = 33, A = r(), t = A, P = 1e3 / 240, e = P, i = [], s, v, c, n, T, z, w = function o(E) {
-    var k = r() - t, a = E === !0, U, D, l, O;
-    if ((k > Q || k < 0) && (A += k - B), t += k, l = t - A, U = l - e, (U > 0 || a) && (O = ++n.frame, T = l - n.time * 1e3, n.time = l = l / 1e3, e += U + (U >= P ? 4 : P - U), D = 1), a || (s = v(o)), D)
+    var k = r() - t, h = E === !0, U, D, l, O;
+    if ((k > Q || k < 0) && (A += k - B), t += k, l = t - A, U = l - e, (U > 0 || h) && (O = ++n.frame, T = l - n.time * 1e3, n.time = l = l / 1e3, e += U + (U >= P ? 4 : P - U), D = 1), h || (s = v(o)), D)
       for (z = 0; z < i.length; z++)
         i[z](l, T, O, E);
   };
@@ -1146,11 +1146,11 @@ var sQ = {
     fps: function(E) {
       P = 1e3 / (E || 240), e = n.time * 1e3 + P;
     },
-    add: function(E, k, a) {
+    add: function(E, k, h) {
       var U = k ? function(D, l, O, u) {
         E(D, l, O, u), n.remove(U);
       } : E;
-      return n.remove(E), i[a ? "unshift" : "push"](U), AB(), U;
+      return n.remove(E), i[h ? "unshift" : "push"](U), AB(), U;
     },
     remove: function(E, k) {
       ~(k = i.indexOf(E)) && i.splice(k, 1) && z >= k && z--;
@@ -1410,7 +1410,7 @@ var _ = /* @__PURE__ */ function(r) {
   }, B.staggerFromTo = function(t, P, e, i, s, v, c, n) {
     return i.startAt = e, cB(i).immediateRender = $(i.immediateRender), this.staggerTo(t, P, i, s, v, c, n);
   }, B.render = function(t, P, e) {
-    var i = this._time, s = this._dirty ? this.totalDuration() : this._tDur, v = this._dur, c = t <= 0 ? 0 : y(t), n = this._zTime < 0 != t < 0 && (this._initted || !v), T, z, w, o, E, k, a, U, D, l, O, u;
+    var i = this._time, s = this._dirty ? this.totalDuration() : this._tDur, v = this._dur, c = t <= 0 ? 0 : y(t), n = this._zTime < 0 != t < 0 && (this._initted || !v), T, z, w, o, E, k, h, U, D, l, O, u;
     if (this !== I && c > s && t >= 0 && (c = s), c !== this._tTime || e || n) {
       if (i !== this._time && v && (c += this._time - i, t += this._time - i), T = c, D = this._start, U = this._ts, k = !U, n && (v || (i = this._zTime), (t || !P) && (this._zTime = t)), this._repeat) {
         if (O = this._yoyo, E = v + this._rDelay, this._repeat < -1 && t < 0)
@@ -1423,15 +1423,15 @@ var _ = /* @__PURE__ */ function(r) {
             return this;
         }
       }
-      if (this._hasPause && !this._forcing && this._lock < 2 && (a = se(this, y(i), y(T)), a && (c -= T - (T = a._start))), this._tTime = c, this._time = T, this._act = !!U, this._initted || (this._onUpdate = this.vars.onUpdate, this._initted = 1, this._zTime = t, i = 0), !i && c && v && !P && !l && (iQ(this, "onStart"), this._tTime !== c))
+      if (this._hasPause && !this._forcing && this._lock < 2 && (h = se(this, y(i), y(T)), h && (c -= T - (T = h._start))), this._tTime = c, this._time = T, this._act = !!U, this._initted || (this._onUpdate = this.vars.onUpdate, this._initted = 1, this._zTime = t, i = 0), !i && c && v && !P && !l && (iQ(this, "onStart"), this._tTime !== c))
         return this;
       if (T >= i && t >= 0)
         for (z = this._first; z; ) {
-          if (w = z._next, (z._act || T >= z._start) && z._ts && a !== z) {
+          if (w = z._next, (z._act || T >= z._start) && z._ts && h !== z) {
             if (z.parent !== this)
               return this.render(t, P, e);
             if (z.render(z._ts > 0 ? (T - z._start) * z._ts : (z._dirty ? z.totalDuration() : z._tDur) + (T - z._start) * z._ts, P, e), T !== this._time || !this._ts && !k) {
-              a = 0, w && (c += this._zTime = -x);
+              h = 0, w && (c += this._zTime = -x);
               break;
             }
           }
@@ -1440,18 +1440,18 @@ var _ = /* @__PURE__ */ function(r) {
       else {
         z = this._last;
         for (var M = t < 0 ? t : T; z; ) {
-          if (w = z._prev, (z._act || M <= z._end) && z._ts && a !== z) {
+          if (w = z._prev, (z._act || M <= z._end) && z._ts && h !== z) {
             if (z.parent !== this)
               return this.render(t, P, e);
             if (z.render(z._ts > 0 ? (M - z._start) * z._ts : (z._dirty ? z.totalDuration() : z._tDur) + (M - z._start) * z._ts, P, e || Z && LA(z)), T !== this._time || !this._ts && !k) {
-              a = 0, w && (c += this._zTime = M ? -x : x);
+              h = 0, w && (c += this._zTime = M ? -x : x);
               break;
             }
           }
           z = w;
         }
       }
-      if (a && !P && (this.pause(), a.render(T >= i ? 0 : -x)._zTime = T >= i ? 1 : -1, this._ts))
+      if (h && !P && (this.pause(), h.render(T >= i ? 0 : -x)._zTime = T >= i ? 1 : -1, this._ts))
         return this._start = D, pB(this), this.render(t, P, e);
       this._onUpdate && !P && iQ(this, "onUpdate", !0), (c === s && this._tTime >= this.totalDuration() || !c && i) && (D === this._start || Math.abs(U) !== Math.abs(this._ts)) && (this._lock || ((t || !v) && (c === s && this._ts > 0 || !c && this._ts < 0) && FQ(this, 1), !P && !(t < 0 && !i) && (c || i || !s) && (iQ(this, c === s && t >= 0 ? "onComplete" : "onReverseComplete", !0), this._prom && !(c < s && this.timeScale() > 0) && this._prom())));
     }
@@ -1582,8 +1582,8 @@ cQ(_.prototype, {
   _forcing: 0
 });
 var Ne = function(Q, B, A, t, P, e, i) {
-  var s = new BQ(this._pt, Q, B, 0, 1, Zt, null, P), v = 0, c = 0, n, T, z, w, o, E, k, a;
-  for (s.b = A, s.e = t, A += "", t += "", (k = ~t.indexOf("random(")) && (t = EB(t)), e && (a = [A, t], e(a, Q, B), A = a[0], t = a[1]), T = A.match(SB) || []; n = SB.exec(t); )
+  var s = new BQ(this._pt, Q, B, 0, 1, Zt, null, P), v = 0, c = 0, n, T, z, w, o, E, k, h;
+  for (s.b = A, s.e = t, A += "", t += "", (k = ~t.indexOf("random(")) && (t = EB(t)), e && (h = [A, t], e(h, Q, B), A = h[0], t = h[1]), T = A.match(SB) || []; n = SB.exec(t); )
     w = n[0], o = t.substring(v, n.index), z ? z = (z + 1) % 5 : o.substr(-5) === "rgba(" && (z = 1), w !== T[c++] && (E = parseFloat(T[c - 1]) || 0, s._pt = {
       _next: s._pt,
       p: o || c === 1 ? o : ",",
@@ -1612,7 +1612,7 @@ var Ne = function(Q, B, A, t, P, e, i) {
       v[i._props[c]] = s;
   return i;
 }, dQ, zA, HA = function r(Q, B, A) {
-  var t = Q.vars, P = t.ease, e = t.startAt, i = t.immediateRender, s = t.lazy, v = t.onUpdate, c = t.runBackwards, n = t.yoyoEase, T = t.keyframes, z = t.autoRevert, w = Q._dur, o = Q._startAt, E = Q._targets, k = Q.parent, a = k && k.data === "nested" ? k.vars.targets : E, U = Q._overwrite === "auto" && !lA, D = Q.timeline, l = t.easeReverse || n, O, u, N, C, M, b, j, d, G, f, H, F, X;
+  var t = Q.vars, P = t.ease, e = t.startAt, i = t.immediateRender, s = t.lazy, v = t.onUpdate, c = t.runBackwards, n = t.yoyoEase, T = t.keyframes, z = t.autoRevert, w = Q._dur, o = Q._startAt, E = Q._targets, k = Q.parent, h = k && k.data === "nested" ? k.vars.targets : E, U = Q._overwrite === "auto" && !lA, D = Q.timeline, l = t.easeReverse || n, O, u, N, C, M, b, j, d, G, f, H, F, X;
   if (D && (!T || !P) && (P = "none"), Q._ease = VQ(P, TB.ease), Q._rEase = l && (VQ(l) || Q._ease), Q._from = !D && !!t.runBackwards, Q._from && (Q.ratio = 1), !D || T && !t.stagger) {
     if (d = E[0] ? SQ(E[0]).harness : 0, F = d && t[d.prop], O = jB(t, NA), o && (o._zTime < 0 && o.progress(1), B < 0 && c && i && !z ? o.render(-1, !0) : o.revert(c && w ? NB : $P), o._lazy = 0), e) {
       if (FQ(Q._startAt = J.set(E, cQ({
@@ -1648,11 +1648,11 @@ var Ne = function(Q, B, A, t, P, e, i) {
         return;
     }
     for (Q._pt = Q._ptCache = 0, s = w && $(s) || s && !w, u = 0; u < E.length; u++) {
-      if (M = E[u], j = M._gsap || dA(E)[u]._gsap, Q._ptLookup[u] = f = {}, sA[j.id] && HQ.length && HB(), H = a === E ? u : a.indexOf(M), d && (G = new d()).init(M, F || O, Q, H, a) !== !1 && (Q._pt = C = new BQ(Q._pt, M, G.name, 0, 1, G.render, G, 0, G.priority), G._props.forEach(function(nQ) {
+      if (M = E[u], j = M._gsap || dA(E)[u]._gsap, Q._ptLookup[u] = f = {}, sA[j.id] && HQ.length && HB(), H = h === E ? u : h.indexOf(M), d && (G = new d()).init(M, F || O, Q, H, h) !== !1 && (Q._pt = C = new BQ(Q._pt, M, G.name, 0, 1, G.render, G, 0, G.priority), G._props.forEach(function(nQ) {
         f[nQ] = C;
       }), G.priority && (b = 1)), !d || F)
         for (N in O)
-          PQ[N] && (G = Vt(N, O, Q, H, M, a)) ? G.priority && (b = 1) : f[N] = C = MA.call(Q, M, N, "get", O[N], H, a, 0, t.stringFilter);
+          PQ[N] && (G = Vt(N, O, Q, H, M, h)) ? G.priority && (b = 1) : f[N] = C = MA.call(Q, M, N, "get", O[N], H, h, 0, t.stringFilter);
       Q._op && Q._op[u] && Q.kill(M, Q._op[u]), U && Q._pt && (dQ = Q, I.killTweensOf(M, f, Q.globalTime(B)), X = !Q.parent, dQ = 0), Q._pt && s && (sA[j.id] = 1);
     }
     b && Wt(Q), Q._onInit && Q._onInit(Q);
@@ -1709,20 +1709,20 @@ var J = /* @__PURE__ */ function(r) {
   function Q(A, t, P, e) {
     var i;
     typeof t == "number" && (P.duration = t, t = P, P = null), i = r.call(this, e ? t : cB(t)) || this;
-    var s = i.vars, v = s.duration, c = s.delay, n = s.immediateRender, T = s.stagger, z = s.overwrite, w = s.keyframes, o = s.defaults, E = s.scrollTrigger, k = t.parent || I, a = (q(A) || wt(A) ? uQ(A[0]) : "length" in t) ? [A] : wQ(A), U, D, l, O, u, N, C, M;
-    if (i._targets = a.length ? dA(a) : zB("GSAP target " + A + " not found. https://gsap.com", !sQ.nullTargetWarn) || [], i._ptLookup = [], i._overwrite = z, w || T || CB(v) || CB(c)) {
+    var s = i.vars, v = s.duration, c = s.delay, n = s.immediateRender, T = s.stagger, z = s.overwrite, w = s.keyframes, o = s.defaults, E = s.scrollTrigger, k = t.parent || I, h = (q(A) || wt(A) ? uQ(A[0]) : "length" in t) ? [A] : wQ(A), U, D, l, O, u, N, C, M;
+    if (i._targets = h.length ? dA(h) : zB("GSAP target " + A + " not found. https://gsap.com", !sQ.nullTargetWarn) || [], i._ptLookup = [], i._overwrite = z, w || T || CB(v) || CB(c)) {
       t = i.vars;
       var b = t.easeReverse || t.yoyoEase;
       if (U = i.timeline = new _({
         data: "nested",
         defaults: o || {},
-        targets: k && k.data === "nested" ? k.vars.targets : a
+        targets: k && k.data === "nested" ? k.vars.targets : h
       }), U.kill(), U.parent = U._dp = UQ(i), U._start = 0, T || CB(v) || CB(c)) {
-        if (O = a.length, C = T && Ft(T), kQ(T))
+        if (O = h.length, C = T && Ft(T), kQ(T))
           for (u in T)
             ~Jt.indexOf(u) && (M || (M = {}), M[u] = T[u]);
         for (D = 0; D < O; D++)
-          l = jB(t, Rt), l.stagger = 0, b && (l.easeReverse = b), M && $Q(l, M), N = a[D], l.duration = +oB(v, UQ(i), D, N, a), l.delay = (+oB(c, UQ(i), D, N, a) || 0) - i._delay, !T && O === 1 && l.delay && (i._delay = c = l.delay, i._start += c, l.delay = 0), U.to(N, l, C ? C(D, N, a) : 0), U._ease = g.none;
+          l = jB(t, Rt), l.stagger = 0, b && (l.easeReverse = b), M && $Q(l, M), N = h[D], l.duration = +oB(v, UQ(i), D, N, h), l.delay = (+oB(c, UQ(i), D, N, h) || 0) - i._delay, !T && O === 1 && l.delay && (i._delay = c = l.delay, i._start += c, l.delay = 0), U.to(N, l, C ? C(D, N, h) : 0), U._ease = g.none;
         U.duration() ? v = c = 0 : i.timeline = 0;
       } else if (w) {
         cB(cQ(U.vars.defaults, {
@@ -1731,7 +1731,7 @@ var J = /* @__PURE__ */ function(r) {
         var j = 0, d, G, f;
         if (q(w))
           w.forEach(function(H) {
-            return U.to(a, H, ">");
+            return U.to(h, H, ">");
           }), U.duration();
         else {
           l = {};
@@ -1744,7 +1744,7 @@ var J = /* @__PURE__ */ function(r) {
               G = d[D], f = {
                 ease: G.e,
                 duration: (G.t - (D ? d[D - 1].t : 0)) / 100 * v
-              }, f[u] = G.v, U.to(a, f, j), j += f.duration;
+              }, f[u] = G.v, U.to(h, f, j), j += f.duration;
           U.duration() < v && U.to({}, {
             duration: v - U.duration()
           });
@@ -1753,11 +1753,11 @@ var J = /* @__PURE__ */ function(r) {
       v || i.duration(v = U.duration());
     } else
       i.timeline = 0;
-    return z === !0 && !lA && (dQ = UQ(i), I.killTweensOf(a), dQ = 0), aQ(k, UQ(i), P), t.reversed && i.reverse(), t.paused && i.paused(!0), (n || !v && !w && i._start === y(k._time) && $(n) && ee(UQ(i)) && k.data !== "nested") && (i._tTime = -x, i.render(Math.max(0, -c) || 0)), E && Lt(UQ(i), E), i;
+    return z === !0 && !lA && (dQ = UQ(i), I.killTweensOf(h), dQ = 0), aQ(k, UQ(i), P), t.reversed && i.reverse(), t.paused && i.paused(!0), (n || !v && !w && i._start === y(k._time) && $(n) && ee(UQ(i)) && k.data !== "nested") && (i._tTime = -x, i.render(Math.max(0, -c) || 0)), E && Lt(UQ(i), E), i;
   }
   var B = Q.prototype;
   return B.render = function(t, P, e) {
-    var i = this._time, s = this._tDur, v = this._dur, c = t < 0, n = t > s - x && !c ? s : t < x ? 0 : t, T, z, w, o, E, k, a, U;
+    var i = this._time, s = this._tDur, v = this._dur, c = t < 0, n = t > s - x && !c ? s : t < x ? 0 : t, T, z, w, o, E, k, h, U;
     if (!v)
       re(this, t, P, e);
     else if (n !== this._tTime || !t || e || !this._initted && this._tTime || this._startAt && this._zTime < 0 !== c || this._lazy) {
@@ -1782,13 +1782,13 @@ var J = /* @__PURE__ */ function(r) {
           var l = D ? i : v - i;
           this._inv = D, this._from && (this.ratio = 1 - this.ratio), this._invRatio = this.ratio, this._invTime = i, this._invRecip = l ? (D ? -1 : 1) / l : 0, this._invScale = D ? -this.ratio : 1 - this.ratio, this._invEase = D ? this._rEase : this._ease;
         }
-        this.ratio = a = this._invRatio + this._invScale * this._invEase((T - this._invTime) * this._invRecip);
+        this.ratio = h = this._invRatio + this._invScale * this._invEase((T - this._invTime) * this._invRecip);
       } else
-        this.ratio = a = this._ease(T / v);
-      if (this._from && (this.ratio = a = 1 - a), this._tTime = n, this._time = T, !this._act && this._ts && (this._act = 1, this._lazy = 0), !i && n && !P && !E && (iQ(this, "onStart"), this._tTime !== n))
+        this.ratio = h = this._ease(T / v);
+      if (this._from && (this.ratio = h = 1 - h), this._tTime = n, this._time = T, !this._act && this._ts && (this._act = 1, this._lazy = 0), !i && n && !P && !E && (iQ(this, "onStart"), this._tTime !== n))
         return this;
       for (z = this._pt; z; )
-        z.r(a, z.d), z = z._next;
+        z.r(h, z.d), z = z._next;
       U && U.render(t < 0 ? t : U._dur * U._ease(T / this._dur), P, e) || this._startAt && (this._zTime = t), this._onUpdate && !P && (c && vA(this, t, P, e), iQ(this, "onUpdate")), this._repeat && w !== E && this.vars.onRepeat && !P && this.parent && iQ(this, "onRepeat"), (n === this._tDur || !n) && this._tTime === n && (c && !this._onUpdate && vA(this, t, !0, !0), (t || !v) && (n === this._tDur && this._ts > 0 || !n && this._ts < 0) && FQ(this, 1), !P && !(c && !i) && (n || i || k) && (iQ(this, n === s ? "onComplete" : "onReverseComplete", !0), this._prom && !(n < s && this.timeScale() > 0) && this._prom()));
     }
     return this;
@@ -1810,8 +1810,8 @@ var J = /* @__PURE__ */ function(r) {
     var i = this._targets, s = t ? wQ(t) : i, v = this._ptLookup, c = this._pt, n, T, z, w, o, E, k;
     if ((!P || P === "all") && te(i, s))
       return P === "all" && (this._pt = 0), sB(this);
-    for (n = this._op = this._op || [], P !== "all" && (K(P) && (o = {}, QQ(P, function(a) {
-      return o[a] = 1;
+    for (n = this._op = this._op || [], P !== "all" && (K(P) && (o = {}, QQ(P, function(h) {
+      return o[h] = 1;
     }), P = o), P = Le(i, P)), k = i.length; k--; )
       if (~s.indexOf(i[k])) {
         T = v[k], P === "all" ? (n[k] = P, w = T, z = {}) : (z = n[k] = n[k] || {}, w = P);
@@ -2387,8 +2387,8 @@ var ZA, LQ, qQ, fA, IQ, WA, bA, Ie = function() {
   if (i[s ? "width" : "height"] = n + (T ? e : t), o = t !== "rem" && ~B.indexOf("adius") || t === "em" && Q.appendChild && !v ? Q : Q.parentNode, k && (o = (Q.ownerSVGElement || {}).parentNode), (!o || o === LQ || !o.appendChild) && (o = LQ.body), E = o._gsap, E && z && E.width && s && E.time === eQ.time && !E.uncache)
     return V(P / E.width * n);
   if (z && (B === "height" || B === "width")) {
-    var a = Q.style[B];
-    Q.style[B] = n + t, w = Q[c], a ? Q.style[B] = a : GQ(Q, B);
+    var h = Q.style[B];
+    Q.style[B] = n + t, w = Q[c], h ? Q.style[B] = h : GQ(Q, B);
   } else
     (z || e === "%") && !Ai[rQ(o, "display")] && (i.position = rQ(Q, "position")), o === Q && (i.position = "static"), o.appendChild(IQ), w = IQ[c], o.removeChild(IQ), i.position = "absolute";
   return s && z && (E = SQ(o), E.time = eQ.time, E.width = o[c]), V(T ? w * P / n : w && P ? n / w * P : 0);
@@ -2400,12 +2400,12 @@ var ZA, LQ, qQ, fA, IQ, WA, bA, Ie = function() {
     var P = tB(B, Q, 1), e = P && rQ(Q, P, 1);
     e && e !== A ? (B = P, A = e) : B === "borderColor" && (A = rQ(Q, "borderTopColor"));
   }
-  var i = new BQ(this._pt, Q.style, B, 0, 1, Zt), s = 0, v = 0, c, n, T, z, w, o, E, k, a, U, D, l;
+  var i = new BQ(this._pt, Q.style, B, 0, 1, Zt), s = 0, v = 0, c, n, T, z, w, o, E, k, h, U, D, l;
   if (i.b = A, i.e = t, A += "", t += "", t.substring(0, 6) === "var(--" && (t = rQ(Q, t.substring(4, t.indexOf(")")))), t === "auto" && (o = Q.style[B], Q.style[B] = t, t = rQ(Q, B) || t, o ? Q.style[B] = o : GQ(Q, B)), c = [A, t], It(c), A = c[0], t = c[1], T = A.match(KQ) || [], l = t.match(KQ) || [], l.length) {
     for (; n = KQ.exec(t); )
-      E = n[0], a = t.substring(s, n.index), w ? w = (w + 1) % 5 : (a.substr(-5) === "rgba(" || a.substr(-5) === "hsla(") && (w = 1), E !== (o = T[v++] || "") && (z = parseFloat(o) || 0, D = o.substr((z + "").length), E.charAt(1) === "=" && (E = WQ(z, E) + D), k = parseFloat(E), U = E.substr((k + "").length), s = KQ.lastIndex - U.length, U || (U = U || sQ.units[B] || D, s === t.length && (t += U, i.e += U)), D !== U && (z = fQ(Q, B, o, U) || 0), i._pt = {
+      E = n[0], h = t.substring(s, n.index), w ? w = (w + 1) % 5 : (h.substr(-5) === "rgba(" || h.substr(-5) === "hsla(") && (w = 1), E !== (o = T[v++] || "") && (z = parseFloat(o) || 0, D = o.substr((z + "").length), E.charAt(1) === "=" && (E = WQ(z, E) + D), k = parseFloat(E), U = E.substr((k + "").length), s = KQ.lastIndex - U.length, U || (U = U || sQ.units[B] || D, s === t.length && (t += U, i.e += U)), D !== U && (z = fQ(Q, B, o, U) || 0), i._pt = {
         _next: i._pt,
-        p: a || v === 1 ? a : ",",
+        p: h || v === 1 ? h : ",",
         //note: SVG spec allows omission of comma/space when a negative sign is wedged between two numbers, like 2.5-5.3 instead of 2.5,-5.3 but when tweening, the negative value may switch to positive, so we insert the comma just in case.
         s: z,
         c: k - z,
@@ -2513,14 +2513,14 @@ var ZA, LQ, qQ, fA, IQ, WA, bA, Ie = function() {
   var A = Q._gsap || SQ(Q), t = Q.style, P = tt(Q), e, i, s, v;
   return A.svg && Q.getAttribute("transform") ? (s = Q.transform.baseVal.consolidate().matrix, P = [s.a, s.b, s.c, s.d, s.e, s.f], P.join(",") === "1,0,0,1,0,0" ? kB : P) : (P === kB && !Q.offsetParent && Q !== qQ && !A.svg && (s = t.display, t.display = "block", e = Q.parentNode, (!e || !Q.offsetParent && !Q.getBoundingClientRect().width) && (v = 1, i = Q.nextElementSibling, qQ.appendChild(Q)), P = tt(Q), s ? t.display = s : GQ(Q, "display"), v && (i ? e.insertBefore(Q, i) : e ? e.appendChild(Q) : qQ.removeChild(Q))), B && P.length > 6 ? [P[0], P[1], P[4], P[5], P[12], P[13]] : P);
 }, kA = function(Q, B, A, t, P, e) {
-  var i = Q._gsap, s = P || pA(Q, !0), v = i.xOrigin || 0, c = i.yOrigin || 0, n = i.xOffset || 0, T = i.yOffset || 0, z = s[0], w = s[1], o = s[2], E = s[3], k = s[4], a = s[5], U = B.split(" "), D = parseFloat(U[0]) || 0, l = parseFloat(U[1]) || 0, O, u, N, C;
-  A ? s !== kB && (u = z * E - w * o) && (N = D * (E / u) + l * (-o / u) + (o * a - E * k) / u, C = D * (-w / u) + l * (z / u) - (z * a - w * k) / u, D = N, l = C) : (O = tP(Q), D = O.x + (~U[0].indexOf("%") ? D / 100 * O.width : D), l = O.y + (~(U[1] || U[0]).indexOf("%") ? l / 100 * O.height : l)), t || t !== !1 && i.smooth ? (k = D - v, a = l - c, i.xOffset = n + (k * z + a * o) - k, i.yOffset = T + (k * w + a * E) - a) : i.xOffset = i.yOffset = 0, i.xOrigin = D, i.yOrigin = l, i.smooth = !!t, i.origin = B, i.originIsAbsolute = !!A, Q.style[AQ] = "0px 0px", e && (MQ(e, i, "xOrigin", v, D), MQ(e, i, "yOrigin", c, l), MQ(e, i, "xOffset", n, i.xOffset), MQ(e, i, "yOffset", T, i.yOffset)), Q.setAttribute("data-svg-origin", D + " " + l);
+  var i = Q._gsap, s = P || pA(Q, !0), v = i.xOrigin || 0, c = i.yOrigin || 0, n = i.xOffset || 0, T = i.yOffset || 0, z = s[0], w = s[1], o = s[2], E = s[3], k = s[4], h = s[5], U = B.split(" "), D = parseFloat(U[0]) || 0, l = parseFloat(U[1]) || 0, O, u, N, C;
+  A ? s !== kB && (u = z * E - w * o) && (N = D * (E / u) + l * (-o / u) + (o * h - E * k) / u, C = D * (-w / u) + l * (z / u) - (z * h - w * k) / u, D = N, l = C) : (O = tP(Q), D = O.x + (~U[0].indexOf("%") ? D / 100 * O.width : D), l = O.y + (~(U[1] || U[0]).indexOf("%") ? l / 100 * O.height : l)), t || t !== !1 && i.smooth ? (k = D - v, h = l - c, i.xOffset = n + (k * z + h * o) - k, i.yOffset = T + (k * w + h * E) - h) : i.xOffset = i.yOffset = 0, i.xOrigin = D, i.yOrigin = l, i.smooth = !!t, i.origin = B, i.originIsAbsolute = !!A, Q.style[AQ] = "0px 0px", e && (MQ(e, i, "xOrigin", v, D), MQ(e, i, "yOrigin", c, l), MQ(e, i, "xOffset", n, i.xOffset), MQ(e, i, "yOffset", T, i.yOffset)), Q.setAttribute("data-svg-origin", D + " " + l);
 }, lB = function(Q, B) {
   var A = Q._gsap || new Yt(Q);
   if ("x" in A && !B && !A.uncache)
     return A;
-  var t = Q.style, P = A.scaleX < 0, e = "px", i = "deg", s = getComputedStyle(Q), v = rQ(Q, AQ) || "0", c, n, T, z, w, o, E, k, a, U, D, l, O, u, N, C, M, b, j, d, G, f, H, F, X, nQ, NQ, gQ, oQ, R, lQ, pQ;
-  return c = n = T = o = E = k = a = U = D = 0, z = w = 1, A.svg = !!(Q.getCTM && PP(Q)), s.translate && ((s.translate !== "none" || s.scale !== "none" || s.rotate !== "none") && (t[S] = (s.translate !== "none" ? "translate3d(" + (s.translate + " 0 0").split(" ").slice(0, 3).join(", ") + ") " : "") + (s.rotate !== "none" ? "rotate(" + s.rotate + ") " : "") + (s.scale !== "none" ? "scale(" + s.scale.split(" ").join(",") + ") " : "") + (s[S] !== "none" ? s[S] : "")), t.scale = t.rotate = t.translate = "none"), u = pA(Q, A.svg), A.svg && (A.uncache ? (X = Q.getBBox(), v = A.xOrigin - X.x + "px " + (A.yOrigin - X.y) + "px", F = "") : F = !B && Q.getAttribute("data-svg-origin"), kA(Q, F || v, !!F || A.originIsAbsolute, A.smooth !== !1, u)), l = A.xOrigin || 0, O = A.yOrigin || 0, u !== kB && (b = u[0], j = u[1], d = u[2], G = u[3], c = f = u[4], n = H = u[5], u.length === 6 ? (z = Math.sqrt(b * b + j * j), w = Math.sqrt(G * G + d * d), o = b || j ? XQ(j, b) * yQ : 0, a = d || G ? XQ(d, G) * yQ + o : 0, a && (w *= Math.abs(Math.cos(a * _Q))), A.svg && (c -= l - (l * b + O * d), n -= O - (l * j + O * G))) : (pQ = u[6], R = u[7], NQ = u[8], gQ = u[9], oQ = u[10], lQ = u[11], c = u[12], n = u[13], T = u[14], N = XQ(pQ, oQ), E = N * yQ, N && (C = Math.cos(-N), M = Math.sin(-N), F = f * C + NQ * M, X = H * C + gQ * M, nQ = pQ * C + oQ * M, NQ = f * -M + NQ * C, gQ = H * -M + gQ * C, oQ = pQ * -M + oQ * C, lQ = R * -M + lQ * C, f = F, H = X, pQ = nQ), N = XQ(-d, oQ), k = N * yQ, N && (C = Math.cos(-N), M = Math.sin(-N), F = b * C - NQ * M, X = j * C - gQ * M, nQ = d * C - oQ * M, lQ = G * M + lQ * C, b = F, j = X, d = nQ), N = XQ(j, b), o = N * yQ, N && (C = Math.cos(N), M = Math.sin(N), F = b * C + j * M, X = f * C + H * M, j = j * C - b * M, H = H * C - f * M, b = F, f = X), E && Math.abs(E) + Math.abs(o) > 359.9 && (E = o = 0, k = 180 - k), z = V(Math.sqrt(b * b + j * j + d * d)), w = V(Math.sqrt(H * H + pQ * pQ)), N = XQ(f, H), a = Math.abs(N) > 2e-4 ? N * yQ : 0, D = lQ ? 1 / (lQ < 0 ? -lQ : lQ) : 0), A.svg && (F = Q.getAttribute("transform"), A.forceCSS = Q.setAttribute("transform", "") || !iP(rQ(Q, S)), F && Q.setAttribute("transform", F))), Math.abs(a) > 90 && Math.abs(a) < 270 && (P ? (z *= -1, a += o <= 0 ? 180 : -180, o += o <= 0 ? 180 : -180) : (w *= -1, a += a <= 0 ? 180 : -180)), B = B || A.uncache, A.x = c - ((A.xPercent = c && (!B && A.xPercent || (Math.round(Q.offsetWidth / 2) === Math.round(-c) ? -50 : 0))) ? Q.offsetWidth * A.xPercent / 100 : 0) + e, A.y = n - ((A.yPercent = n && (!B && A.yPercent || (Math.round(Q.offsetHeight / 2) === Math.round(-n) ? -50 : 0))) ? Q.offsetHeight * A.yPercent / 100 : 0) + e, A.z = T + e, A.scaleX = V(z), A.scaleY = V(w), A.rotation = V(o) + i, A.rotationX = V(E) + i, A.rotationY = V(k) + i, A.skewX = a + i, A.skewY = U + i, A.transformPerspective = D + e, (A.zOrigin = parseFloat(v.split(" ")[2]) || !B && A.zOrigin || 0) && (t[AQ] = bB(v)), A.xOffset = A.yOffset = 0, A.force3D = sQ.force3D, A.renderTransform = A.svg ? ri : AP ? rP : ii, A.uncache = 0, A;
+  var t = Q.style, P = A.scaleX < 0, e = "px", i = "deg", s = getComputedStyle(Q), v = rQ(Q, AQ) || "0", c, n, T, z, w, o, E, k, h, U, D, l, O, u, N, C, M, b, j, d, G, f, H, F, X, nQ, NQ, gQ, oQ, R, lQ, pQ;
+  return c = n = T = o = E = k = h = U = D = 0, z = w = 1, A.svg = !!(Q.getCTM && PP(Q)), s.translate && ((s.translate !== "none" || s.scale !== "none" || s.rotate !== "none") && (t[S] = (s.translate !== "none" ? "translate3d(" + (s.translate + " 0 0").split(" ").slice(0, 3).join(", ") + ") " : "") + (s.rotate !== "none" ? "rotate(" + s.rotate + ") " : "") + (s.scale !== "none" ? "scale(" + s.scale.split(" ").join(",") + ") " : "") + (s[S] !== "none" ? s[S] : "")), t.scale = t.rotate = t.translate = "none"), u = pA(Q, A.svg), A.svg && (A.uncache ? (X = Q.getBBox(), v = A.xOrigin - X.x + "px " + (A.yOrigin - X.y) + "px", F = "") : F = !B && Q.getAttribute("data-svg-origin"), kA(Q, F || v, !!F || A.originIsAbsolute, A.smooth !== !1, u)), l = A.xOrigin || 0, O = A.yOrigin || 0, u !== kB && (b = u[0], j = u[1], d = u[2], G = u[3], c = f = u[4], n = H = u[5], u.length === 6 ? (z = Math.sqrt(b * b + j * j), w = Math.sqrt(G * G + d * d), o = b || j ? XQ(j, b) * yQ : 0, h = d || G ? XQ(d, G) * yQ + o : 0, h && (w *= Math.abs(Math.cos(h * _Q))), A.svg && (c -= l - (l * b + O * d), n -= O - (l * j + O * G))) : (pQ = u[6], R = u[7], NQ = u[8], gQ = u[9], oQ = u[10], lQ = u[11], c = u[12], n = u[13], T = u[14], N = XQ(pQ, oQ), E = N * yQ, N && (C = Math.cos(-N), M = Math.sin(-N), F = f * C + NQ * M, X = H * C + gQ * M, nQ = pQ * C + oQ * M, NQ = f * -M + NQ * C, gQ = H * -M + gQ * C, oQ = pQ * -M + oQ * C, lQ = R * -M + lQ * C, f = F, H = X, pQ = nQ), N = XQ(-d, oQ), k = N * yQ, N && (C = Math.cos(-N), M = Math.sin(-N), F = b * C - NQ * M, X = j * C - gQ * M, nQ = d * C - oQ * M, lQ = G * M + lQ * C, b = F, j = X, d = nQ), N = XQ(j, b), o = N * yQ, N && (C = Math.cos(N), M = Math.sin(N), F = b * C + j * M, X = f * C + H * M, j = j * C - b * M, H = H * C - f * M, b = F, f = X), E && Math.abs(E) + Math.abs(o) > 359.9 && (E = o = 0, k = 180 - k), z = V(Math.sqrt(b * b + j * j + d * d)), w = V(Math.sqrt(H * H + pQ * pQ)), N = XQ(f, H), h = Math.abs(N) > 2e-4 ? N * yQ : 0, D = lQ ? 1 / (lQ < 0 ? -lQ : lQ) : 0), A.svg && (F = Q.getAttribute("transform"), A.forceCSS = Q.setAttribute("transform", "") || !iP(rQ(Q, S)), F && Q.setAttribute("transform", F))), Math.abs(h) > 90 && Math.abs(h) < 270 && (P ? (z *= -1, h += o <= 0 ? 180 : -180, o += o <= 0 ? 180 : -180) : (w *= -1, h += h <= 0 ? 180 : -180)), B = B || A.uncache, A.x = c - ((A.xPercent = c && (!B && A.xPercent || (Math.round(Q.offsetWidth / 2) === Math.round(-c) ? -50 : 0))) ? Q.offsetWidth * A.xPercent / 100 : 0) + e, A.y = n - ((A.yPercent = n && (!B && A.yPercent || (Math.round(Q.offsetHeight / 2) === Math.round(-n) ? -50 : 0))) ? Q.offsetHeight * A.yPercent / 100 : 0) + e, A.z = T + e, A.scaleX = V(z), A.scaleY = V(w), A.rotation = V(o) + i, A.rotationX = V(E) + i, A.rotationY = V(k) + i, A.skewX = h + i, A.skewY = U + i, A.transformPerspective = D + e, (A.zOrigin = parseFloat(v.split(" ")[2]) || !B && A.zOrigin || 0) && (t[AQ] = bB(v)), A.xOffset = A.yOffset = 0, A.force3D = sQ.force3D, A.renderTransform = A.svg ? ri : AP ? rP : ii, A.uncache = 0, A;
 }, bB = function(Q) {
   return (Q = Q.split(" "))[0] + " " + Q[1];
 }, ZB = function(Q, B, A) {
@@ -2529,15 +2529,15 @@ var ZA, LQ, qQ, fA, IQ, WA, bA, Ie = function() {
 }, ii = function(Q, B) {
   B.z = "0px", B.rotationY = B.rotationX = "0deg", B.force3D = 0, rP(Q, B);
 }, xQ = "0deg", PB = "0px", mQ = ") ", rP = function(Q, B) {
-  var A = B || this, t = A.xPercent, P = A.yPercent, e = A.x, i = A.y, s = A.z, v = A.rotation, c = A.rotationY, n = A.rotationX, T = A.skewX, z = A.skewY, w = A.scaleX, o = A.scaleY, E = A.transformPerspective, k = A.force3D, a = A.target, U = A.zOrigin, D = "", l = k === "auto" && Q && Q !== 1 || k === !0;
+  var A = B || this, t = A.xPercent, P = A.yPercent, e = A.x, i = A.y, s = A.z, v = A.rotation, c = A.rotationY, n = A.rotationX, T = A.skewX, z = A.skewY, w = A.scaleX, o = A.scaleY, E = A.transformPerspective, k = A.force3D, h = A.target, U = A.zOrigin, D = "", l = k === "auto" && Q && Q !== 1 || k === !0;
   if (U && (n !== xQ || c !== xQ)) {
     var O = parseFloat(c) * _Q, u = Math.sin(O), N = Math.cos(O), C;
-    O = parseFloat(n) * _Q, C = Math.cos(O), e = ZB(a, e, u * C * -U), i = ZB(a, i, -Math.sin(O) * -U), s = ZB(a, s, N * C * -U + U);
+    O = parseFloat(n) * _Q, C = Math.cos(O), e = ZB(h, e, u * C * -U), i = ZB(h, i, -Math.sin(O) * -U), s = ZB(h, s, N * C * -U + U);
   }
-  E !== PB && (D += "perspective(" + E + mQ), (t || P) && (D += "translate(" + t + "%, " + P + "%) "), (l || e !== PB || i !== PB || s !== PB) && (D += s !== PB || l ? "translate3d(" + e + ", " + i + ", " + s + ") " : "translate(" + e + ", " + i + mQ), v !== xQ && (D += "rotate(" + v + mQ), c !== xQ && (D += "rotateY(" + c + mQ), n !== xQ && (D += "rotateX(" + n + mQ), (T !== xQ || z !== xQ) && (D += "skew(" + T + ", " + z + mQ), (w !== 1 || o !== 1) && (D += "scale(" + w + ", " + o + mQ), a.style[S] = D || "translate(0, 0)";
+  E !== PB && (D += "perspective(" + E + mQ), (t || P) && (D += "translate(" + t + "%, " + P + "%) "), (l || e !== PB || i !== PB || s !== PB) && (D += s !== PB || l ? "translate3d(" + e + ", " + i + ", " + s + ") " : "translate(" + e + ", " + i + mQ), v !== xQ && (D += "rotate(" + v + mQ), c !== xQ && (D += "rotateY(" + c + mQ), n !== xQ && (D += "rotateX(" + n + mQ), (T !== xQ || z !== xQ) && (D += "skew(" + T + ", " + z + mQ), (w !== 1 || o !== 1) && (D += "scale(" + w + ", " + o + mQ), h.style[S] = D || "translate(0, 0)";
 }, ri = function(Q, B) {
-  var A = B || this, t = A.xPercent, P = A.yPercent, e = A.x, i = A.y, s = A.rotation, v = A.skewX, c = A.skewY, n = A.scaleX, T = A.scaleY, z = A.target, w = A.xOrigin, o = A.yOrigin, E = A.xOffset, k = A.yOffset, a = A.forceCSS, U = parseFloat(e), D = parseFloat(i), l, O, u, N, C;
-  s = parseFloat(s), v = parseFloat(v), c = parseFloat(c), c && (c = parseFloat(c), v += c, s += c), s || v ? (s *= _Q, v *= _Q, l = Math.cos(s) * n, O = Math.sin(s) * n, u = Math.sin(s - v) * -T, N = Math.cos(s - v) * T, v && (c *= _Q, C = Math.tan(v - c), C = Math.sqrt(1 + C * C), u *= C, N *= C, c && (C = Math.tan(c), C = Math.sqrt(1 + C * C), l *= C, O *= C)), l = V(l), O = V(O), u = V(u), N = V(N)) : (l = n, N = T, O = u = 0), (U && !~(e + "").indexOf("px") || D && !~(i + "").indexOf("px")) && (U = fQ(z, "x", e, "px"), D = fQ(z, "y", i, "px")), (w || o || E || k) && (U = V(U + w - (w * l + o * u) + E), D = V(D + o - (w * O + o * N) + k)), (t || P) && (C = z.getBBox(), U = V(U + t / 100 * C.width), D = V(D + P / 100 * C.height)), C = "matrix(" + l + "," + O + "," + u + "," + N + "," + U + "," + D + ")", z.setAttribute("transform", C), a && (z.style[S] = C);
+  var A = B || this, t = A.xPercent, P = A.yPercent, e = A.x, i = A.y, s = A.rotation, v = A.skewX, c = A.skewY, n = A.scaleX, T = A.scaleY, z = A.target, w = A.xOrigin, o = A.yOrigin, E = A.xOffset, k = A.yOffset, h = A.forceCSS, U = parseFloat(e), D = parseFloat(i), l, O, u, N, C;
+  s = parseFloat(s), v = parseFloat(v), c = parseFloat(c), c && (c = parseFloat(c), v += c, s += c), s || v ? (s *= _Q, v *= _Q, l = Math.cos(s) * n, O = Math.sin(s) * n, u = Math.sin(s - v) * -T, N = Math.cos(s - v) * T, v && (c *= _Q, C = Math.tan(v - c), C = Math.sqrt(1 + C * C), u *= C, N *= C, c && (C = Math.tan(c), C = Math.sqrt(1 + C * C), l *= C, O *= C)), l = V(l), O = V(O), u = V(u), N = V(N)) : (l = n, N = T, O = u = 0), (U && !~(e + "").indexOf("px") || D && !~(i + "").indexOf("px")) && (U = fQ(z, "x", e, "px"), D = fQ(z, "y", i, "px")), (w || o || E || k) && (U = V(U + w - (w * l + o * u) + E), D = V(D + o - (w * O + o * N) + k)), (t || P) && (C = z.getBBox(), U = V(U + t / 100 * C.width), D = V(D + P / 100 * C.height)), C = "matrix(" + l + "," + O + "," + u + "," + N + "," + U + "," + D + ")", z.setAttribute("transform", C), h && (z.style[S] = C);
 }, si = function(Q, B, A, t, P) {
   var e = 360, i = K(P), s = parseFloat(P) * (i && ~P.indexOf("rad") ? yQ : 1), v = s - t, c = t + v + "deg", n, T;
   return i && (n = P.split("_")[1], n === "short" && (v %= e, v !== v % (e / 2) && (v += v < 0 ? e : -e)), n === "cw" && v < 0 ? v = (v + e * qA) % e - ~~(v / e) * e : n === "ccw" && v > 0 && (v = (v - e * qA) % e - ~~(v / e) * e)), Q._pt = T = new BQ(Q._pt, B, A, t, v, Ve), T.e = c, T.u = "deg", Q._props.push(A), T;
@@ -2574,7 +2574,7 @@ var sP = {
     return Q.style && Q.nodeType;
   },
   init: function(Q, B, A, t, P) {
-    var e = this._props, i = Q.style, s = A.vars.startAt, v, c, n, T, z, w, o, E, k, a, U, D, l, O, u, N, C;
+    var e = this._props, i = Q.style, s = A.vars.startAt, v, c, n, T, z, w, o, E, k, h, U, D, l, O, u, N, C;
     fA || hA(), this.styles = this.styles || BP(Q), N = this.styles.props, this.tween = A;
     for (o in B)
       if (o !== "autoRound" && (c = B[o], !(PQ[o] && Vt(o, B, A, t, Q, P)))) {
@@ -2583,7 +2583,7 @@ var sP = {
         else if (o.substr(0, 2) === "--")
           v = (getComputedStyle(Q).getPropertyValue(o) + "").trim(), c += "", jQ.lastIndex = 0, jQ.test(v) || (E = W(v), k = W(c), k ? E !== k && (v = fQ(Q, o, v, k) + k) : E && (c += E)), this.add(i, "setProperty", v, c, t, P, 0, 0, o), e.push(o), N.push(o, 0, i[o]);
         else if (z !== "undefined") {
-          if (s && o in s ? (v = typeof s[o] == "function" ? s[o].call(A, t, Q, P) : s[o], K(v) && ~v.indexOf("random(") && (v = EB(v)), W(v + "") || v === "auto" || (v += sQ.units[o] || W(DQ(Q, o)) || ""), (v + "").charAt(1) === "=" && (v = DQ(Q, o))) : v = DQ(Q, o), T = parseFloat(v), a = z === "string" && c.charAt(1) === "=" && c.substr(0, 2), a && (c = c.substr(2)), n = parseFloat(c), o in hQ && (o === "autoAlpha" && (T === 1 && DQ(Q, "visibility") === "hidden" && n && (T = 0), N.push("visibility", 0, i.visibility), MQ(this, i, "visibility", T ? "inherit" : "hidden", n ? "inherit" : "hidden", !n)), o !== "scale" && o !== "transform" && (o = hQ[o], ~o.indexOf(",") && (o = o.split(",")[0]))), U = o in CQ, U) {
+          if (s && o in s ? (v = typeof s[o] == "function" ? s[o].call(A, t, Q, P) : s[o], K(v) && ~v.indexOf("random(") && (v = EB(v)), W(v + "") || v === "auto" || (v += sQ.units[o] || W(DQ(Q, o)) || ""), (v + "").charAt(1) === "=" && (v = DQ(Q, o))) : v = DQ(Q, o), T = parseFloat(v), h = z === "string" && c.charAt(1) === "=" && c.substr(0, 2), h && (c = c.substr(2)), n = parseFloat(c), o in hQ && (o === "autoAlpha" && (T === 1 && DQ(Q, "visibility") === "hidden" && n && (T = 0), N.push("visibility", 0, i.visibility), MQ(this, i, "visibility", T ? "inherit" : "hidden", n ? "inherit" : "hidden", !n)), o !== "scale" && o !== "transform" && (o = hQ[o], ~o.indexOf(",") && (o = o.split(",")[0]))), U = o in CQ, U) {
             if (this.styles.save(o), C = c, z === "string" && c.substring(0, 6) === "var(--") {
               if (c = rQ(Q, c.substring(4, c.indexOf(")"))), c.substring(0, 5) === "calc(") {
                 var M = Q.style.perspective;
@@ -2592,7 +2592,7 @@ var sP = {
               n = parseFloat(c);
             }
             if (D || (l = Q._gsap, l.renderTransform && !B.parseTransform || lB(Q, B.parseTransform), O = B.smoothOrigin !== !1 && l.smooth, D = this._pt = new BQ(this._pt, i, S, 0, 1, l.renderTransform, l, 0, -1), D.dep = 1), o === "scale")
-              this._pt = new BQ(this._pt, l, "scaleY", l.scaleY, (a ? WQ(l.scaleY, a + n) : n) - l.scaleY || 0, EA), this._pt.u = 0, e.push("scaleY", o), o += "X";
+              this._pt = new BQ(this._pt, l, "scaleY", l.scaleY, (h ? WQ(l.scaleY, h + n) : n) - l.scaleY || 0, EA), this._pt.u = 0, e.push("scaleY", o), o += "X";
             else if (o === "transformOrigin") {
               N.push(AQ, 0, i[AQ]), c = Pi(c), l.svg ? kA(Q, c, 0, O, 0, this) : (k = parseFloat(c.split(" ")[2]) || 0, k !== l.zOrigin && MQ(this, l, "zOrigin", l.zOrigin, k), MQ(this, i, o, bB(v), bB(c)));
               continue;
@@ -2600,7 +2600,7 @@ var sP = {
               kA(Q, c, 1, O, 0, this);
               continue;
             } else if (o in eP) {
-              si(this, l, o, T, a ? WQ(T, a + c) : c);
+              si(this, l, o, T, h ? WQ(T, h + c) : c);
               continue;
             } else if (o === "smoothOrigin") {
               MQ(this, l, "smooth", l.smooth, c);
@@ -2614,11 +2614,11 @@ var sP = {
             }
           } else o in i || (o = tB(o) || o);
           if (U || (n || n === 0) && (T || T === 0) && !Ye.test(c) && o in i)
-            E = (v + "").substr((T + "").length), n || (n = 0), k = W(c) || (o in sQ.units ? sQ.units[o] : E), E !== k && (T = fQ(Q, o, v, k)), this._pt = new BQ(this._pt, U ? l : i, o, T, (a ? WQ(T, a + n) : n) - T, !U && (k === "px" || o === "zIndex") && B.autoRound !== !1 ? Xe : EA), this._pt.u = k || 0, U && C !== c ? (this._pt.b = v, this._pt.e = C, this._pt.r = Re) : E !== k && k !== "%" && (this._pt.b = v, this._pt.r = Je);
+            E = (v + "").substr((T + "").length), n || (n = 0), k = W(c) || (o in sQ.units ? sQ.units[o] : E), E !== k && (T = fQ(Q, o, v, k)), this._pt = new BQ(this._pt, U ? l : i, o, T, (h ? WQ(T, h + n) : n) - T, !U && (k === "px" || o === "zIndex") && B.autoRound !== !1 ? Xe : EA), this._pt.u = k || 0, U && C !== c ? (this._pt.b = v, this._pt.e = C, this._pt.r = Re) : E !== k && k !== "%" && (this._pt.b = v, this._pt.r = Je);
           else if (o in i)
-            ti.call(this, Q, o, v, a ? a + c : c);
+            ti.call(this, Q, o, v, h ? h + c : c);
           else if (o in Q)
-            this.add(Q, o, v || Q[o], a ? a + c : c, t, P);
+            this.add(Q, o, v || Q[o], h ? h + c : c, t, P);
           else if (o !== "parseTransform") {
             CA(o, c);
             continue;
@@ -2674,11 +2674,11 @@ function oi(r) {
   return 1 - Math.pow(1 - Q, 3);
 }
 function Ti(r) {
-  const Q = Math.max(1e-3, r), B = Q * 1.6, A = Q * 0.7, t = new h.ConeGeometry(A, B, 3, 1, !1);
+  const Q = Math.max(1e-3, r), B = Q * 1.6, A = Q * 0.7, t = new a.ConeGeometry(A, B, 3, 1, !1);
   return t.rotateX(-Math.PI / 2), t.translate(0, 0, B / 2), t;
 }
 function zi(r) {
-  const B = Math.max(1e-3, r) * 0.65, A = new h.SphereGeometry(B, 18, 12);
+  const B = Math.max(1e-3, r) * 0.65, A = new a.SphereGeometry(B, 18, 12);
   return A.translate(0, 0, B), A;
 }
 function wi(r, Q) {
@@ -2688,14 +2688,14 @@ function wi(r, Q) {
     const i = t.getX(e), s = t.getY(e), v = t.getZ(e);
     P[e * 2] = Math.atan2(s, i) / (2 * Math.PI) + 0.5, P[e * 2 + 1] = (v - B.min.z) / A * Q;
   }
-  r.setAttribute("uv", new h.BufferAttribute(P, 2));
+  r.setAttribute("uv", new a.BufferAttribute(P, 2));
 }
 function cP(r) {
   const Q = atob(ci), B = new Uint8Array(Q.length);
   for (let v = 0; v < Q.length; v++) B[v] = Q.charCodeAt(v);
   const t = new aP().parse(B.buffer);
   t.rotateX(-Math.PI / 2), t.computeBoundingBox();
-  const P = t.boundingBox, e = new h.Vector3();
+  const P = t.boundingBox, e = new a.Vector3();
   P.getSize(e);
   const i = Math.max(1e-3, r) * 1.6 / Math.max(e.x, e.y, e.z, 1e-3);
   t.scale(i, i, i), t.computeBoundingBox();
@@ -2724,34 +2724,34 @@ function Ei() {
     P.data[i] = Math.min(255, Math.max(0, P.data[i] + s)), P.data[i + 1] = P.data[i], P.data[i + 2] = P.data[i];
   }
   A.putImageData(P, 0, 0);
-  const e = new h.CanvasTexture(B);
-  return e.wrapS = h.RepeatWrapping, e.wrapT = h.RepeatWrapping, WB = e, e;
+  const e = new a.CanvasTexture(B);
+  return e.wrapS = a.RepeatWrapping, e.wrapT = a.RepeatWrapping, WB = e, e;
 }
 function ai(r, Q) {
-  const B = Math.max(1e-3, r), A = B * 1.6, t = B * 0.08, P = B * 0.187, e = DB(Q), i = new h.CylinderGeometry(0, t, A, 8, 1, !1);
+  const B = Math.max(1e-3, r), A = B * 1.6, t = B * 0.08, P = B * 0.187, e = DB(Q), i = new a.CylinderGeometry(0, t, A, 8, 1, !1);
   i.rotateX(-Math.PI / 2), i.translate(0, 0, A / 2);
-  const s = new h.CylinderGeometry(0, P, A, 8, 1, !0);
+  const s = new a.CylinderGeometry(0, P, A, 8, 1, !0);
   s.rotateX(-Math.PI / 2), s.translate(0, 0, A / 2);
-  const v = new h.MeshBasicMaterial({
-    color: new h.Color(it),
+  const v = new a.MeshBasicMaterial({
+    color: new a.Color(it),
     transparent: !0,
     opacity: e,
     depthTest: !1,
     depthWrite: !1,
-    blending: h.AdditiveBlending
-  }), c = new h.MeshBasicMaterial({
-    color: new h.Color(it),
+    blending: a.AdditiveBlending
+  }), c = new a.MeshBasicMaterial({
+    color: new a.Color(it),
     transparent: !0,
     opacity: e * 0.3,
     depthTest: !1,
     depthWrite: !1,
-    blending: h.AdditiveBlending,
-    side: h.DoubleSide
-  }), n = new h.Mesh(i, v);
+    blending: a.AdditiveBlending,
+    side: a.DoubleSide
+  }), n = new a.Mesh(i, v);
   n.renderOrder = 1e3;
-  const T = new h.Mesh(s, c);
+  const T = new a.Mesh(s, c);
   T.renderOrder = 1e3;
-  const z = new h.Group();
+  const z = new a.Group();
   return z.add(n), z.add(T), z;
 }
 function hi(r) {
@@ -2762,7 +2762,7 @@ function nP(r) {
   return r.bit.colorSource === "custom" ? r.bit.color : ni;
 }
 function ki(r) {
-  const Q = DB(r.bit.opacity), B = cP(Math.max(1e-3, r.bit.size)), A = new h.Color(nP(r)), t = Ei(), P = new h.MeshStandardMaterial({
+  const Q = DB(r.bit.opacity), B = cP(Math.max(1e-3, r.bit.size)), A = new a.Color(nP(r)), t = Ei(), P = new a.MeshStandardMaterial({
     color: A,
     metalness: 0.8,
     roughness: 0.35,
@@ -2778,32 +2778,32 @@ function ki(r) {
     opacity: Q,
     depthTest: !1,
     depthWrite: !1
-  }), e = new h.Mesh(B, P);
+  }), e = new a.Mesh(B, P);
   return e.renderOrder = 1e3, e;
 }
 function li(r) {
-  const Q = DB(r.bit.opacity), B = hi(r), A = new h.MeshBasicMaterial({
-    color: new h.Color(vP),
+  const Q = DB(r.bit.opacity), B = hi(r), A = new a.MeshBasicMaterial({
+    color: new a.Color(vP),
     transparent: Q < 1,
     opacity: Q,
-    side: h.DoubleSide,
+    side: a.DoubleSide,
     depthTest: !1,
     depthWrite: !1
-  }), t = new h.Mesh(B, A);
+  }), t = new a.Mesh(B, A);
   return t.renderOrder = 1e3, t;
 }
 function rt(r) {
   return r.bit.type === "laser" ? ai(r.bit.size, r.bit.opacity) : r.bit.type === "drill" ? ki(r) : li(r);
 }
 function st(r) {
-  if (r instanceof h.Mesh)
+  if (r instanceof a.Mesh)
     r.geometry.dispose(), r.material.dispose();
-  else if (r instanceof h.Group)
+  else if (r instanceof a.Group)
     for (const Q of r.children)
-      Q instanceof h.Mesh && (Q.geometry.dispose(), Q.material.dispose());
+      Q instanceof a.Mesh && (Q.geometry.dispose(), Q.material.dispose());
 }
 function Ui(r) {
-  const Q = new h.Group();
+  const Q = new a.Group();
   Q.name = "gviewer:bit-marker", Q.visible = !!r.bit.enabled;
   let B = r, A = rt(B);
   Q.add(A);
@@ -2820,15 +2820,15 @@ function Ui(r) {
   };
   e = s(B.bit.spinRpm);
   const v = (n) => {
-    const T = n.bit.type, z = B.bit.type, w = n.bit.size, o = B.bit.size, E = T !== z, k = w !== o, a = DB(n.bit.opacity);
+    const T = n.bit.type, z = B.bit.type, w = n.bit.size, o = B.bit.size, E = T !== z, k = w !== o, h = DB(n.bit.opacity);
     if (E || k)
       Q.remove(A), st(A), A = rt(n), Q.add(A), i == null || i.kill(), e == null || e.kill(), e = s(n.bit.spinRpm), P && e.timeScale(1).play();
     else if (T === "laser") {
       const D = A, [l, O] = D.children, u = l.material, N = O.material;
-      u.opacity = a, u.needsUpdate = !0, N.opacity = a * 0.3, N.needsUpdate = !0;
+      u.opacity = h, u.needsUpdate = !0, N.opacity = h * 0.3, N.needsUpdate = !0;
     } else {
-      const l = A.material, O = new h.Color(T === "drill" ? nP(n) : vP);
-      l.color = O, T === "drill" && (l.emissive = O), l.opacity = a, l.transparent = a < 1, l.needsUpdate = !0;
+      const l = A.material, O = new a.Color(T === "drill" ? nP(n) : vP);
+      l.color = O, T === "drill" && (l.emissive = O), l.opacity = h, l.transparent = h < 1, l.needsUpdate = !0;
     }
     B = n, Q.visible = !!n.bit.enabled;
   };
@@ -2874,9 +2874,9 @@ function Ui(r) {
       if (!t) return;
       const T = (n - t.startedAt) / t.duration, z = oi(T);
       Q.position.set(
-        h.MathUtils.lerp(t.from.x, t.to.x, z),
-        h.MathUtils.lerp(t.from.y, t.to.y, z),
-        h.MathUtils.lerp(t.from.z, t.to.z, z)
+        a.MathUtils.lerp(t.from.x, t.to.x, z),
+        a.MathUtils.lerp(t.from.y, t.to.y, z),
+        a.MathUtils.lerp(t.from.z, t.to.z, z)
       ), T >= 1 && (Q.position.set(t.to.x, t.to.y, t.to.z), t = null);
     },
     dispose: () => {
@@ -2887,27 +2887,27 @@ function Ui(r) {
 const Di = 25.4;
 class Hi {
   constructor(Q) {
-    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.bitMarker = null, this.preLaserBitType = "drill", this.toolpathStreams = [], this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.id = Q.id, this.container = Q.container, this.callbacks = Q.callbacks ?? {}, this.options = ct(NP, Q.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), pP(this.container), this.renderer = new h.WebGLRenderer({
+    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.bitMarker = null, this.preLaserBitType = "drill", this.toolpathStreams = [], this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.id = Q.id, this.container = Q.container, this.callbacks = Q.callbacks ?? {}, this.options = ct(NP, Q.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), pP(this.container), this.renderer = new a.WebGLRenderer({
       canvas: this.canvas,
       antialias: this.options.render.antialias
-    }), this.renderer.setPixelRatio(window.devicePixelRatio), this.renderer.setClearColor(this.options.render.theme.background, 1), this.scene = new h.Scene(), this.scene.add(new h.AmbientLight(16777215, 0.8));
-    const B = new h.DirectionalLight(16777215, 0.9);
+    }), this.renderer.setPixelRatio(window.devicePixelRatio), this.renderer.setClearColor(this.options.render.theme.background, 1), this.scene = new a.Scene(), this.scene.add(new a.AmbientLight(16777215, 0.8));
+    const B = new a.DirectionalLight(16777215, 0.9);
     B.position.set(1, -1, 1.5), this.scene.add(B);
-    const A = new h.DirectionalLight(16777215, 0.5);
-    A.position.set(-1, 1, 1), this.scene.add(A), this.toolpathRoot = new h.Group(), this.toolpathRoot.name = "gviewer:toolpath-root", this.scene.add(this.toolpathRoot), this.camera = new h.PerspectiveCamera(this.options.camera.fov, 1, 0.1, 1e5), this.camera.up.set(0, 0, 1), this.camera.position.set(
+    const A = new a.DirectionalLight(16777215, 0.5);
+    A.position.set(-1, 1, 1), this.scene.add(A), this.toolpathRoot = new a.Group(), this.toolpathRoot.name = "gviewer:toolpath-root", this.scene.add(this.toolpathRoot), this.camera = new a.PerspectiveCamera(this.options.camera.fov, 1, 0.1, 1e5), this.camera.up.set(0, 0, 1), this.camera.position.set(
       this.options.camera.initialPosition.x,
       this.options.camera.initialPosition.y,
       this.options.camera.initialPosition.z
-    ), this.controls = new oP(this.camera, this.renderer.domElement), this.controls.enableDamping = this.options.camera.orbit.enableDamping, this.controls.update(), this.viewCubeCorrection = new h.Matrix4().makeRotationX(h.MathUtils.degToRad(90)), this.viewCube = new jP({
+    ), this.controls = new oP(this.camera, this.renderer.domElement), this.controls.enableDamping = this.options.camera.orbit.enableDamping, this.controls.update(), this.viewCubeCorrection = new a.Matrix4().makeRotationX(a.MathUtils.degToRad(90)), this.viewCube = new jP({
       container: this.container,
       onSelectView: (t) => {
-        const P = new h.Vector3();
+        const P = new a.Vector3();
         let e;
         if (this.currentBounds) {
           this.currentBounds.getCenter(P);
-          const i = new h.Vector3();
+          const i = new a.Vector3();
           this.currentBounds.getSize(i);
-          const s = Math.max(i.x, i.y, 1) / 2, v = h.MathUtils.degToRad(this.camera.fov);
+          const s = Math.max(i.x, i.y, 1) / 2, v = a.MathUtils.degToRad(this.camera.fov);
           e = s / Math.tan(v / 2) * 1.25 + i.z;
         } else
           e = this.camera.position.distanceTo(this.controls.target);
@@ -2917,7 +2917,7 @@ class Hi {
   }
   setBitPosition(Q, B) {
     var A;
-    this.ensureBitMarker(), (A = this.bitMarker) == null || A.setTarget(Q, B);
+    this.ensureBitMarker(), this.lastBitPosition = { ...this.lastBitPosition, ...Q }, (A = this.bitMarker) == null || A.setTarget(Q, B);
   }
   setBitVisible(Q) {
     var B;
@@ -2929,7 +2929,7 @@ class Hi {
   }
   setToolpathRotationA(Q) {
     const B = Number(Q) || 0;
-    this.toolpathRotationA = B, this.toolpathRoot.rotation.x = h.MathUtils.degToRad(B);
+    this.toolpathRotationA = B, this.toolpathRoot.rotation.x = a.MathUtils.degToRad(B);
   }
   setCallbacks(Q) {
     this.callbacks = Q;
@@ -2973,6 +2973,44 @@ class Hi {
   snapCameraToView(Q, B = {}) {
     const A = Math.max(0, Math.floor(B.durationMs ?? 240)), t = this.controls.target.clone(), P = this.camera.position.distanceTo(t), e = Math.max(1e-6, B.distance ?? P);
     this.startSnapToView(Q, t, e, A);
+  }
+  /**
+   * Enable or disable orbit *rotation* while leaving pan and zoom untouched.
+   *
+   * Used to pin the camera to a fixed view (e.g. top-down) so a press-and-hold
+   * gesture is not interpreted as a rotate-drag and the picked plane stays
+   * stable under the cursor. Picking (screenToWorld) works from any camera
+   * orientation, so this is a UX lock, not a correctness requirement.
+   */
+  setRotateEnabled(Q) {
+    this.controls.enableRotate = Q;
+  }
+  /**
+   * Convert a viewport pixel (clientX/clientY, e.g. from a PointerEvent) into a
+   * point on a horizontal toolpath plane, in the scene's coordinate space.
+   *
+   * A ray is cast from the camera through the pixel and intersected with the
+   * plane Z = `planeZ`, which defaults to the bit's current Z so the pick lands
+   * on the plane the tool is sitting on. Returns null when the pixel is outside
+   * a laid-out canvas or the ray is parallel to the plane (no intersection).
+   *
+   * The result is in world/scene space. The toolpath root sits at the origin,
+   * so for a normal (non-rotary) file this equals the gcode work coordinate.
+   * For a rotary file the toolpath root is rotated about X, so the returned XY
+   * is not a meaningful work coordinate — callers supporting only XY moves
+   * should gate on file type.
+   */
+  screenToWorld(Q, B, A) {
+    const t = this.canvas.getBoundingClientRect();
+    if (t.width === 0 || t.height === 0)
+      return null;
+    const P = new a.Vector2(
+      (Q - t.left) / t.width * 2 - 1,
+      -((B - t.top) / t.height) * 2 + 1
+    ), e = new a.Raycaster();
+    e.setFromCamera(P, this.camera);
+    const i = (A == null ? void 0 : A.planeZ) ?? this.lastBitPosition.z ?? 0, s = new a.Plane(new a.Vector3(0, 0, 1), -i), v = new a.Vector3();
+    return e.ray.intersectPlane(s, v) ? { x: v.x, y: v.y, z: v.z } : null;
   }
   startSnapToView(Q, B, A, t) {
     const P = mA(Q), e = B.clone().add(P.multiplyScalar(A)), i = Math.max(1, A);
@@ -3302,11 +3340,11 @@ class Hi {
     IB(e, P), this.setSim3dHandle({ data: t, slab: e, currentLine: 0 });
   }
   startCameraFocus(Q) {
-    const B = new h.Vector3();
+    const B = new a.Vector3();
     Q.getCenter(B);
-    const A = new h.Vector3();
+    const A = new a.Vector3();
     Q.getSize(A);
-    const t = Math.max(A.x, A.y, 1) / 2, P = h.MathUtils.degToRad(this.camera.fov), e = t / Math.tan(P / 2) * 1.25 + A.z, i = mA("front-top-left"), s = B.clone().add(i.multiplyScalar(e)), v = Math.max(A.x, A.y, A.z, 1);
+    const t = Math.max(A.x, A.y, 1) / 2, P = a.MathUtils.degToRad(this.camera.fov), e = t / Math.tan(P / 2) * 1.25 + A.z, i = mA("front-top-left"), s = B.clone().add(i.multiplyScalar(e)), v = Math.max(A.x, A.y, A.z, 1);
     this.camera.near = v / 1e3, this.camera.far = v * 50, this.camera.updateProjectionMatrix(), this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {
       startedAt: performance.now(),
       duration: this.options.camera.focusDurationMs,
@@ -3331,7 +3369,7 @@ class Hi {
       return;
     const Q = this.camera.quaternion.clone();
     typeof Q.invert == "function" ? Q.invert() : typeof Q.inverse == "function" && Q.inverse();
-    const B = new h.Matrix4();
+    const B = new a.Matrix4();
     B.makeRotationFromQuaternion(Q), B.multiply(this.viewCubeCorrection), this.viewCube.setRotationMatrix3d(B.elements);
     const A = mP(this.camera.position, this.controls.target);
     this.viewCube.setActiveFace(A);
@@ -3429,11 +3467,11 @@ class ji {
       if (this.activePointers.set(A.pointerId, { x: A.clientX, y: A.clientY }), this.activePointers.size === 2) {
         const [i, s] = Array.from(this.activePointers.values()), v = Math.hypot(s.x - i.x, s.y - i.y), c = { x: (i.x + s.x) / 2, y: (i.y + s.y) / 2 };
         if (this.pinchLastDist > 0) {
-          const w = this.pinchLastDist / v, o = this.svgPoint(c.x, c.y), { x: E, y: k, w: a, h: U } = this.viewBox;
+          const w = this.pinchLastDist / v, o = this.svgPoint(c.x, c.y), { x: E, y: k, w: h, h: U } = this.viewBox;
           this.viewBox = {
             x: o.x - (o.x - E) * w,
             y: o.y - (o.y - k) * w,
-            w: a * w,
+            w: h * w,
             h: U * w
           };
         }
@@ -3592,7 +3630,7 @@ class ji {
       this.viewBox = { x: -50, y: -50, w: 100, h: 100 };
       return;
     }
-    const { minX: Q, maxX: B, minY: A, maxY: t, minZ: P, maxZ: e } = this.bounds, i = this.project, s = i(Q, A, P), v = i(B, A, P), c = i(B, t, P), n = i(Q, t, P), T = i(Q, A, e), z = i(B, A, e), w = i(B, t, e), o = i(Q, t, e), E = Math.hypot(v.x - s.x, v.y - s.y), k = Math.hypot(n.x - s.x, n.y - s.y), a = Math.hypot(T.x - s.x, T.y - s.y), U = Math.max(E, k, a) * 0.07, D = U * 0.5, l = nt(rB(s, v), rB(c, n), D), O = [s, v, c, n, T, z, w, o], u = Math.min(...O.map((R) => R.y)), N = Math.max(...O.map((R) => R.y)), C = Math.min(...O.map((R) => R.x)), M = Math.max(...O.map((R) => R.x)), b = { x: M + D, y: (u + N) / 2 }, j = { x: b.x + U * 5, y: b.y }, d = { x: (C + M) / 2, y: u - U }, G = [s, v, c, n, T, z, w, o, l, b, j, d];
+    const { minX: Q, maxX: B, minY: A, maxY: t, minZ: P, maxZ: e } = this.bounds, i = this.project, s = i(Q, A, P), v = i(B, A, P), c = i(B, t, P), n = i(Q, t, P), T = i(Q, A, e), z = i(B, A, e), w = i(B, t, e), o = i(Q, t, e), E = Math.hypot(v.x - s.x, v.y - s.y), k = Math.hypot(n.x - s.x, n.y - s.y), h = Math.hypot(T.x - s.x, T.y - s.y), U = Math.max(E, k, h) * 0.07, D = U * 0.5, l = nt(rB(s, v), rB(c, n), D), O = [s, v, c, n, T, z, w, o], u = Math.min(...O.map((R) => R.y)), N = Math.max(...O.map((R) => R.y)), C = Math.min(...O.map((R) => R.x)), M = Math.max(...O.map((R) => R.x)), b = { x: M + D, y: (u + N) / 2 }, j = { x: b.x + U * 5, y: b.y }, d = { x: (C + M) / 2, y: u - U }, G = [s, v, c, n, T, z, w, o, l, b, j, d];
     let f = 1 / 0, H = 1 / 0, F = -1 / 0, X = -1 / 0;
     for (const R of G)
       R.x < f && (f = R.x), R.y < H && (H = R.y), R.x > F && (F = R.x), R.y > X && (X = R.y);
@@ -3629,7 +3667,7 @@ class ji {
       `M${L(n.x)} ${L(n.y)}L${L(o.x)} ${L(o.y)}`
     ].join("");
     this.bboxPath.setAttribute("d", E);
-    const k = Math.hypot(v.x - s.x, v.y - s.y), a = Math.hypot(n.x - s.x, n.y - s.y), U = Math.hypot(T.x - s.x, T.y - s.y), D = Math.max(k, a, U) * 0.07, l = D * 0.5;
+    const k = Math.hypot(v.x - s.x, v.y - s.y), h = Math.hypot(n.x - s.x, n.y - s.y), U = Math.hypot(T.x - s.x, T.y - s.y), D = Math.max(k, h, U) * 0.07, l = D * 0.5;
     $B(this.bboxLabelX, rB(s, v), nt(rB(s, v), rB(c, n), l), D, `X: ${QA(B - Q)}`);
     const O = [s, v, c, n, T, z, w, o], u = Math.min(...O.map((d) => d.y)), N = Math.max(...O.map((d) => d.y)), C = Math.min(...O.map((d) => d.x)), M = Math.max(...O.map((d) => d.x)), b = { x: M + l, y: (u + N) / 2 };
     $B(this.bboxLabelY, b, b, D, `Y: ${QA(t - A)}`);

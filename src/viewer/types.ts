@@ -159,6 +159,12 @@ export type GCodeViewerHandle = {
     view: GCodeViewerCameraView,
     options?: { durationMs?: number; distance?: number }
   ): void;
+  setRotateEnabled(enabled: boolean): void;
+  screenToWorld(
+    clientX: number,
+    clientY: number,
+    options?: { planeZ?: number }
+  ): { x: number; y: number; z: number } | null;
   setBitPosition(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void;
   setBitVisible(visible: boolean): void;
   setBitSpinning(spinning: boolean): void;
