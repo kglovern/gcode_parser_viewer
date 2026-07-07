@@ -80,6 +80,22 @@ export declare class GCodeViewer implements GCodeViewerHandle {
         y: number;
         z: number;
     } | null;
+    /**
+     * Project a point in world/scene space to a viewport pixel (clientX/clientY),
+     * the inverse of screenToWorld and in the same coordinate space it consumes.
+     *
+     * The point is projected through the camera to normalized device coordinates
+     * and mapped back onto the laid-out canvas rect, so overlays drawn in fixed
+     * (viewport) coordinates line up with picked scene points and track pan/zoom.
+     *
+     * `z` is the point's height in scene space (default 0); it changes the
+     * projected pixel under the perspective camera, so callers placing markers
+     * off the Z=0 plane should pass it. Returns null when the canvas has no layout.
+     */
+    worldToScreen(x: number, y: number, z?: number): {
+        x: number;
+        y: number;
+    } | null;
     private startSnapToView;
     loadFromUrl(url: string, args?: {
         signal?: AbortSignal;

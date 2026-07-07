@@ -3102,6 +3102,28 @@ class Ii {
     const i = (A == null ? void 0 : A.planeZ) ?? this.lastBitPosition.z ?? 0, s = new a.Plane(new a.Vector3(0, 0, 1), -i), v = new a.Vector3();
     return e.ray.intersectPlane(s, v) ? { x: v.x, y: v.y, z: v.z } : null;
   }
+  /**
+   * Project a point in world/scene space to a viewport pixel (clientX/clientY),
+   * the inverse of screenToWorld and in the same coordinate space it consumes.
+   *
+   * The point is projected through the camera to normalized device coordinates
+   * and mapped back onto the laid-out canvas rect, so overlays drawn in fixed
+   * (viewport) coordinates line up with picked scene points and track pan/zoom.
+   *
+   * `z` is the point's height in scene space (default 0); it changes the
+   * projected pixel under the perspective camera, so callers placing markers
+   * off the Z=0 plane should pass it. Returns null when the canvas has no layout.
+   */
+  worldToScreen(Q, B, A = 0) {
+    const t = this.canvas.getBoundingClientRect();
+    if (t.width === 0 || t.height === 0)
+      return null;
+    const P = new a.Vector3(Q, B, A).project(this.camera);
+    return {
+      x: t.left + (P.x + 1) / 2 * t.width,
+      y: t.top + (1 - P.y) / 2 * t.height
+    };
+  }
   startSnapToView(Q, B, A, t) {
     const P = JA(Q), e = B.clone().add(P.multiplyScalar(A)), i = Math.max(1, A);
     this.camera.near = i / 1e3, this.camera.far = i * 50, this.camera.updateProjectionMatrix(), this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {

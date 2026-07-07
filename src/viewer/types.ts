@@ -178,6 +178,11 @@ export type GCodeViewerHandle = {
     clientY: number,
     options?: { planeZ?: number }
   ): { x: number; y: number; z: number } | null;
+  worldToScreen(
+    x: number,
+    y: number,
+    z?: number
+  ): { x: number; y: number } | null;
   setBitPosition(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void;
   setBitVisible(visible: boolean): void;
   setBitSpinning(spinning: boolean): void;
