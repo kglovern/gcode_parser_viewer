@@ -2974,7 +2974,7 @@ function Fi(r) {
     }
   };
 }
-const Gi = 25.4, fi = 500, bi = 260;
+const Gi = 25.4, fi = 500, bi = 300;
 class Yi {
   constructor(Q) {
     this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.machineBedGroup = null, this.bitMarker = null, this.preLaserBitType = "drill", this.toolpathStreams = [], this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.cameraFollowRequested = !1, this.cameraFollowInterrupted = !1, this.cameraFollowOffset = null, this.id = Q.id, this.container = Q.container, this.callbacks = Q.callbacks ?? {}, this.options = Et(GP, Q.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), KP(this.container), this.renderer = new a.WebGLRenderer({
@@ -3011,7 +3011,7 @@ class Yi {
     var A;
     if (this.ensureBitMarker(), this.lastBitPosition = { ...this.lastBitPosition, ...Q }, (A = this.bitMarker) == null || A.setTarget(Q, B), this.cameraFollowRequested && !this.cameraFollowInterrupted && this.cameraFollowOffset) {
       const t = new a.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z), P = t.clone().add(this.cameraFollowOffset);
-      this.startCameraLerp(t, P, bi);
+      this.startCameraLerp(t, P, bi, "linear");
     }
   }
   /**
@@ -3133,7 +3133,7 @@ class Yi {
   // Shared tween kickoff for any camera position+target move (view snapping,
   // model focus, tool-follow engage/track): saves/restores damping around the
   // transition and hands off to updateCameraFocusTransition() each frame.
-  startCameraLerp(Q, B, A) {
+  startCameraLerp(Q, B, A, t = "easeInOutCubic") {
     this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {
       startedAt: performance.now(),
       duration: A,
@@ -3141,7 +3141,8 @@ class Yi {
       toPosition: B,
       fromTarget: this.controls.target.clone(),
       toTarget: Q,
-      dampingEnabled: this.controls.enableDamping
+      dampingEnabled: this.controls.enableDamping,
+      easing: t
     }, this.controls.enableDamping = !1;
   }
   async loadFromUrl(Q, B = {}) {
@@ -3490,20 +3491,12 @@ class Yi {
     const A = new a.Vector3();
     Q.getSize(A);
     const t = Math.max(A.x, A.y, 1) / 2, P = a.MathUtils.degToRad(this.camera.fov), e = t / Math.tan(P / 2) * 1.25 + A.z, i = JA("front-top-left"), s = B.clone().add(i.multiplyScalar(e)), v = Math.max(A.x, A.y, A.z, 1);
-    this.camera.near = v / 1e3, this.camera.far = v * 50, this.camera.updateProjectionMatrix(), this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {
-      startedAt: performance.now(),
-      duration: this.options.camera.focusDurationMs,
-      fromPosition: this.camera.position.clone(),
-      toPosition: s,
-      fromTarget: this.controls.target.clone(),
-      toTarget: B,
-      dampingEnabled: this.controls.enableDamping
-    }, this.controls.enableDamping = !1;
+    this.camera.near = v / 1e3, this.camera.far = v * 50, this.camera.updateProjectionMatrix(), this.startCameraLerp(B, s, this.options.camera.focusDurationMs);
   }
   updateCameraFocusTransition() {
     if (!this.cameraFocusTransition)
       return;
-    const B = performance.now() - this.cameraFocusTransition.startedAt, A = Math.min(1, Math.max(0, B / this.cameraFocusTransition.duration)), t = ZP(A);
+    const B = performance.now() - this.cameraFocusTransition.startedAt, A = Math.min(1, Math.max(0, B / this.cameraFocusTransition.duration)), t = this.cameraFocusTransition.easing === "linear" ? A : ZP(A);
     if (this.camera.position.lerpVectors(this.cameraFocusTransition.fromPosition, this.cameraFocusTransition.toPosition, t), this.controls.target.lerpVectors(this.cameraFocusTransition.fromTarget, this.cameraFocusTransition.toTarget, t), A >= 1) {
       const P = this.cameraFocusTransition.dampingEnabled;
       this.camera.position.copy(this.cameraFocusTransition.toPosition), this.controls.target.copy(this.cameraFocusTransition.toTarget), this.cameraFocusTransition = null, this.controls.enableDamping = !1, this.controls.update(), this.controls.enableDamping = P;

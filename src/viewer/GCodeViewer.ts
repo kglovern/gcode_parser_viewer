@@ -54,11 +54,14 @@ import { createBitMarker, type BitMarker } from "./bit/bit";
 
 const MM_PER_INCH = 25.4;
 // "Follow tool" camera tween durations: a deliberate, noticeable ease when
-// follow first engages, then a shorter one per subsequent bit-position tick
-// so the camera glides in sync with the bit marker's own tween (see bit.ts,
-// default tweenMs 140) rather than the two visibly drifting out of step.
+// follow first engages, then a per-tick linear pan for continuous tracking
+// (see the "linear" easing note on cameraFocusTransition — eased in/out
+// would stutter here since a fresh lerp restarts roughly every status-report
+// tick). Track duration is set slightly above the controller's ~250ms status
+// poll interval so consecutive lerps always overlap a little, even with
+// minor timing jitter, instead of momentarily settling still between ticks.
 const CAMERA_FOLLOW_ENGAGE_MS = 500;
-const CAMERA_FOLLOW_TRACK_MS = 260;
+const CAMERA_FOLLOW_TRACK_MS = 300;
 
 type NormalizedOptions = GCodeViewerOptions;
 
@@ -118,6 +121,13 @@ export class GCodeViewer implements GCodeViewerHandle {
         fromTarget: THREE.Vector3;
         toTarget: THREE.Vector3;
         dampingEnabled: boolean;
+        // "linear" for continuous tool-follow tracking, where a fresh lerp
+        // restarts roughly every status-report tick — eased in/out would
+        // decelerate right as it should be at cruising speed, then
+        // re-accelerate slowly each cycle, reading as a stutter. One-off
+        // moves (view snaps, focus, follow engage) use easeInOutCubic since
+        // they settle to a stop.
+        easing: "easeInOutCubic" | "linear";
       }
     | null = null;
 
@@ -233,7 +243,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (this.cameraFollowRequested && !this.cameraFollowInterrupted && this.cameraFollowOffset) {
       const toTarget = new THREE.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z);
       const toPosition = toTarget.clone().add(this.cameraFollowOffset);
-      this.startCameraLerp(toTarget, toPosition, CAMERA_FOLLOW_TRACK_MS);
+      this.startCameraLerp(toTarget, toPosition, CAMERA_FOLLOW_TRACK_MS, "linear");
     }
   }
 
@@ -419,7 +429,12 @@ export class GCodeViewer implements GCodeViewerHandle {
   // Shared tween kickoff for any camera position+target move (view snapping,
   // model focus, tool-follow engage/track): saves/restores damping around the
   // transition and hands off to updateCameraFocusTransition() each frame.
-  private startCameraLerp(toTarget: THREE.Vector3, toPosition: THREE.Vector3, durationMs: number): void {
+  private startCameraLerp(
+    toTarget: THREE.Vector3,
+    toPosition: THREE.Vector3,
+    durationMs: number,
+    easing: "easeInOutCubic" | "linear" = "easeInOutCubic"
+  ): void {
     if (this.cameraFocusTransition) {
       this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
     }
@@ -432,6 +447,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       fromTarget: this.controls.target.clone(),
       toTarget,
       dampingEnabled: this.controls.enableDamping,
+      easing,
     };
     this.controls.enableDamping = false;
   }
@@ -1158,21 +1174,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.camera.near = maxDim / 1000;
     this.camera.far = maxDim * 50;
     this.camera.updateProjectionMatrix();
-
-    if (this.cameraFocusTransition) {
-      this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
-    }
-
-    this.cameraFocusTransition = {
-      startedAt: performance.now(),
-      duration: this.options.camera.focusDurationMs,
-      fromPosition: this.camera.position.clone(),
-      toPosition,
-      fromTarget: this.controls.target.clone(),
-      toTarget: center,
-      dampingEnabled: this.controls.enableDamping,
-    };
-    this.controls.enableDamping = false;
+    this.startCameraLerp(center, toPosition, this.options.camera.focusDurationMs);
   }
 
   private updateCameraFocusTransition(): void {
@@ -1182,7 +1184,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     const now = performance.now();
     const elapsed = now - this.cameraFocusTransition.startedAt;
     const t = Math.min(1, Math.max(0, elapsed / this.cameraFocusTransition.duration));
-    const eased = easeInOutCubic(t);
+    const eased = this.cameraFocusTransition.easing === "linear" ? t : easeInOutCubic(t);
 
     this.camera.position.lerpVectors(this.cameraFocusTransition.fromPosition, this.cameraFocusTransition.toPosition, eased);
     this.controls.target.lerpVectors(this.cameraFocusTransition.fromTarget, this.cameraFocusTransition.toTarget, eased);
