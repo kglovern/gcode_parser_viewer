@@ -71,6 +71,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           screenToWorld(clientX: number, clientY: number, worldOptions?: { planeZ?: number }) {
             return getViewer().screenToWorld(clientX, clientY, worldOptions);
           },
+          worldToScreen(x: number, y: number, z?: number) {
+            return getViewer().worldToScreen(x, y, z);
+          },
           setBitPosition(position, bitOptions) {
             getViewer().setBitPosition(position, bitOptions);
           },

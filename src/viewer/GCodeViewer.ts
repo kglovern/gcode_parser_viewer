@@ -411,6 +411,35 @@ export class GCodeViewer implements GCodeViewerHandle {
     return { x: hit.x, y: hit.y, z: hit.z };
   }
 
+  /**
+   * Project a point in world/scene space to a viewport pixel (clientX/clientY),
+   * the inverse of screenToWorld and in the same coordinate space it consumes.
+   *
+   * The point is projected through the camera to normalized device coordinates
+   * and mapped back onto the laid-out canvas rect, so overlays drawn in fixed
+   * (viewport) coordinates line up with picked scene points and track pan/zoom.
+   *
+   * `z` is the point's height in scene space (default 0); it changes the
+   * projected pixel under the perspective camera, so callers placing markers
+   * off the Z=0 plane should pass it. Returns null when the canvas has no layout.
+   */
+  worldToScreen(
+    x: number,
+    y: number,
+    z = 0,
+  ): { x: number; y: number } | null {
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      return null;
+    }
+
+    const ndc = new THREE.Vector3(x, y, z).project(this.camera);
+    return {
+      x: rect.left + ((ndc.x + 1) / 2) * rect.width,
+      y: rect.top + ((1 - ndc.y) / 2) * rect.height,
+    };
+  }
+
   private startSnapToView(
     view: GCodeViewerCameraView,
     toTarget: THREE.Vector3,
