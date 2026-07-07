@@ -33,10 +33,22 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private renderSequence;
     private currentBounds;
     private cameraFocusTransition;
+    private cameraFollowRequested;
+    private cameraFollowInterrupted;
+    private cameraFollowOffset;
     constructor(args: GCodeViewerCreateArgs);
     setBitPosition(position: GCodeViewerBitPosition, options?: {
         immediate?: boolean;
     }): void;
+    /**
+     * Enable or disable "follow tool" camera tracking. While enabled, every
+     * subsequent setBitPosition() call pans the camera+target in X/Y to keep
+     * the tool centered, holding the camera→target offset captured at engage
+     * time constant — which is what preserves viewing angle and height. A
+     * user-initiated camera drag (OrbitControls "start") interrupts an active
+     * session; it only re-arms on the next disabled→enabled edge.
+     */
+    setCameraFollowEnabled(enabled: boolean): void;
     setBitVisible(visible: boolean): void;
     setBitSpinning(spinning: boolean): void;
     setToolpathRotationA(aDegrees: number): void;
@@ -97,6 +109,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
         y: number;
     } | null;
     private startSnapToView;
+    private startCameraLerp;
     loadFromUrl(url: string, args?: {
         signal?: AbortSignal;
     }): Promise<void>;

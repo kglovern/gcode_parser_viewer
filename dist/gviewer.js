@@ -1,0 +1,708 @@
+const U = /([A-Za-z])\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))/g;
+class R {
+  parseLine(e) {
+    const o = [], t = this.stripComments(e, o), s = this.parseWords(t), r = s.filter((a) => {
+      const c = a.letter.toUpperCase();
+      return c === "G" || c === "M";
+    }), i = s.filter((a) => {
+      const c = a.letter.toUpperCase();
+      return c !== "G" && c !== "M";
+    });
+    return {
+      raw: e,
+      words: s,
+      gcodes: r,
+      params: i,
+      comments: o
+    };
+  }
+  stripComments(e, o) {
+    let t = "", s = !1, r = -1, i = "";
+    for (let a = 0; a < e.length; a += 1) {
+      const c = e[a];
+      if (!s && c === ";") {
+        const u = e.slice(a + 1);
+        o.push({ type: "semicolon", text: u, start: a, end: e.length });
+        break;
+      }
+      if (c === "(") {
+        s ? i += c : (s = !0, r = a, i = "");
+        continue;
+      }
+      if (c === ")" && s) {
+        o.push({
+          type: "paren",
+          text: i,
+          start: r,
+          end: a + 1
+        }), s = !1, r = -1, i = "";
+        continue;
+      }
+      if (s) {
+        i += c;
+        continue;
+      }
+      t += c;
+    }
+    return s && o.push({
+      type: "paren",
+      text: i,
+      start: r,
+      end: e.length
+    }), t;
+  }
+  parseWords(e) {
+    const o = [];
+    for (const t of e.matchAll(U)) {
+      const s = t[0], r = t[1].toUpperCase(), i = Number(t[2]), a = t.index ?? 0, c = a + s.length;
+      o.push({ letter: r, value: i, raw: s, start: a, end: c });
+    }
+    return o;
+  }
+}
+const F = ["X", "Y", "Z", "A", "B", "C"], Z = {
+  motion: "G0",
+  distance: "G90",
+  plane: "G17",
+  units: "G21",
+  feedMode: "G94",
+  feedRate: null,
+  spindleSpeed: null,
+  tool: null,
+  coolant: null,
+  spindle: null,
+  coordinateSystem: "G54"
+};
+class I {
+  constructor(e = {}) {
+    this.parser = new R(), this.modals = { ...Z }, this.position = { X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0 }, this.callbacks = e, this.feedRates = /* @__PURE__ */ new Set(), this.spindleSpeeds = /* @__PURE__ */ new Set(), this.tools = /* @__PURE__ */ new Set();
+  }
+  setCallbacks(e) {
+    this.callbacks = e;
+  }
+  getModals() {
+    return { ...this.modals };
+  }
+  getPosition() {
+    return { ...this.position };
+  }
+  getUniqueFeedRates() {
+    return Array.from(this.feedRates);
+  }
+  getUniqueSpindleSpeeds() {
+    return Array.from(this.spindleSpeeds);
+  }
+  getUniqueTools() {
+    return Array.from(this.tools);
+  }
+  reset() {
+    this.modals = { ...Z }, this.position = { X: 0, Y: 0, Z: 0, A: 0, B: 0, C: 0 }, this.feedRates.clear(), this.spindleSpeeds.clear(), this.tools.clear();
+  }
+  processLine(e) {
+    const o = this.parser.parseLine(e), t = { ...this.position };
+    this.updateModals(o);
+    const s = this.modals.motion, r = this.modals.plane;
+    let i = this.applyAxes(o, t), a, c, u = "none";
+    return s === "G0" || s === "G1" ? N(t, i) || (u = "linear", this.position = { ...i }, this.emitLinear({ start: t, end: i })) : (s === "G2" || s === "G3") && (N(t, i) || (u = "arc", c = this.arcCenter(o, t, i, r), a = this.computeArcMax(t, i, s, r, c), this.position = { ...i }, this.emitArc({ start: t, end: i, max: a, center: c, plane: r, motion: s }))), {
+      parsed: o,
+      modals: { ...this.modals },
+      start: t,
+      end: i,
+      movement: u,
+      arcMax: a
+    };
+  }
+  unitsScale() {
+    return this.modals.units === "G20" ? 25.4 : 1;
+  }
+  updateModals(e) {
+    for (const o of e.gcodes) {
+      if (o.letter.toUpperCase() === "G") {
+        const t = `G${Math.trunc(o.value)}`;
+        (t === "G0" || t === "G1" || t === "G2" || t === "G3") && (this.modals.motion = t), (t === "G90" || t === "G91") && (this.modals.distance = t), (t === "G17" || t === "G18" || t === "G19") && (this.modals.plane = t), (t === "G20" || t === "G21") && (this.modals.units = t), (t === "G93" || t === "G94") && (this.modals.feedMode = t), (t === "G54" || t === "G55" || t === "G56" || t === "G57" || t === "G58" || t === "G59") && (this.modals.coordinateSystem = t);
+      }
+      if (o.letter.toUpperCase() === "M") {
+        const t = `M${Math.trunc(o.value)}`;
+        (t === "M7" || t === "M8" || t === "M9") && (this.modals.coolant = t), (t === "M3" || t === "M4" || t === "M5") && (this.modals.spindle = t);
+      }
+    }
+    for (const o of e.params) {
+      const t = o.letter.toUpperCase();
+      t === "F" && (this.modals.feedRate = o.value, this.feedRates.add(o.value)), t === "S" && (this.modals.spindleSpeed = o.value, this.spindleSpeeds.add(o.value)), t === "T" && (this.modals.tool = o.value, this.tools.add(o.value));
+    }
+  }
+  applyAxes(e, o) {
+    const t = { ...o }, s = this.unitsScale();
+    for (const r of F) {
+      const i = e.params.find((c) => c.letter.toUpperCase() === r);
+      if (!i)
+        continue;
+      const a = r === "X" || r === "Y" || r === "Z" ? i.value * s : i.value;
+      this.modals.distance === "G90" ? t[r] = a : t[r] = t[r] + a;
+    }
+    return t;
+  }
+  computeArcMax(e, o, t, s, r) {
+    const { primary: i, secondary: a, tertiary: c } = X(s), u = j(
+      e[i],
+      e[a],
+      r[i],
+      r[a]
+    ), f = Math.atan2(
+      e[a] - r[a],
+      e[i] - r[i]
+    ), d = Math.atan2(
+      o[a] - r[a],
+      o[i] - r[i]
+    ), M = $(f, d, t);
+    let l = Number.NEGATIVE_INFINITY, m = Number.NEGATIVE_INFINITY;
+    for (const x of M) {
+      const w = r[i] + u * Math.cos(x), h = r[a] + u * Math.sin(x);
+      w > l && (l = w), h > m && (m = h);
+    }
+    const A = { ...e };
+    A[i] = l, A[a] = m, A[c] = Math.max(e[c], o[c]);
+    for (const x of F)
+      x !== i && x !== a && x !== c && (A[x] = Math.max(e[x], o[x]));
+    return A;
+  }
+  arcCenter(e, o, t, s) {
+    const { primary: r, secondary: i } = X(s), a = { ...o }, c = this.unitsScale(), u = C(e, "R"), f = _(e, s), d = f.primary === null ? null : f.primary * c, M = f.secondary === null ? null : f.secondary * c;
+    if (d !== null || M !== null)
+      return a[r] = o[r] + (d ?? 0), a[i] = o[i] + (M ?? 0), a;
+    if (u === null)
+      return a;
+    const l = u * c, m = o[r], A = o[i], x = t[r], w = t[i], h = x - m, G = w - A, S = Math.hypot(h, G);
+    if (S === 0)
+      return a;
+    const L = Math.abs(l), p = Math.sqrt(Math.max(0, L * L - S / 2 * (S / 2))), y = (m + x) / 2, v = (A + w) / 2, P = -G / S, E = h / S, Y = l >= 0 ? 1 : -1;
+    return a[r] = y + Y * P * p, a[i] = v + Y * E * p, a;
+  }
+  emitLinear(e) {
+    const o = this.callbacks.onLinearMove;
+    if (!o)
+      return;
+    const t = e.end.A - e.start.A, s = Math.max(1, Math.ceil(Math.abs(t) / W));
+    let r = { ...e.start };
+    for (let i = 1; i <= s; i += 1) {
+      const a = i / s, c = q(e.start, e.end, a), u = V(r), f = V(c);
+      o({
+        modals: { ...this.modals },
+        start: { ...r },
+        end: { ...c },
+        transformedStart: u,
+        transformedEnd: f
+      }), r = c;
+    }
+  }
+  emitArc(e) {
+    const o = this.callbacks.onArcMove;
+    if (!o)
+      return;
+    const t = V(e.start), s = V(e.end), r = V(e.max), i = V(e.center);
+    o({
+      modals: { ...this.modals },
+      start: { ...e.start },
+      end: { ...e.end },
+      max: { ...e.max },
+      center: { ...e.center },
+      plane: e.plane,
+      motion: e.motion,
+      transformedStart: t,
+      transformedEnd: s,
+      transformedMax: r,
+      transformedCenter: i
+    });
+  }
+}
+function C(n, e) {
+  const o = n.params.find((t) => t.letter.toUpperCase() === e);
+  return o ? o.value : null;
+}
+function X(n) {
+  return n === "G18" ? { primary: "Z", secondary: "X", tertiary: "Y" } : n === "G19" ? { primary: "Y", secondary: "Z", tertiary: "X" } : { primary: "X", secondary: "Y", tertiary: "Z" };
+}
+function _(n, e) {
+  const o = C(n, "I"), t = C(n, "J"), s = C(n, "K");
+  return e === "G18" ? { primary: s, secondary: o } : e === "G19" ? { primary: t, secondary: s } : { primary: o, secondary: t };
+}
+function $(n, e, o) {
+  const t = Math.PI * 2;
+  let s = b(n), r = b(e);
+  const i = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2, t];
+  if (o === "G2") {
+    s < r && (s += t);
+    const c = [s, r];
+    for (const u of i) {
+      let f = u;
+      f < r && (f += t), f <= s && f >= r && c.push(f);
+    }
+    return c;
+  }
+  r < s && (r += t);
+  const a = [s, r];
+  for (const c of i) {
+    let u = c;
+    u < s && (u += t), u >= s && u <= r && a.push(u);
+  }
+  return a;
+}
+function b(n) {
+  const e = Math.PI * 2;
+  let o = n % e;
+  return o < 0 && (o += e), o;
+}
+function j(n, e, o, t) {
+  return Math.hypot(n - o, e - t);
+}
+function N(n, e) {
+  return F.every((o) => n[o] === e[o]);
+}
+const W = 5;
+function q(n, e, o) {
+  return {
+    X: n.X + (e.X - n.X) * o,
+    Y: n.Y + (e.Y - n.Y) * o,
+    Z: n.Z + (e.Z - n.Z) * o,
+    A: n.A + (e.A - n.A) * o,
+    B: n.B + (e.B - n.B) * o,
+    C: n.C + (e.C - n.C) * o
+  };
+}
+function V(n) {
+  const e = n.A * Math.PI / 180, o = Math.cos(e), t = Math.sin(e), s = n.Y * o - n.Z * t, r = n.Y * t + n.Z * o;
+  return { ...n, Y: s, Z: r };
+}
+function ne(n, e = {}) {
+  const o = [], t = e.arcSegments ?? 30, s = e.collector ?? {}, r = new I({
+    onLinearMove: (i) => {
+      (s.onLinearMove ?? z)(i, o);
+    },
+    onArcMove: (i) => {
+      (s.onArcMove ?? ((c, u) => {
+        g(c, u, t);
+      }))(i, o);
+    }
+  });
+  for (const i of n)
+    i && r.processLine(i);
+  return Float32Array.from(o);
+}
+function oe(n, e = {}) {
+  const o = [], t = [], s = e.arcSegments ?? 30, r = new I({
+    onLinearMove: (i) => {
+      const a = i.transformedStart ?? i.start, c = i.transformedEnd ?? i.end;
+      (i.modals.motion === "G0" ? o : t).push(a.X, a.Y, a.Z, c.X, c.Y, c.Z);
+    },
+    onArcMove: (i) => {
+      const a = i.modals.motion === "G0" ? o : t;
+      g(i, a, s);
+    }
+  });
+  for (const i of n)
+    i && r.processLine(i);
+  return {
+    rapid: Float32Array.from(o),
+    cutting: Float32Array.from(t)
+  };
+}
+async function re(n, e = {}) {
+  var M;
+  const o = [], t = [], s = e.arcSegments ?? 30, r = e.batch, i = Math.max(1, Math.floor((r == null ? void 0 : r.everyLines) ?? 5e3)), a = Math.max(0, Math.floor((r == null ? void 0 : r.yieldEveryLines) ?? 5e4));
+  let c = i, u = a > 0 ? a : Number.POSITIVE_INFINITY;
+  const f = new I({
+    onLinearMove: (l) => {
+      const m = l.transformedStart ?? l.start, A = l.transformedEnd ?? l.end;
+      (l.modals.motion === "G0" ? o : t).push(m.X, m.Y, m.Z, A.X, A.Y, A.Z);
+    },
+    onArcMove: (l) => {
+      const m = l.modals.motion === "G0" ? o : t;
+      g(l, m, s);
+    }
+  }), d = n.length;
+  for (let l = 0; l < d; l += 1) {
+    if ((M = r == null ? void 0 : r.shouldAbort) != null && M.call(r))
+      throw new Error("Aborted.");
+    const m = n[l];
+    if (!m) {
+      r != null && r.onProgress && (l + 1 === d || l + 1 === c) && (r.onProgress(l + 1, d), c += i), a > 0 && (l + 1 === d || l + 1 === u) && (await new Promise((A) => {
+        setTimeout(A, 0);
+      }), u += a);
+      continue;
+    }
+    f.processLine(m), r != null && r.onProgress && (l + 1 === d || l + 1 === c) && (r.onProgress(l + 1, d), c += i), a > 0 && (l + 1 === d || l + 1 === u) && (await new Promise((A) => {
+      setTimeout(A, 0);
+    }), u += a);
+  }
+  return {
+    rapid: Float32Array.from(o),
+    cutting: Float32Array.from(t)
+  };
+}
+async function se(n, e = {}) {
+  var w;
+  const o = [], t = e.arcSegments ?? 30, s = e.batch, r = Math.max(1, Math.floor((s == null ? void 0 : s.everyLines) ?? 5e3)), i = Math.max(0, Math.floor((s == null ? void 0 : s.yieldEveryLines) ?? 5e4));
+  let a = r, c = i > 0 ? i : Number.POSITIVE_INFINITY;
+  const u = new Int32Array(n.length);
+  u.fill(-1);
+  const f = new Int32Array(n.length);
+  f.fill(-1);
+  const d = new Uint8Array(n.length), M = new Int32Array(n.length);
+  let l = -1, m = 0;
+  const A = new I({
+    onLinearMove: (h) => {
+      const G = h.modals.motion === "G0" ? 1 : 2;
+      l >= 0 && (m === 0 ? m = G : m !== G && (m = 3)), z(h, o);
+    },
+    onArcMove: (h) => {
+      const G = h.modals.motion === "G0" ? 1 : 2;
+      l >= 0 && (m === 0 ? m = G : m !== G && (m = 3)), g(h, o, t);
+    }
+  }), x = n.length;
+  for (let h = 0; h < x; h += 1) {
+    if ((w = s == null ? void 0 : s.shouldAbort) != null && w.call(s))
+      throw new Error("Aborted.");
+    const G = o.length / 3;
+    l = h, m = 0;
+    const S = n[h];
+    S && A.processLine(S), l = -1;
+    const L = o.length / 3;
+    L > G && (u[h] = G, f[h] = L, d[h] = m), M[h] = L, s != null && s.onProgress && (h + 1 === x || h + 1 === a) && (s.onProgress(h + 1, x), a += r), i > 0 && (h + 1 === x || h + 1 === c) && (await new Promise((p) => {
+      setTimeout(p, 0);
+    }), c += i);
+  }
+  return {
+    positions: Float32Array.from(o),
+    lineStartVertex: u,
+    lineEndVertex: f,
+    lineKind: d,
+    prefixEndVertex: M
+  };
+}
+function ie(n, e = {}) {
+  const o = e.arcSegments ?? 30, t = Math.max(1, Math.floor(e.bucketCount ?? 16)), s = e.baseOpacity ?? 0.9, { minPower: r, maxPower: i } = ee(n), a = [], c = Array.from({ length: t }, () => []), u = new I({
+    onLinearMove: (d) => {
+      const M = d.transformedStart ?? d.start, l = d.transformedEnd ?? d.end;
+      if (d.modals.motion === "G0") {
+        a.push(M.X, M.Y, M.Z, l.X, l.Y, l.Z);
+        return;
+      }
+      const m = B(d.modals.spindleSpeed, r, i, t);
+      c[m].push(M.X, M.Y, M.Z, l.X, l.Y, l.Z);
+    },
+    onArcMove: (d) => {
+      if (d.modals.motion === "G0")
+        return;
+      const M = B(d.modals.spindleSpeed, r, i, t), l = c[M];
+      g(d, l, o);
+    }
+  });
+  for (const d of n)
+    d && u.processLine(d);
+  const f = c.map((d, M) => ({
+    opacity: O(M, t, s),
+    vertices: Float32Array.from(d)
+  }));
+  return {
+    rapid: Float32Array.from(a),
+    buckets: f,
+    minPower: r,
+    maxPower: i
+  };
+}
+async function ae(n, e = {}) {
+  const o = await K(n, e);
+  return {
+    rapid: o.rapidPositions,
+    buckets: o.buckets.map((t) => ({ opacity: t.opacity, vertices: t.positions })),
+    minPower: o.minPower,
+    maxPower: o.maxPower
+  };
+}
+async function D(n, e = {}) {
+  var S, L;
+  const o = e.arcSegments ?? 30, t = Math.max(1, Math.floor(e.bucketCount ?? 16)), s = !!e.laserMode, r = e.batch, i = n.length * (s ? 2 : 1), a = Math.max(1, Math.floor((r == null ? void 0 : r.everyLines) ?? 5e3)), c = Math.max(0, Math.floor((r == null ? void 0 : r.yieldEveryLines) ?? 5e4));
+  let u = a, f = c > 0 ? c : Number.POSITIVE_INFINITY, d = Number.NEGATIVE_INFINITY, M = !1;
+  if (s) {
+    const p = new R();
+    for (const y of n) {
+      if (!y)
+        continue;
+      if (p.parseLine(y).gcodes.some((E) => {
+        if (E.letter !== "M")
+          return !1;
+        const Y = Math.trunc(E.value);
+        return Y === 3 || Y === 4 || Y === 5;
+      })) {
+        M = !1;
+        break;
+      }
+      M = !0;
+    }
+  }
+  const l = (p) => p.spindle === "M5" || !(p.spindle === "M3" || p.spindle === "M4" || M && p.spindle === null) ? !1 : p.spindleSpeed === null ? !0 : p.spindleSpeed > 0;
+  if (s) {
+    const p = new I({
+      onLinearMove: (y) => {
+        if (!l(y.modals))
+          return;
+        const v = y.modals.spindleSpeed;
+        v === null || v <= 0 || (d = Math.max(d, v));
+      },
+      onArcMove: (y) => {
+        if (!l(y.modals))
+          return;
+        const v = y.modals.spindleSpeed;
+        v === null || v <= 0 || (d = Math.max(d, v));
+      }
+    });
+    for (let y = 0; y < n.length; y += 1) {
+      if ((S = r == null ? void 0 : r.shouldAbort) != null && S.call(r))
+        throw new Error("Aborted.");
+      const v = n[y];
+      v && p.processLine(v);
+      const P = y + 1;
+      r != null && r.onProgress && (P === i || P === u) && (r.onProgress(P, i), u += a), c > 0 && (P === i || P === f) && (await new Promise((E) => {
+        setTimeout(E, 0);
+      }), f += c);
+    }
+    Number.isFinite(d) || (d = 0);
+  } else
+    d = 0;
+  const m = (p) => {
+    if (t <= 1)
+      return 0;
+    if (p === null)
+      return t - 1;
+    const y = p;
+    if (y <= 0)
+      return 0;
+    if (d <= 0)
+      return t - 1;
+    const v = Math.min(1, Math.max(0, y / d)), P = 1 + Math.floor(v * (t - 2));
+    return Math.min(t - 1, Math.max(1, P));
+  }, A = [], x = s ? Array.from({ length: t }, () => []) : [new Array()], w = new Int32Array(n.length), h = Array.from(
+    { length: s ? t : 1 },
+    () => new Int32Array(n.length)
+  ), G = new I({
+    onLinearMove: (p) => {
+      const y = p.transformedStart ?? p.start, v = p.transformedEnd ?? p.end;
+      if (p.modals.motion === "G0") {
+        A.push(y.X, y.Y, y.Z, v.X, v.Y, v.Z);
+        return;
+      }
+      if (s && !l(p.modals))
+        return;
+      const P = s ? m(p.modals.spindleSpeed) : 0;
+      x[P].push(y.X, y.Y, y.Z, v.X, v.Y, v.Z);
+    },
+    onArcMove: (p) => {
+      if (p.modals.motion === "G0" || s && !l(p.modals))
+        return;
+      const y = s ? m(p.modals.spindleSpeed) : 0, v = x[y];
+      g(p, v, o);
+    }
+  });
+  for (let p = 0; p < n.length; p += 1) {
+    if ((L = r == null ? void 0 : r.shouldAbort) != null && L.call(r))
+      throw new Error("Aborted.");
+    const y = n[p];
+    y && G.processLine(y), w[p] = A.length / 3;
+    for (let P = 0; P < x.length; P += 1)
+      h[P][p] = x[P].length / 3;
+    const v = s ? n.length + p + 1 : p + 1;
+    r != null && r.onProgress && (v === i || v === u) && (r.onProgress(v, i), u += a), c > 0 && (v === i || v === f) && (await new Promise((P) => {
+      setTimeout(P, 0);
+    }), f += c);
+  }
+  return {
+    rapid: { positions: Float32Array.from(A), prefixEndVertex: w },
+    cuts: x.map((p, y) => ({
+      positions: Float32Array.from(p),
+      prefixEndVertex: h[y]
+    })),
+    cutBucketCount: x.length,
+    minPower: 0,
+    maxPower: d
+  };
+}
+async function K(n, e = {}) {
+  const o = Math.max(1, Math.floor(e.bucketCount ?? 16)), t = e.baseOpacity ?? 0.9, s = await D(n, {
+    arcSegments: e.arcSegments,
+    bucketCount: o,
+    laserMode: !0,
+    batch: e.batch
+  }), r = s.cuts.map((i, a) => ({
+    opacity: O(a, o, t),
+    positions: i.positions,
+    prefixEndVertex: i.prefixEndVertex
+  }));
+  return {
+    rapidPositions: s.rapid.positions,
+    rapidPrefixEndVertex: s.rapid.prefixEndVertex,
+    buckets: r,
+    minPower: 0,
+    maxPower: s.maxPower
+  };
+}
+function ce(n, e) {
+  n.push(e.X, e.Y, e.Z);
+}
+function z(n, e) {
+  const o = n.transformedStart ?? n.start, t = n.transformedEnd ?? n.end;
+  e.push(o.X, o.Y, o.Z, t.X, t.Y, t.Z);
+}
+function g(n, e, o) {
+  const t = Math.max(1, Math.floor(o)), { primary: s, secondary: r } = H(n.plane), i = J(
+    n.start[s],
+    n.start[r],
+    n.center[s],
+    n.center[r]
+  ), a = Math.atan2(
+    n.start[r] - n.center[r],
+    n.start[s] - n.center[s]
+  ), c = Math.atan2(
+    n.end[r] - n.center[r],
+    n.end[s] - n.center[s]
+  ), u = Math.PI * 2;
+  let f = k(a), d = k(c);
+  n.motion === "G2" ? f <= d && (f += u) : d <= f && (d += u);
+  const M = n.motion === "G2" ? f - d : d - f;
+  let l = { ...n.start };
+  for (let m = 1; m <= t; m += 1) {
+    const A = m / t, x = n.motion === "G2" ? f - M * A : f + M * A, w = Q(n.start, n.end, A);
+    w[s] = n.center[s] + i * Math.cos(x), w[r] = n.center[r] + i * Math.sin(x);
+    const h = T(l), G = T(w);
+    e.push(
+      h.X,
+      h.Y,
+      h.Z,
+      G.X,
+      G.Y,
+      G.Z
+    ), l = w;
+  }
+}
+function T(n) {
+  const e = n.A * Math.PI / 180, o = Math.cos(e), t = Math.sin(e), s = n.Y * o - n.Z * t, r = n.Y * t + n.Z * o;
+  return { ...n, Y: s, Z: r };
+}
+function H(n) {
+  return n === "G18" ? { primary: "Z", secondary: "X" } : n === "G19" ? { primary: "Y", secondary: "Z" } : { primary: "X", secondary: "Y" };
+}
+function k(n) {
+  const e = Math.PI * 2;
+  let o = n % e;
+  return o < 0 && (o += e), o;
+}
+function J(n, e, o, t) {
+  return Math.hypot(n - o, e - t);
+}
+function Q(n, e, o) {
+  return {
+    X: n.X + (e.X - n.X) * o,
+    Y: n.Y + (e.Y - n.Y) * o,
+    Z: n.Z + (e.Z - n.Z) * o,
+    A: n.A + (e.A - n.A) * o,
+    B: n.B + (e.B - n.B) * o,
+    C: n.C + (e.C - n.C) * o
+  };
+}
+function ee(n) {
+  let e = Number.POSITIVE_INFINITY, o = Number.NEGATIVE_INFINITY;
+  const t = new I({
+    onLinearMove: (s) => {
+      const r = s.modals.spindleSpeed;
+      r !== null && (e = Math.min(e, r), o = Math.max(o, r));
+    },
+    onArcMove: (s) => {
+      const r = s.modals.spindleSpeed;
+      r !== null && (e = Math.min(e, r), o = Math.max(o, r));
+    }
+  });
+  for (const s of n)
+    s && t.processLine(s);
+  return !Number.isFinite(e) || !Number.isFinite(o) ? { minPower: 0, maxPower: 0 } : { minPower: e, maxPower: o };
+}
+function B(n, e, o, t) {
+  if (t <= 1)
+    return 0;
+  const s = n ?? e;
+  if (o <= e)
+    return t - 1;
+  const r = (s - e) / (o - e), i = Math.floor(r * (t - 1));
+  return Math.min(t - 1, Math.max(0, i));
+}
+function O(n, e, o) {
+  if (e <= 1)
+    return o;
+  const t = n / (e - 1);
+  return o * t;
+}
+function le(n) {
+  const e = new Float32Array(n.vertices), o = new Uint32Array(n.frames), t = new Float32Array(n.colorArrayBuffer), { verticesLen: s, framesLen: r } = n, i = /* @__PURE__ */ new Map();
+  for (let a = 0; a < r; a++) {
+    const c = o[a], u = a < r - 1 ? o[a + 1] : s / 3;
+    if (u <= c + 1) continue;
+    const f = c * 4, d = t[f], M = t[f + 1], l = t[f + 2], m = t[f + 3], A = te(d, M, l), x = `${A}|${Math.round(m * 100)}`;
+    let w = i.get(x);
+    w || (w = { hexColor: A, opacity: m, pos: [], rgb: [] }, i.set(x, w));
+    for (let h = c; h < u - 1; h++) {
+      const G = h * 3, S = (h + 1) * 3;
+      w.pos.push(e[G], e[G + 1], e[G + 2], e[S], e[S + 1], e[S + 2]), w.rgb.push(d, M, l, d, M, l);
+    }
+  }
+  return Array.from(i.values()).map(({ hexColor: a, opacity: c, pos: u, rgb: f }) => ({
+    hexColor: a,
+    opacity: c,
+    positions: new Float32Array(u),
+    rgbColors: new Float32Array(f)
+  }));
+}
+function te(n, e, o) {
+  const t = (s) => Math.round(Math.min(1, Math.max(0, s)) * 255).toString(16).padStart(2, "0");
+  return `#${t(n)}${t(e)}${t(o)}`;
+}
+function de(n) {
+  const e = new Float32Array(n.vertices), o = new Uint32Array(n.frames), t = new Float32Array(n.colorArrayBuffer), r = (n.isLaser && n.savedColorsBuffer && n.savedColorLen ? new Float32Array(n.savedColorsBuffer) : null) ?? t, { verticesLen: i, framesLen: a } = n, c = [], u = [], f = [], d = [], M = new Int32Array(a), l = new Int32Array(a);
+  for (let m = 0; m < a; m++) {
+    const A = o[m], x = m < a - 1 ? o[m + 1] : i / 3;
+    if (x > A + 1) {
+      const w = t[A * 4 + 3] < 0.75, h = w ? c : f, G = w ? u : d;
+      for (let S = A; S < x - 1; S++) {
+        const L = S * 3, p = (S + 1) * 3;
+        h.push(e[L], e[L + 1], e[L + 2], e[p], e[p + 1], e[p + 2]);
+        const y = S * 4, v = (S + 1) * 4;
+        G.push(r[y], r[y + 1], r[y + 2], r[v], r[v + 1], r[v + 2]);
+      }
+    }
+    M[m] = c.length / 3, l[m] = f.length / 3;
+  }
+  return {
+    rapid: {
+      positions: Float32Array.from(c),
+      colors: Float32Array.from(u),
+      prefixEndVertex: M
+    },
+    cut: {
+      positions: Float32Array.from(f),
+      colors: Float32Array.from(d),
+      prefixEndVertex: l
+    }
+  };
+}
+export {
+  R as GCodeParser,
+  I as GCodeVirtualizer,
+  K as buildLaserGeometryFromLinesBatched,
+  ie as buildLaserVerticesFromLines,
+  ae as buildLaserVerticesFromLinesBatched,
+  se as buildMovementGeometryFromLinesBatched,
+  oe as buildMovementVerticesFromLines,
+  re as buildMovementVerticesFromLinesBatched,
+  D as buildToolpathGeometryFromLinesBatched,
+  ne as buildVerticesFromLines,
+  le as buildWorkerSegmentGroups,
+  de as buildWorkerToolpathStreams,
+  ce as pushXYZ
+};
