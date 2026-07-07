@@ -1,5 +1,5 @@
 import * as o from "react";
-import { a as w, G as V } from "./GCodeSVGRenderer-BIdf-Kth.js";
+import { a as w, G as V } from "./GCodeSVGRenderer-BllsP24E.js";
 const G = o.forwardRef(
   function(u, c) {
     const { id: a, options: n, callbacks: l, className: m, style: d } = u, i = o.useRef(null), r = o.useRef(null);
@@ -38,6 +38,9 @@ const G = o.forwardRef(
           },
           setRotateEnabled(t) {
             e().setRotateEnabled(t);
+          },
+          setCameraFollowEnabled(t) {
+            e().setCameraFollowEnabled(t);
           },
           screenToWorld(t, s, F) {
             return e().screenToWorld(t, s, F);

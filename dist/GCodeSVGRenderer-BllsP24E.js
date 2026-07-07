@@ -2974,10 +2974,10 @@ function Fi(r) {
     }
   };
 }
-const Gi = 25.4;
-class Ii {
+const Gi = 25.4, fi = 500, bi = 260;
+class Yi {
   constructor(Q) {
-    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.machineBedGroup = null, this.bitMarker = null, this.preLaserBitType = "drill", this.toolpathStreams = [], this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.id = Q.id, this.container = Q.container, this.callbacks = Q.callbacks ?? {}, this.options = Et(GP, Q.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), KP(this.container), this.renderer = new a.WebGLRenderer({
+    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.machineBedGroup = null, this.bitMarker = null, this.preLaserBitType = "drill", this.toolpathStreams = [], this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.cameraFollowRequested = !1, this.cameraFollowInterrupted = !1, this.cameraFollowOffset = null, this.id = Q.id, this.container = Q.container, this.callbacks = Q.callbacks ?? {}, this.options = Et(GP, Q.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), KP(this.container), this.renderer = new a.WebGLRenderer({
       canvas: this.canvas,
       antialias: this.options.render.antialias
     }), this.renderer.setPixelRatio(window.devicePixelRatio), this.renderer.setClearColor(this.options.render.theme.background, 1), this.scene = new a.Scene(), this.scene.add(new a.AmbientLight(16777215, 0.8));
@@ -2988,7 +2988,9 @@ class Ii {
       this.options.camera.initialPosition.x,
       this.options.camera.initialPosition.y,
       this.options.camera.initialPosition.z
-    ), this.controls = new lP(this.camera, this.renderer.domElement), this.controls.enableDamping = this.options.camera.orbit.enableDamping, this.controls.update(), this.viewCubeCorrection = new a.Matrix4().makeRotationX(a.MathUtils.degToRad(90)), this.viewCube = new xP({
+    ), this.controls = new lP(this.camera, this.renderer.domElement), this.controls.enableDamping = this.options.camera.orbit.enableDamping, this.controls.addEventListener("start", () => {
+      this.cameraFollowRequested && (this.cameraFollowInterrupted = !0);
+    }), this.controls.update(), this.viewCubeCorrection = new a.Matrix4().makeRotationX(a.MathUtils.degToRad(90)), this.viewCube = new xP({
       container: this.container,
       onSelectView: (t) => {
         const P = new a.Vector3();
@@ -3007,7 +3009,29 @@ class Ii {
   }
   setBitPosition(Q, B) {
     var A;
-    this.ensureBitMarker(), this.lastBitPosition = { ...this.lastBitPosition, ...Q }, (A = this.bitMarker) == null || A.setTarget(Q, B);
+    if (this.ensureBitMarker(), this.lastBitPosition = { ...this.lastBitPosition, ...Q }, (A = this.bitMarker) == null || A.setTarget(Q, B), this.cameraFollowRequested && !this.cameraFollowInterrupted && this.cameraFollowOffset) {
+      const t = new a.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z), P = t.clone().add(this.cameraFollowOffset);
+      this.startCameraLerp(t, P, bi);
+    }
+  }
+  /**
+   * Enable or disable "follow tool" camera tracking. While enabled, every
+   * subsequent setBitPosition() call pans the camera+target in X/Y to keep
+   * the tool centered, holding the camera→target offset captured at engage
+   * time constant — which is what preserves viewing angle and height. A
+   * user-initiated camera drag (OrbitControls "start") interrupts an active
+   * session; it only re-arms on the next disabled→enabled edge.
+   */
+  setCameraFollowEnabled(Q) {
+    if (Q === this.cameraFollowRequested)
+      return;
+    if (this.cameraFollowRequested = Q, this.cameraFollowInterrupted = !1, !Q) {
+      this.cameraFollowOffset = null;
+      return;
+    }
+    this.cameraFollowOffset = this.camera.position.clone().sub(this.controls.target);
+    const B = new a.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z), A = B.clone().add(this.cameraFollowOffset);
+    this.startCameraLerp(B, A, fi);
   }
   setBitVisible(Q) {
     var B;
@@ -3104,13 +3128,19 @@ class Ii {
   }
   startSnapToView(Q, B, A, t) {
     const P = JA(Q), e = B.clone().add(P.multiplyScalar(A)), i = Math.max(1, A);
-    this.camera.near = i / 1e3, this.camera.far = i * 50, this.camera.updateProjectionMatrix(), this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {
+    this.camera.near = i / 1e3, this.camera.far = i * 50, this.camera.updateProjectionMatrix(), this.startCameraLerp(B, e, t);
+  }
+  // Shared tween kickoff for any camera position+target move (view snapping,
+  // model focus, tool-follow engage/track): saves/restores damping around the
+  // transition and hands off to updateCameraFocusTransition() each frame.
+  startCameraLerp(Q, B, A) {
+    this.cameraFocusTransition && (this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled), this.cameraFocusTransition = {
       startedAt: performance.now(),
-      duration: t,
+      duration: A,
       fromPosition: this.camera.position.clone(),
-      toPosition: e,
+      toPosition: B,
       fromTarget: this.controls.target.clone(),
-      toTarget: B,
+      toTarget: Q,
       dampingEnabled: this.controls.enableDamping
     }, this.controls.enableDamping = !1;
   }
@@ -3497,7 +3527,7 @@ function Et(r, Q) {
   var A, t, P, e;
   if (!Q)
     return { ...r };
-  const B = fi(r.render.theme, (A = Q.render) == null ? void 0 : A.theme);
+  const B = gi(r.render.theme, (A = Q.render) == null ? void 0 : A.theme);
   return {
     ...r,
     ...Q,
@@ -3526,7 +3556,7 @@ function Et(r, Q) {
     }
   };
 }
-function fi(r, Q) {
+function gi(r, Q) {
   var B, A;
   return Q ? {
     ...r,
@@ -3539,7 +3569,7 @@ function fi(r, Q) {
     }
   } : r;
 }
-const bi = {
+const pi = {
   rapidColor: "#0ef6ae",
   cutColor: "#3e85c7",
   boundingBoxColor: "#d0d0d0",
@@ -3551,7 +3581,7 @@ const bi = {
   originColor: "#ffffff",
   crosshairColor: "#ffffff"
 }, eB = 0, iB = 0;
-class Si {
+class Vi {
   constructor(Q, B) {
     this.crosshairPos = null, this.crosshairVisible = !1, this.pathEls = [], this.segmentGroups = [], this.workerMode = !1, this.viewBox = { x: 0, y: 0, w: 100, h: 100 }, this.rotX = eB, this.rotY = iB, this.centerX = 0, this.centerY = 0, this.centerZ = 0, this.focalLength = 500, this.cosRotX = 1, this.sinRotX = 0, this.cosRotY = 1, this.sinRotY = 0, this.dragMode = "none", this.activePointers = /* @__PURE__ */ new Map(), this.pinchLastDist = 0, this.pinchLastMid = { x: 0, y: 0 }, this.rafPending = !1, this.rapidVerts = new Float32Array(0), this.cutVerts = new Float32Array(0), this.bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: !0 }, this.project = (A, t, P) => {
       const e = A - this.centerX, i = t - this.centerY, s = P - this.centerZ, v = e * this.cosRotY + s * this.sinRotY, c = i, n = -e * this.sinRotY + s * this.cosRotY, T = v, z = c * this.cosRotX - n * this.sinRotX, w = c * this.sinRotX + n * this.cosRotX;
@@ -3619,7 +3649,7 @@ class Si {
       } else this.activePointers.size === 0 && (this.dragMode = "none", this.svg.style.cursor = "grab");
     }, this.onContextMenu = (A) => {
       A.preventDefault();
-    }, this.options = { ...bi, ...B }, this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"), this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none;", this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet"), this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg"), this.bboxPath = qB(), this.pathLayer = document.createElementNS("http://www.w3.org/2000/svg", "g"), this.bboxLabelX = _B("middle", "hanging"), this.bboxLabelY = _B("start", "middle"), this.bboxLabelZ = _B("middle", "auto"), this.originMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle"), this.originMarker.setAttribute("stroke-opacity", "0.4"), this.originMarker.setAttribute("visibility", "hidden"), this.crosshairEl = qB(), this.crosshairEl.setAttribute("fill", "none"), this.crosshairEl.setAttribute("visibility", "hidden"), this.svg.appendChild(this.bboxPath), this.svg.appendChild(this.pathLayer), this.svg.appendChild(this.bboxLabelX), this.svg.appendChild(this.bboxLabelY), this.svg.appendChild(this.bboxLabelZ), this.svg.appendChild(this.originMarker), this.svg.appendChild(this.crosshairEl), Q.appendChild(this.svg), this.applyOptions(), this.bindEvents();
+    }, this.options = { ...pi, ...B }, this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"), this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none;", this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet"), this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg"), this.bboxPath = qB(), this.pathLayer = document.createElementNS("http://www.w3.org/2000/svg", "g"), this.bboxLabelX = _B("middle", "hanging"), this.bboxLabelY = _B("start", "middle"), this.bboxLabelZ = _B("middle", "auto"), this.originMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle"), this.originMarker.setAttribute("stroke-opacity", "0.4"), this.originMarker.setAttribute("visibility", "hidden"), this.crosshairEl = qB(), this.crosshairEl.setAttribute("fill", "none"), this.crosshairEl.setAttribute("visibility", "hidden"), this.svg.appendChild(this.bboxPath), this.svg.appendChild(this.pathLayer), this.svg.appendChild(this.bboxLabelX), this.svg.appendChild(this.bboxLabelY), this.svg.appendChild(this.bboxLabelZ), this.svg.appendChild(this.originMarker), this.svg.appendChild(this.crosshairEl), Q.appendChild(this.svg), this.applyOptions(), this.bindEvents();
   }
   // ── Public API ────────────────────────────────────────────────────────────
   loadFromLines(Q) {
@@ -3723,7 +3753,7 @@ class Si {
   }
   // ── Rendering ─────────────────────────────────────────────────────────────
   rebuildAndRender(Q = !1) {
-    const B = Q ? gi : L, A = String(this.options.strokeWidth);
+    const B = Q ? mi : L, A = String(this.options.strokeWidth);
     for (; this.pathEls.length < this.segmentGroups.length; ) {
       const t = qB();
       this.pathLayer.appendChild(t), this.pathEls.push(t);
@@ -3732,7 +3762,7 @@ class Si {
       this.pathLayer.removeChild(this.pathEls.pop());
     for (let t = 0; t < this.segmentGroups.length; t++) {
       const { color: P, opacity: e, verts: i } = this.segmentGroups[t], s = this.pathEls[t];
-      s.setAttribute("stroke", P), s.setAttribute("stroke-opacity", String(e)), s.setAttribute("stroke-width", A), s.setAttribute("stroke-linecap", "round"), s.setAttribute("stroke-linejoin", "round"), s.setAttribute("d", pi(i, this.project, B));
+      s.setAttribute("stroke", P), s.setAttribute("stroke-opacity", String(e)), s.setAttribute("stroke-width", A), s.setAttribute("stroke-linecap", "round"), s.setAttribute("stroke-linejoin", "round"), s.setAttribute("d", xi(i, this.project, B));
     }
     this.renderBbox(), this.renderOriginMarker(), this.renderCrosshairMarker(), this.applyViewBox();
   }
@@ -3843,13 +3873,13 @@ function at(r, Q, B) {
 function L(r) {
   return r.toFixed(2);
 }
-function gi(r) {
+function mi(r) {
   return Math.round(r) + "";
 }
 function QA(r) {
   return r.toFixed(2);
 }
-function pi(r, Q, B) {
+function xi(r, Q, B) {
   if (r.length === 0) return "";
   const A = [], t = 1e-6;
   let P = NaN, e = NaN;
@@ -3869,9 +3899,9 @@ function BA(...r) {
   return { minX: Q, minY: B, maxX: t, maxY: P, minZ: A, maxZ: e, empty: i };
 }
 export {
-  Si as G,
+  Vi as G,
   xP as V,
-  Ii as a,
+  Yi as a,
   YA as b,
   GP as d
 };

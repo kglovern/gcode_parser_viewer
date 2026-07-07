@@ -175,6 +175,7 @@ export type GCodeViewerHandle = {
         distance?: number;
     }): void;
     setRotateEnabled(enabled: boolean): void;
+    setCameraFollowEnabled(enabled: boolean): void;
     screenToWorld(clientX: number, clientY: number, options?: {
         planeZ?: number;
     }): {

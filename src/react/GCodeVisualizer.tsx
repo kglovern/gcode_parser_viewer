@@ -65,6 +65,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           setRotateEnabled(enabled: boolean) {
             getViewer().setRotateEnabled(enabled);
           },
+          setCameraFollowEnabled(enabled: boolean) {
+            getViewer().setCameraFollowEnabled(enabled);
+          },
           screenToWorld(clientX: number, clientY: number, worldOptions?: { planeZ?: number }) {
             return getViewer().screenToWorld(clientX, clientY, worldOptions);
           },

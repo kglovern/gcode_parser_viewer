@@ -53,6 +53,12 @@ import {
 import { createBitMarker, type BitMarker } from "./bit/bit";
 
 const MM_PER_INCH = 25.4;
+// "Follow tool" camera tween durations: a deliberate, noticeable ease when
+// follow first engages, then a shorter one per subsequent bit-position tick
+// so the camera glides in sync with the bit marker's own tween (see bit.ts,
+// default tweenMs 140) rather than the two visibly drifting out of step.
+const CAMERA_FOLLOW_ENGAGE_MS = 500;
+const CAMERA_FOLLOW_TRACK_MS = 260;
 
 type NormalizedOptions = GCodeViewerOptions;
 
@@ -115,6 +121,16 @@ export class GCodeViewer implements GCodeViewerHandle {
       }
     | null = null;
 
+  // "Follow tool" camera state. cameraFollowRequested mirrors the last value
+  // passed to setCameraFollowEnabled; cameraFollowInterrupted latches true
+  // once the user manually grabs the camera mid-follow (cleared again only
+  // on the next disabled→enabled edge); cameraFollowOffset is the
+  // camera→target vector captured at engage time, held constant for the rest
+  // of the session — that's what preserves angle and height while tracking.
+  private cameraFollowRequested = false;
+  private cameraFollowInterrupted = false;
+  private cameraFollowOffset: THREE.Vector3 | null = null;
+
   constructor(args: GCodeViewerCreateArgs) {
     this.id = args.id;
     this.container = args.container;
@@ -161,6 +177,15 @@ export class GCodeViewer implements GCodeViewerHandle {
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = this.options.camera.orbit.enableDamping;
+    // "start" only fires from OrbitControls' own pointerdown/wheel/touchstart
+    // handlers, never from the programmatic controls.update() calls
+    // elsewhere in this file — a clean signal for "the user just grabbed the
+    // camera," used to interrupt an active tool-follow session.
+    this.controls.addEventListener("start", () => {
+      if (this.cameraFollowRequested) {
+        this.cameraFollowInterrupted = true;
+      }
+    });
     this.controls.update();
 
     this.viewCubeCorrection = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(90));
@@ -205,6 +230,35 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.ensureBitMarker();
     this.lastBitPosition = { ...this.lastBitPosition, ...position };
     this.bitMarker?.setTarget(position, options);
+    if (this.cameraFollowRequested && !this.cameraFollowInterrupted && this.cameraFollowOffset) {
+      const toTarget = new THREE.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z);
+      const toPosition = toTarget.clone().add(this.cameraFollowOffset);
+      this.startCameraLerp(toTarget, toPosition, CAMERA_FOLLOW_TRACK_MS);
+    }
+  }
+
+  /**
+   * Enable or disable "follow tool" camera tracking. While enabled, every
+   * subsequent setBitPosition() call pans the camera+target in X/Y to keep
+   * the tool centered, holding the camera→target offset captured at engage
+   * time constant — which is what preserves viewing angle and height. A
+   * user-initiated camera drag (OrbitControls "start") interrupts an active
+   * session; it only re-arms on the next disabled→enabled edge.
+   */
+  setCameraFollowEnabled(enabled: boolean): void {
+    if (enabled === this.cameraFollowRequested) {
+      return;
+    }
+    this.cameraFollowRequested = enabled;
+    this.cameraFollowInterrupted = false;
+    if (!enabled) {
+      this.cameraFollowOffset = null;
+      return;
+    }
+    this.cameraFollowOffset = this.camera.position.clone().sub(this.controls.target);
+    const toTarget = new THREE.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.controls.target.z);
+    const toPosition = toTarget.clone().add(this.cameraFollowOffset);
+    this.startCameraLerp(toTarget, toPosition, CAMERA_FOLLOW_ENGAGE_MS);
   }
 
   setBitVisible(visible: boolean): void {
@@ -359,7 +413,13 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.camera.near = maxDim / 1000;
     this.camera.far = maxDim * 50;
     this.camera.updateProjectionMatrix();
+    this.startCameraLerp(toTarget, toPosition, durationMs);
+  }
 
+  // Shared tween kickoff for any camera position+target move (view snapping,
+  // model focus, tool-follow engage/track): saves/restores damping around the
+  // transition and hands off to updateCameraFocusTransition() each frame.
+  private startCameraLerp(toTarget: THREE.Vector3, toPosition: THREE.Vector3, durationMs: number): void {
     if (this.cameraFocusTransition) {
       this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
     }
