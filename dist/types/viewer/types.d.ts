@@ -10,6 +10,7 @@ export type GCodeViewerTheme = {
         laser?: string;
         processed?: string;
         boundingBox: string;
+        machineBed: string;
         grid: {
             major: string;
             minor: string;
@@ -55,13 +56,25 @@ export type GCodeViewerOptions = {
         mode: "hide" | "grey";
     };
     grid: {
-        size: number;
+        sizeX: number;
+        sizeY: number;
         axisDepth: number;
         labels: boolean;
     };
     boundingBox: {
         visible: boolean;
         labels: boolean;
+    };
+    machineBed: {
+        visible: boolean;
+        min: {
+            x: number;
+            y: number;
+        } | null;
+        max: {
+            x: number;
+            y: number;
+        } | null;
     };
     geometry: {
         arcSegments: number;
@@ -140,6 +153,14 @@ export type GCodeViewerHandle = {
         durationMs?: number;
         distance?: number;
     }): void;
+    setRotateEnabled(enabled: boolean): void;
+    screenToWorld(clientX: number, clientY: number, options?: {
+        planeZ?: number;
+    }): {
+        x: number;
+        y: number;
+        z: number;
+    } | null;
     setBitPosition(position: GCodeViewerBitPosition, options?: {
         immediate?: boolean;
     }): void;

@@ -1,4 +1,4 @@
-import { G as e, a as d, V as i, d as c, b as s } from "./GCodeSVGRenderer-AJzTt7mi.js";
+import { G as o, a as r, V as i, d as c, b as n } from "./GCodeSVGRenderer-DZeQSwum.js";
 const a = {
   dark: {
     background: "#111827",
@@ -10,6 +10,7 @@ const a = {
       laser: "#a855f7",
       processed: "#6b7280",
       boundingBox: "#77a9d7",
+      machineBed: "#f5a623",
       grid: { major: "#77a9d7", minor: "#3e6e9e" },
       axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" }
     }
@@ -24,6 +25,7 @@ const a = {
       laser: "#FF0000",
       processed: "#9ca3af",
       boundingBox: "#5191cc",
+      machineBed: "#b45309",
       grid: { major: "#295d8d", minor: "#5191cc" },
       axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" }
     }
@@ -38,6 +40,7 @@ const a = {
       laser: "#8B7EC8",
       processed: "#6f6e69",
       boundingBox: "#da702c",
+      machineBed: "#ffcc66",
       grid: { major: "#a89984", minor: "#6f6e69" },
       axes: { x: "#d14d41", y: "#879a39", z: "#4385be" }
     }
@@ -52,6 +55,7 @@ const a = {
       laser: "#bb9af7",
       processed: "#565f89",
       boundingBox: "#73daca",
+      machineBed: "#e0af68",
       grid: { major: "#7aa2f7", minor: "#414868" },
       axes: { x: "#f7768e", y: "#9ece6a", z: "#7aa2f7" }
     }
@@ -66,6 +70,7 @@ const a = {
       laser: "#b16286",
       processed: "#928374",
       boundingBox: "#076678",
+      machineBed: "#d79921",
       grid: { major: "#7c6f64", minor: "#a89984" },
       axes: { x: "#cc241d", y: "#98971a", z: "#458588" }
     }
@@ -80,6 +85,7 @@ const a = {
       laser: "#DFBFFF",
       processed: "#6E7C8F",
       boundingBox: "#95E6CB",
+      machineBed: "#FFD173",
       grid: { major: "#77a9d7", minor: "#3e6590" },
       axes: { x: "#F28779", y: "#D5FF80", z: "#5CCFE6" }
     }
@@ -94,16 +100,17 @@ const a = {
       laser: "#A37ACC",
       processed: "#ADAEB1",
       boundingBox: "#5C6773",
+      machineBed: "#F2AE49",
       grid: { major: "#5c6773", minor: "#9aacba" },
       axes: { x: "#F07171", y: "#86B300", z: "#55B4D4" }
     }
   }
 };
 export {
-  e as GCodeSVGRenderer,
-  d as GCodeViewer,
+  o as GCodeSVGRenderer,
+  r as GCodeViewer,
   i as ViewCube,
   c as defaultGCodeViewerOptions,
-  s as defaultGCodeViewerTheme,
+  n as defaultGCodeViewerTheme,
   a as gCodeViewerThemePresets
 };

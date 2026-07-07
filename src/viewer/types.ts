@@ -12,6 +12,7 @@ export type GCodeViewerTheme = {
     laser?: string;
     processed?: string;
     boundingBox: string;
+    machineBed: string;
     grid: {
       major: string;
       minor: string;
@@ -61,13 +62,19 @@ export type GCodeViewerOptions = {
     mode: "hide" | "grey";
   };
   grid: {
-    size: number;
+    sizeX: number;
+    sizeY: number;
     axisDepth: number;
     labels: boolean;
   };
   boundingBox: {
     visible: boolean;
     labels: boolean;
+  };
+  machineBed: {
+    visible: boolean;
+    min: { x: number; y: number } | null;
+    max: { x: number; y: number } | null;
   };
   geometry: {
     arcSegments: number;
@@ -100,6 +107,7 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
     laser: "#a855f7",
     processed: "#6b7280",
     boundingBox: "#77a9d7",
+    machineBed: "#fbbf24",
     grid: { major: "#2f3840", minor: "#1f252b" },
     axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" },
   },
@@ -120,8 +128,9 @@ export const defaultGCodeViewerOptions: GCodeViewerOptions = {
     spinRpm: 300,
   },
   progress: { mode: "grey" },
-  grid: { size: 1000, axisDepth: 200, labels: true },
+  grid: { sizeX: 1000, sizeY: 1000, axisDepth: 200, labels: true },
   boundingBox: { visible: false, labels: false },
+  machineBed: { visible: false, min: null, max: null },
   geometry: { arcSegments: 30, batching: { progressEveryLines: 5000, yieldEveryLines: 50000 } },
   render: { antialias: true, theme: defaultGCodeViewerTheme },
   camera: {

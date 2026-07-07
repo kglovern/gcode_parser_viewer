@@ -6,13 +6,17 @@ const MM_PER_INCH = 25.4;
 
 export function createUnitGrid(args: {
   units: GridUnits;
-  sizeMm: number;
+  sizeXMm: number;
+  sizeYMm: number;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
-  const sizeWorld = Math.max(1, args.sizeMm);
-  const half = sizeWorld / 2;
+  // Half-extents are independent per axis so each quadrant reflects the
+  // machine's actual width/depth rather than a single square span.
+  const halfX = Math.max(1, args.sizeXMm) / 2;
+  const halfY = Math.max(1, args.sizeYMm) / 2;
   const stepWorld = args.units === "mm" ? 10 : MM_PER_INCH;
-  const count = Math.max(0, Math.floor(half / stepWorld));
+  const countX = Math.max(0, Math.floor(halfX / stepWorld));
+  const countY = Math.max(0, Math.floor(halfY / stepWorld));
 
   const centerVertices: number[] = [];
   const gridVertices: number[] = [];
@@ -21,14 +25,16 @@ export function createUnitGrid(args: {
     target.push(x1, y1, 0, x2, y2, 0);
   };
 
-  for (let i = -count; i <= count; i += 1) {
+  // Horizontal lines (constant y, spanning the X extent).
+  for (let i = -countY; i <= countY; i += 1) {
     const y = i * stepWorld;
-    pushLineXY(-half, y, half, y, i === 0 ? centerVertices : gridVertices);
+    pushLineXY(-halfX, y, halfX, y, i === 0 ? centerVertices : gridVertices);
   }
 
-  for (let i = -count; i <= count; i += 1) {
+  // Vertical lines (constant x, spanning the Y extent).
+  for (let i = -countX; i <= countX; i += 1) {
     const x = i * stepWorld;
-    pushLineXY(x, -half, x, half, i === 0 ? centerVertices : gridVertices);
+    pushLineXY(x, -halfY, x, halfY, i === 0 ? centerVertices : gridVertices);
   }
 
   const group = new THREE.Group();
@@ -69,14 +75,16 @@ export function disposeLineSegmentsGroup(group: THREE.Object3D): void {
 }
 
 export function createAxes(args: {
-  sizeWorld: number;
+  sizeXWorld: number;
+  sizeYWorld: number;
   depthWorld: number;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
   const group = new THREE.Group();
-  const half = Math.max(1, args.sizeWorld) / 2;
+  const halfX = Math.max(1, args.sizeXWorld) / 2;
+  const halfY = Math.max(1, args.sizeYWorld) / 2;
   const depth = Math.max(1, args.depthWorld);
-  const dashSize = Math.max(1, Math.min(half / 12, 30));
+  const dashSize = Math.max(1, Math.min(Math.max(halfX, halfY) / 12, 30));
   const gapSize = dashSize * 0.6;
 
   const lineMaterial = (color: string) =>
@@ -91,8 +99,8 @@ export function createAxes(args: {
 
   const xLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-half, 0, 0),
-      new THREE.Vector3(half, 0, 0),
+      new THREE.Vector3(-halfX, 0, 0),
+      new THREE.Vector3(halfX, 0, 0),
     ]),
     lineMaterial(args.theme.colors.axes.x)
   );
@@ -100,8 +108,8 @@ export function createAxes(args: {
 
   const yLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, -half, 0),
-      new THREE.Vector3(0, half, 0),
+      new THREE.Vector3(0, -halfY, 0),
+      new THREE.Vector3(0, halfY, 0),
     ]),
     lineMaterial(args.theme.colors.axes.y)
   );
@@ -120,9 +128,9 @@ export function createAxes(args: {
 
   const labelOffset = Math.max(2, dashSize);
   const xLabel = createTextSprite("X", args.theme.colors.axes.x, { size: 5 });
-  xLabel.position.set(half + labelOffset, 0, 0);
+  xLabel.position.set(halfX + labelOffset, 0, 0);
   const yLabel = createTextSprite("Y", args.theme.colors.axes.y, { size: 5 });
-  yLabel.position.set(0, half + labelOffset, 0);
+  yLabel.position.set(0, halfY + labelOffset, 0);
   const zLabel = createTextSprite("Z", args.theme.colors.axes.z, { size: 5 });
   zLabel.position.set(0, 0, depth + labelOffset);
 
@@ -151,45 +159,52 @@ export function disposeAxesGroup(group: THREE.Object3D): void {
 }
 
 export function createGridLabels(args: {
-  sizeMm: number;
+  sizeXMm: number;
+  sizeYMm: number;
   units: GridUnits;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
   const group = new THREE.Group();
-  const halfWorld = Math.max(1, args.sizeMm) / 2;
+  const halfXWorld = Math.max(1, args.sizeXMm) / 2;
+  const halfYWorld = Math.max(1, args.sizeYMm) / 2;
   const displayStep = args.units === "mm" ? 10 : 1;
   const displayStart = displayStep;
-  const displayMax = args.units === "mm" ? halfWorld : halfWorld / MM_PER_INCH;
   const displayIncrement = displayStep * 2;
   const unitScale = args.units === "mm" ? 1 : MM_PER_INCH;
+  const displayMaxX = args.units === "mm" ? halfXWorld : halfXWorld / MM_PER_INCH;
+  const displayMaxY = args.units === "mm" ? halfYWorld : halfYWorld / MM_PER_INCH;
 
   const opacity = 0.5;
   const size = 4;
   const z = 0.1;
   const axisOffset = 5;
 
-  for (let value = displayStart; value <= displayMax + 1e-6; value += displayIncrement) {
+  const xColor = args.theme.colors.axes.x;
+  const yColor = args.theme.colors.axes.y;
+  const spriteOptions = { opacity, size };
+
+  for (let value = displayStart; value <= displayMaxX + 1e-6; value += displayIncrement) {
     const worldValue = value * unitScale;
-    if (worldValue > halfWorld + 1e-6) {
+    if (worldValue > halfXWorld + 1e-6) {
       continue;
     }
-
-    const xColor = args.theme.colors.axes.x;
-    const yColor = args.theme.colors.axes.y;
-
-    const spriteOptions = { opacity, size };
-
     const xPos = createTextSprite(String(value), xColor, spriteOptions);
     xPos.position.set(worldValue, axisOffset, z);
     const xNeg = createTextSprite(String(-value), xColor, spriteOptions);
     xNeg.position.set(-worldValue, axisOffset, z);
+    group.add(xPos, xNeg);
+  }
 
+  for (let value = displayStart; value <= displayMaxY + 1e-6; value += displayIncrement) {
+    const worldValue = value * unitScale;
+    if (worldValue > halfYWorld + 1e-6) {
+      continue;
+    }
     const yPos = createTextSprite(String(value), yColor, spriteOptions);
     yPos.position.set(-axisOffset, worldValue, z);
     const yNeg = createTextSprite(String(-value), yColor, spriteOptions);
     yNeg.position.set(-axisOffset, -worldValue, z);
-
-    group.add(xPos, xNeg, yPos, yNeg);
+    group.add(yPos, yNeg);
   }
 
   return group;

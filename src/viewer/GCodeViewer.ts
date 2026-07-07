@@ -35,6 +35,7 @@ import {
 } from "./simulation/materialSlab";
 import { ViewCube } from "./ViewCube";
 import { createBoundingBoxGroup, disposeBoundingBoxGroup } from "./bbox/boundingBox";
+import { createMachineBedGroup, disposeMachineBedGroup } from "./bed/machineBed";
 import {
   dominantCameraFace,
   easeInOutCubic,
@@ -79,6 +80,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   private axesGroup: THREE.Group | null = null;
   private gridLabelsGroup: THREE.Group | null = null;
   private boundingBoxGroup: THREE.Group | null = null;
+  private machineBedGroup: THREE.Group | null = null;
   private bitMarker: BitMarker | null = null;
   private preLaserBitType: GCodeViewerBitType = "drill";
 
@@ -193,6 +195,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.renderGridAndAxes();
     this.refreshGridLabels();
     this.refreshBoundingBox();
+    this.refreshMachineBed();
     this.ensureBitMarker();
     this.resize();
     this.startAnimationLoop();
@@ -460,7 +463,8 @@ export class GCodeViewer implements GCodeViewerHandle {
 
     const gridLayoutChanged =
       previous.units !== this.options.units ||
-      previous.grid.size !== this.options.grid.size ||
+      previous.grid.sizeX !== this.options.grid.sizeX ||
+      previous.grid.sizeY !== this.options.grid.sizeY ||
       previous.grid.axisDepth !== this.options.grid.axisDepth;
 
     const gridStyleChanged =
@@ -477,7 +481,8 @@ export class GCodeViewer implements GCodeViewerHandle {
     const gridLabelsChanged =
       previous.grid.labels !== this.options.grid.labels ||
       previous.units !== this.options.units ||
-      previous.grid.size !== this.options.grid.size ||
+      previous.grid.sizeX !== this.options.grid.sizeX ||
+      previous.grid.sizeY !== this.options.grid.sizeY ||
       gridStyleChanged;
     if (gridLabelsChanged) {
       this.refreshGridLabels();
@@ -490,6 +495,17 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.render.theme.colors.boundingBox !== this.options.render.theme.colors.boundingBox;
     if (bboxChanged) {
       this.refreshBoundingBox();
+    }
+
+    const machineBedChanged =
+      previous.machineBed.visible !== this.options.machineBed.visible ||
+      previous.machineBed.min?.x !== this.options.machineBed.min?.x ||
+      previous.machineBed.min?.y !== this.options.machineBed.min?.y ||
+      previous.machineBed.max?.x !== this.options.machineBed.max?.x ||
+      previous.machineBed.max?.y !== this.options.machineBed.max?.y ||
+      previous.render.theme.colors.machineBed !== this.options.render.theme.colors.machineBed;
+    if (machineBedChanged) {
+      this.refreshMachineBed();
     }
 
     const toolpathColorsChanged =
@@ -642,6 +658,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setAxesGroup(null);
     this.setGridLabelsGroup(null);
     this.setBoundingBoxGroup(null);
+    this.setMachineBedGroup(null);
     this.setBitMarker(null);
 
     this.controls.dispose();
@@ -688,24 +705,28 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.scene.add(this.bitMarker.object);
   }
 
-  private worldSizes(): { sizeMm: number; axisDepthMm: number } {
+  private worldSizes(): { sizeXMm: number; sizeYMm: number; axisDepthMm: number } {
     const scale = this.options.units === "in" ? MM_PER_INCH : 1;
     return {
-      sizeMm: Math.max(1, this.options.grid.size * scale),
+      sizeXMm: Math.max(1, this.options.grid.sizeX * scale),
+      sizeYMm: Math.max(1, this.options.grid.sizeY * scale),
       axisDepthMm: Math.max(1, this.options.grid.axisDepth * scale),
     };
   }
 
   private renderGridAndAxes(): void {
-    const { sizeMm, axisDepthMm } = this.worldSizes();
+    const { sizeXMm, sizeYMm, axisDepthMm } = this.worldSizes();
     this.setGridGroup(
       createUnitGrid({
         units: this.options.units,
-        sizeMm,
+        sizeXMm,
+        sizeYMm,
         theme: this.options.render.theme,
       })
     );
-    this.setAxesGroup(createAxes({ sizeWorld: sizeMm, depthWorld: axisDepthMm, theme: this.options.render.theme }));
+    this.setAxesGroup(
+      createAxes({ sizeXWorld: sizeXMm, sizeYWorld: sizeYMm, depthWorld: axisDepthMm, theme: this.options.render.theme })
+    );
   }
 
   private refreshGridLabels(): void {
@@ -713,9 +734,9 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.setGridLabelsGroup(null);
       return;
     }
-    const { sizeMm } = this.worldSizes();
+    const { sizeXMm, sizeYMm } = this.worldSizes();
     this.setGridLabelsGroup(
-      createGridLabels({ sizeMm, units: this.options.units, theme: this.options.render.theme })
+      createGridLabels({ sizeXMm, sizeYMm, units: this.options.units, theme: this.options.render.theme })
     );
   }
 
@@ -725,6 +746,15 @@ export class GCodeViewer implements GCodeViewerHandle {
       return;
     }
     this.setBoundingBoxGroup(createBoundingBoxGroup(this.currentBounds, this.options));
+  }
+
+  private refreshMachineBed(): void {
+    const { visible, min, max } = this.options.machineBed;
+    if (!visible || !min || !max) {
+      this.setMachineBedGroup(null);
+      return;
+    }
+    this.setMachineBedGroup(createMachineBedGroup(min, max, this.options));
   }
 
   private setBitMarker(next: BitMarker | null): void {
@@ -782,6 +812,18 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
     if (group) {
       this.boundingBoxGroup = group;
+      this.scene.add(group);
+    }
+  }
+
+  private setMachineBedGroup(group: THREE.Group | null): void {
+    if (this.machineBedGroup) {
+      this.scene.remove(this.machineBedGroup);
+      disposeMachineBedGroup(this.machineBedGroup);
+      this.machineBedGroup = null;
+    }
+    if (group) {
+      this.machineBedGroup = group;
       this.scene.add(group);
     }
   }
@@ -1109,6 +1151,7 @@ function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions
     progress: { ...base.progress, ...next.progress },
     grid: { ...base.grid, ...next.grid },
     boundingBox: { ...base.boundingBox, ...next.boundingBox },
+    machineBed: { ...base.machineBed, ...next.machineBed },
     geometry: {
       ...base.geometry,
       ...next.geometry,
