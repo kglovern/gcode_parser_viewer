@@ -109,7 +109,7 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
     cutting: "#3e85c7",
     laser: "#a855f7",
     processed: "#6b7280",
-    boundingBox: "#77a9d7",
+    boundingBox: "#e2e8f0",
     machineBed: "#fbbf24",
     machineBedKeepout: "#df3b3b",
     grid: { major: "#2f3840", minor: "#1f252b" },

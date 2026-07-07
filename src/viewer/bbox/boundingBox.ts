@@ -12,8 +12,11 @@ export function createBoundingBoxGroup(bounds: THREE.Box3, options: GCodeViewerO
   );
   const helperMaterial = helper.material as THREE.LineBasicMaterial;
   helperMaterial.transparent = true;
-  helperMaterial.opacity = 0.12;
+  helperMaterial.opacity = 0.65;
   helperMaterial.depthWrite = false;
+  // Most WebGL backends ignore linewidth > 1 (a long-standing platform
+  // limitation), but setting it is harmless and helps where it is honored.
+  helperMaterial.linewidth = 2;
   group.add(helper);
 
   if (options.boundingBox.labels) {
@@ -25,7 +28,7 @@ export function createBoundingBoxGroup(bounds: THREE.Box3, options: GCodeViewerO
 
 function createBoundingBoxLabels(bounds: THREE.Box3, options: GCodeViewerOptions): THREE.Object3D[] {
   const color = options.render.theme.colors.boundingBox;
-  const labelOpacity = 0.32;
+  const labelOpacity = 0.8;
 
   const format = (value: number) => {
     if (Math.abs(value) < 1e-9) {

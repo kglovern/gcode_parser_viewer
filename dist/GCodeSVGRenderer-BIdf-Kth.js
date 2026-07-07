@@ -107,7 +107,7 @@ const YA = {
     cutting: "#3e85c7",
     laser: "#a855f7",
     processed: "#6b7280",
-    boundingBox: "#77a9d7",
+    boundingBox: "#e2e8f0",
     machineBed: "#fbbf24",
     machineBedKeepout: "#df3b3b",
     grid: { major: "#2f3840", minor: "#1f252b" },
@@ -433,10 +433,10 @@ function SP(r, Q) {
     r.clone(),
     new a.Color(Q.render.theme.colors.boundingBox)
   ), t = A.material;
-  return t.transparent = !0, t.opacity = 0.12, t.depthWrite = !1, B.add(A), Q.boundingBox.labels && B.add(...YP(r.clone(), Q)), B;
+  return t.transparent = !0, t.opacity = 0.65, t.depthWrite = !1, t.linewidth = 2, B.add(A), Q.boundingBox.labels && B.add(...YP(r.clone(), Q)), B;
 }
 function YP(r, Q) {
-  const B = Q.render.theme.colors.boundingBox, A = 0.32, t = (U) => Math.abs(U) < 1e-9 ? "0" : U.toFixed(3), P = (U) => Q.units === "in" ? `${t(U / IP)} in` : `${t(U)} mm`, e = r.min, i = r.max, s = (U) => LQ(U, B, { size: 4, opacity: A }), v = s(P(e.x)), c = s(P(i.x)), n = s(P(e.y)), T = s(P(i.y)), z = s(P(e.z)), w = s(P(i.z)), o = new a.Vector3();
+  const B = Q.render.theme.colors.boundingBox, A = 0.8, t = (U) => Math.abs(U) < 1e-9 ? "0" : U.toFixed(3), P = (U) => Q.units === "in" ? `${t(U / IP)} in` : `${t(U)} mm`, e = r.min, i = r.max, s = (U) => LQ(U, B, { size: 4, opacity: A }), v = s(P(e.x)), c = s(P(i.x)), n = s(P(e.y)), T = s(P(i.y)), z = s(P(e.z)), w = s(P(i.z)), o = new a.Vector3();
   r.getSize(o);
   const E = Math.max(2, Math.max(o.x, o.y, o.z) * 0.02), k = (e.x + i.x) / 2, h = (e.y + i.y) / 2;
   return v.position.set(e.x - E, h, e.z - E), c.position.set(i.x + E, h, e.z - E), n.position.set(k, e.y - E, e.z - E), T.position.set(k, i.y + E, e.z - E), z.position.set(k, h, e.z - E), w.position.set(k, h, i.z + E), [v, c, n, T, z, w];
