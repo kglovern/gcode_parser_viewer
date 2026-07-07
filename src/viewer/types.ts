@@ -67,6 +67,7 @@ export type GCodeViewerOptions = {
     sizeY: number;
     axisDepth: number;
     labels: boolean;
+    bounds: { min: { x: number; y: number }; max: { x: number; y: number } } | null;
   };
   boundingBox: {
     visible: boolean;
@@ -131,7 +132,7 @@ export const defaultGCodeViewerOptions: GCodeViewerOptions = {
     spinRpm: 300,
   },
   progress: { mode: "grey" },
-  grid: { sizeX: 1000, sizeY: 1000, axisDepth: 200, labels: true },
+  grid: { sizeX: 1000, sizeY: 1000, axisDepth: 200, labels: true, bounds: null },
   boundingBox: { visible: false, labels: false },
   machineBed: { visible: false, min: null, max: null, keepout: null },
   geometry: { arcSegments: 30, batching: { progressEveryLines: 5000, yieldEveryLines: 50000 } },

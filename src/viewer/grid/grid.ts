@@ -4,19 +4,41 @@ import { createTextSprite, disposeSpriteGroup } from "../render/textSprite";
 
 const MM_PER_INCH = 25.4;
 
+type GridBounds = { min: { x: number; y: number }; max: { x: number; y: number } } | null;
+
+// Resolves the box grid/axes/labels are drawn within. With no bounds, it's
+// the usual symmetric square centered on the origin; with bounds (the "trim
+// to machine bed" option), it's the literal (possibly off-center) box.
+function resolveBounds(args: {
+  sizeXMm: number;
+  sizeYMm: number;
+  bounds?: GridBounds;
+}): { minX: number; maxX: number; minY: number; maxY: number } {
+  if (args.bounds) {
+    return {
+      minX: args.bounds.min.x,
+      maxX: args.bounds.max.x,
+      minY: args.bounds.min.y,
+      maxY: args.bounds.max.y,
+    };
+  }
+  const halfX = Math.max(1, args.sizeXMm) / 2;
+  const halfY = Math.max(1, args.sizeYMm) / 2;
+  return { minX: -halfX, maxX: halfX, minY: -halfY, maxY: halfY };
+}
+
 export function createUnitGrid(args: {
   units: GridUnits;
   sizeXMm: number;
   sizeYMm: number;
+  bounds?: GridBounds;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
-  // Half-extents are independent per axis so each quadrant reflects the
-  // machine's actual width/depth rather than a single square span.
-  const halfX = Math.max(1, args.sizeXMm) / 2;
-  const halfY = Math.max(1, args.sizeYMm) / 2;
+  // Half-extents (or explicit bounds) are independent per axis so each
+  // quadrant reflects the machine's actual width/depth rather than a single
+  // square span.
+  const { minX, maxX, minY, maxY } = resolveBounds(args);
   const stepWorld = args.units === "mm" ? 10 : MM_PER_INCH;
-  const countX = Math.max(0, Math.floor(halfX / stepWorld));
-  const countY = Math.max(0, Math.floor(halfY / stepWorld));
 
   const centerVertices: number[] = [];
   const gridVertices: number[] = [];
@@ -25,16 +47,20 @@ export function createUnitGrid(args: {
     target.push(x1, y1, 0, x2, y2, 0);
   };
 
-  // Horizontal lines (constant y, spanning the X extent).
-  for (let i = -countY; i <= countY; i += 1) {
-    const y = i * stepWorld;
-    pushLineXY(-halfX, y, halfX, y, i === 0 ? centerVertices : gridVertices);
+  // Horizontal lines (constant y, spanning the X extent), step-aligned to
+  // absolute world positions so trimmed bounds clip the same grid rather
+  // than re-tiling it from the box corner.
+  const startY = Math.ceil(minY / stepWorld) * stepWorld;
+  const endY = Math.floor(maxY / stepWorld) * stepWorld;
+  for (let y = startY; y <= endY + 1e-6; y += stepWorld) {
+    pushLineXY(minX, y, maxX, y, Math.abs(y) < 1e-6 ? centerVertices : gridVertices);
   }
 
   // Vertical lines (constant x, spanning the Y extent).
-  for (let i = -countX; i <= countX; i += 1) {
-    const x = i * stepWorld;
-    pushLineXY(x, -halfY, x, halfY, i === 0 ? centerVertices : gridVertices);
+  const startX = Math.ceil(minX / stepWorld) * stepWorld;
+  const endX = Math.floor(maxX / stepWorld) * stepWorld;
+  for (let x = startX; x <= endX + 1e-6; x += stepWorld) {
+    pushLineXY(x, minY, x, maxY, Math.abs(x) < 1e-6 ? centerVertices : gridVertices);
   }
 
   const group = new THREE.Group();
@@ -78,13 +104,17 @@ export function createAxes(args: {
   sizeXWorld: number;
   sizeYWorld: number;
   depthWorld: number;
+  bounds?: GridBounds;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
   const group = new THREE.Group();
-  const halfX = Math.max(1, args.sizeXWorld) / 2;
-  const halfY = Math.max(1, args.sizeYWorld) / 2;
+  const { minX, maxX, minY, maxY } = resolveBounds({
+    sizeXMm: args.sizeXWorld,
+    sizeYMm: args.sizeYWorld,
+    bounds: args.bounds,
+  });
   const depth = Math.max(1, args.depthWorld);
-  const dashSize = Math.max(1, Math.min(Math.max(halfX, halfY) / 12, 30));
+  const dashSize = Math.max(1, Math.min(Math.max(maxX - minX, maxY - minY) / 24, 30));
   const gapSize = dashSize * 0.6;
 
   const lineMaterial = (color: string) =>
@@ -99,8 +129,8 @@ export function createAxes(args: {
 
   const xLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-halfX, 0, 0),
-      new THREE.Vector3(halfX, 0, 0),
+      new THREE.Vector3(minX, 0, 0),
+      new THREE.Vector3(maxX, 0, 0),
     ]),
     lineMaterial(args.theme.colors.axes.x)
   );
@@ -108,8 +138,8 @@ export function createAxes(args: {
 
   const yLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, -halfY, 0),
-      new THREE.Vector3(0, halfY, 0),
+      new THREE.Vector3(0, minY, 0),
+      new THREE.Vector3(0, maxY, 0),
     ]),
     lineMaterial(args.theme.colors.axes.y)
   );
@@ -128,9 +158,9 @@ export function createAxes(args: {
 
   const labelOffset = Math.max(2, dashSize);
   const xLabel = createTextSprite("X", args.theme.colors.axes.x, { size: 5 });
-  xLabel.position.set(halfX + labelOffset, 0, 0);
+  xLabel.position.set(maxX + labelOffset, 0, 0);
   const yLabel = createTextSprite("Y", args.theme.colors.axes.y, { size: 5 });
-  yLabel.position.set(0, halfY + labelOffset, 0);
+  yLabel.position.set(0, maxY + labelOffset, 0);
   const zLabel = createTextSprite("Z", args.theme.colors.axes.z, { size: 5 });
   zLabel.position.set(0, 0, depth + labelOffset);
 
@@ -161,18 +191,15 @@ export function disposeAxesGroup(group: THREE.Object3D): void {
 export function createGridLabels(args: {
   sizeXMm: number;
   sizeYMm: number;
+  bounds?: GridBounds;
   units: GridUnits;
   theme: GCodeViewerOptions["render"]["theme"];
 }): THREE.Group {
   const group = new THREE.Group();
-  const halfXWorld = Math.max(1, args.sizeXMm) / 2;
-  const halfYWorld = Math.max(1, args.sizeYMm) / 2;
+  const { minX, maxX, minY, maxY } = resolveBounds(args);
   const displayStep = args.units === "mm" ? 10 : 1;
-  const displayStart = displayStep;
   const displayIncrement = displayStep * 2;
   const unitScale = args.units === "mm" ? 1 : MM_PER_INCH;
-  const displayMaxX = args.units === "mm" ? halfXWorld : halfXWorld / MM_PER_INCH;
-  const displayMaxY = args.units === "mm" ? halfYWorld : halfYWorld / MM_PER_INCH;
 
   const opacity = 0.5;
   const size = 4;
@@ -183,28 +210,44 @@ export function createGridLabels(args: {
   const yColor = args.theme.colors.axes.y;
   const spriteOptions = { opacity, size };
 
-  for (let value = displayStart; value <= displayMaxX + 1e-6; value += displayIncrement) {
+  // Independent per-direction loops (not paired +/-value) so an off-center
+  // trimmed box only emits labels that actually fall within it.
+  for (let value = displayStep; ; value += displayIncrement) {
     const worldValue = value * unitScale;
-    if (worldValue > halfXWorld + 1e-6) {
-      continue;
+    if (worldValue > maxX + 1e-6) {
+      break;
     }
     const xPos = createTextSprite(String(value), xColor, spriteOptions);
     xPos.position.set(worldValue, axisOffset, z);
+    group.add(xPos);
+  }
+  for (let value = displayStep; ; value += displayIncrement) {
+    const worldValue = value * unitScale;
+    if (-worldValue < minX - 1e-6) {
+      break;
+    }
     const xNeg = createTextSprite(String(-value), xColor, spriteOptions);
     xNeg.position.set(-worldValue, axisOffset, z);
-    group.add(xPos, xNeg);
+    group.add(xNeg);
   }
 
-  for (let value = displayStart; value <= displayMaxY + 1e-6; value += displayIncrement) {
+  for (let value = displayStep; ; value += displayIncrement) {
     const worldValue = value * unitScale;
-    if (worldValue > halfYWorld + 1e-6) {
-      continue;
+    if (worldValue > maxY + 1e-6) {
+      break;
     }
     const yPos = createTextSprite(String(value), yColor, spriteOptions);
     yPos.position.set(-axisOffset, worldValue, z);
+    group.add(yPos);
+  }
+  for (let value = displayStep; ; value += displayIncrement) {
+    const worldValue = value * unitScale;
+    if (-worldValue < minY - 1e-6) {
+      break;
+    }
     const yNeg = createTextSprite(String(-value), yColor, spriteOptions);
     yNeg.position.set(-axisOffset, -worldValue, z);
-    group.add(yPos, yNeg);
+    group.add(yNeg);
   }
 
   return group;

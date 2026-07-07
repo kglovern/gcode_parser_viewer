@@ -61,6 +61,16 @@ export type GCodeViewerOptions = {
         sizeY: number;
         axisDepth: number;
         labels: boolean;
+        bounds: {
+            min: {
+                x: number;
+                y: number;
+            };
+            max: {
+                x: number;
+                y: number;
+            };
+        } | null;
     };
     boundingBox: {
         visible: boolean;

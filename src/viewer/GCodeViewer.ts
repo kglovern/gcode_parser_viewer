@@ -461,11 +461,18 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.controls.enableDamping = this.options.camera.orbit.enableDamping;
     }
 
+    const gridBoundsChanged =
+      previous.grid.bounds?.min.x !== this.options.grid.bounds?.min.x ||
+      previous.grid.bounds?.min.y !== this.options.grid.bounds?.min.y ||
+      previous.grid.bounds?.max.x !== this.options.grid.bounds?.max.x ||
+      previous.grid.bounds?.max.y !== this.options.grid.bounds?.max.y;
+
     const gridLayoutChanged =
       previous.units !== this.options.units ||
       previous.grid.sizeX !== this.options.grid.sizeX ||
       previous.grid.sizeY !== this.options.grid.sizeY ||
-      previous.grid.axisDepth !== this.options.grid.axisDepth;
+      previous.grid.axisDepth !== this.options.grid.axisDepth ||
+      gridBoundsChanged;
 
     const gridStyleChanged =
       previous.render.theme.colors.grid.major !== this.options.render.theme.colors.grid.major ||
@@ -483,6 +490,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.units !== this.options.units ||
       previous.grid.sizeX !== this.options.grid.sizeX ||
       previous.grid.sizeY !== this.options.grid.sizeY ||
+      gridBoundsChanged ||
       gridStyleChanged;
     if (gridLabelsChanged) {
       this.refreshGridLabels();
@@ -710,27 +718,42 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.scene.add(this.bitMarker.object);
   }
 
-  private worldSizes(): { sizeXMm: number; sizeYMm: number; axisDepthMm: number } {
+  private worldSizes(): {
+    sizeXMm: number;
+    sizeYMm: number;
+    axisDepthMm: number;
+    bounds: GCodeViewerOptions["grid"]["bounds"];
+  } {
     const scale = this.options.units === "in" ? MM_PER_INCH : 1;
     return {
       sizeXMm: Math.max(1, this.options.grid.sizeX * scale),
       sizeYMm: Math.max(1, this.options.grid.sizeY * scale),
       axisDepthMm: Math.max(1, this.options.grid.axisDepth * scale),
+      // Bounds are literal absolute mm (unlike sizeX/sizeY), so they don't
+      // go through the units scale round-trip above.
+      bounds: this.options.grid.bounds ?? null,
     };
   }
 
   private renderGridAndAxes(): void {
-    const { sizeXMm, sizeYMm, axisDepthMm } = this.worldSizes();
+    const { sizeXMm, sizeYMm, axisDepthMm, bounds } = this.worldSizes();
     this.setGridGroup(
       createUnitGrid({
         units: this.options.units,
         sizeXMm,
         sizeYMm,
+        bounds,
         theme: this.options.render.theme,
       })
     );
     this.setAxesGroup(
-      createAxes({ sizeXWorld: sizeXMm, sizeYWorld: sizeYMm, depthWorld: axisDepthMm, theme: this.options.render.theme })
+      createAxes({
+        sizeXWorld: sizeXMm,
+        sizeYWorld: sizeYMm,
+        depthWorld: axisDepthMm,
+        bounds,
+        theme: this.options.render.theme,
+      })
     );
   }
 
@@ -739,9 +762,9 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.setGridLabelsGroup(null);
       return;
     }
-    const { sizeXMm, sizeYMm } = this.worldSizes();
+    const { sizeXMm, sizeYMm, bounds } = this.worldSizes();
     this.setGridLabelsGroup(
-      createGridLabels({ sizeXMm, sizeYMm, units: this.options.units, theme: this.options.render.theme })
+      createGridLabels({ sizeXMm, sizeYMm, bounds, units: this.options.units, theme: this.options.render.theme })
     );
   }
 
