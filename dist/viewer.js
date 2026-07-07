@@ -1,5 +1,5 @@
-import { G as o, a as r, V as i, d as c, b as n } from "./GCodeSVGRenderer-DZeQSwum.js";
-const a = {
+import { G as o, a as i, V as c, d as r, b as n } from "./GCodeSVGRenderer-D4yqZ1WL.js";
+const e = {
   dark: {
     background: "#111827",
     opacity: 0.9,
@@ -11,6 +11,7 @@ const a = {
       processed: "#6b7280",
       boundingBox: "#77a9d7",
       machineBed: "#f5a623",
+      machineBedKeepout: "#df3b3b",
       grid: { major: "#77a9d7", minor: "#3e6e9e" },
       axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" }
     }
@@ -26,6 +27,7 @@ const a = {
       processed: "#9ca3af",
       boundingBox: "#5191cc",
       machineBed: "#b45309",
+      machineBedKeepout: "#df3b3b",
       grid: { major: "#295d8d", minor: "#5191cc" },
       axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" }
     }
@@ -41,6 +43,7 @@ const a = {
       processed: "#6f6e69",
       boundingBox: "#da702c",
       machineBed: "#ffcc66",
+      machineBedKeepout: "#d14d41",
       grid: { major: "#a89984", minor: "#6f6e69" },
       axes: { x: "#d14d41", y: "#879a39", z: "#4385be" }
     }
@@ -56,6 +59,7 @@ const a = {
       processed: "#565f89",
       boundingBox: "#73daca",
       machineBed: "#e0af68",
+      machineBedKeepout: "#f7768e",
       grid: { major: "#7aa2f7", minor: "#414868" },
       axes: { x: "#f7768e", y: "#9ece6a", z: "#7aa2f7" }
     }
@@ -71,6 +75,7 @@ const a = {
       processed: "#928374",
       boundingBox: "#076678",
       machineBed: "#d79921",
+      machineBedKeepout: "#cc241d",
       grid: { major: "#7c6f64", minor: "#a89984" },
       axes: { x: "#cc241d", y: "#98971a", z: "#458588" }
     }
@@ -86,6 +91,7 @@ const a = {
       processed: "#6E7C8F",
       boundingBox: "#95E6CB",
       machineBed: "#FFD173",
+      machineBedKeepout: "#F28779",
       grid: { major: "#77a9d7", minor: "#3e6590" },
       axes: { x: "#F28779", y: "#D5FF80", z: "#5CCFE6" }
     }
@@ -101,6 +107,7 @@ const a = {
       processed: "#ADAEB1",
       boundingBox: "#5C6773",
       machineBed: "#F2AE49",
+      machineBedKeepout: "#F07171",
       grid: { major: "#5c6773", minor: "#9aacba" },
       axes: { x: "#F07171", y: "#86B300", z: "#55B4D4" }
     }
@@ -108,9 +115,9 @@ const a = {
 };
 export {
   o as GCodeSVGRenderer,
-  r as GCodeViewer,
-  i as ViewCube,
-  c as defaultGCodeViewerOptions,
+  i as GCodeViewer,
+  c as ViewCube,
+  r as defaultGCodeViewerOptions,
   n as defaultGCodeViewerTheme,
-  a as gCodeViewerThemePresets
+  e as gCodeViewerThemePresets
 };

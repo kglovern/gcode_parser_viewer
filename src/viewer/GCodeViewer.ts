@@ -503,7 +503,12 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.machineBed.min?.y !== this.options.machineBed.min?.y ||
       previous.machineBed.max?.x !== this.options.machineBed.max?.x ||
       previous.machineBed.max?.y !== this.options.machineBed.max?.y ||
-      previous.render.theme.colors.machineBed !== this.options.render.theme.colors.machineBed;
+      previous.machineBed.keepout?.min?.x !== this.options.machineBed.keepout?.min?.x ||
+      previous.machineBed.keepout?.min?.y !== this.options.machineBed.keepout?.min?.y ||
+      previous.machineBed.keepout?.max?.x !== this.options.machineBed.keepout?.max?.x ||
+      previous.machineBed.keepout?.max?.y !== this.options.machineBed.keepout?.max?.y ||
+      previous.render.theme.colors.machineBed !== this.options.render.theme.colors.machineBed ||
+      previous.render.theme.colors.machineBedKeepout !== this.options.render.theme.colors.machineBedKeepout;
     if (machineBedChanged) {
       this.refreshMachineBed();
     }
@@ -749,12 +754,12 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private refreshMachineBed(): void {
-    const { visible, min, max } = this.options.machineBed;
+    const { visible, min, max, keepout } = this.options.machineBed;
     if (!visible || !min || !max) {
       this.setMachineBedGroup(null);
       return;
     }
-    this.setMachineBedGroup(createMachineBedGroup(min, max, this.options));
+    this.setMachineBedGroup(createMachineBedGroup(min, max, this.options, keepout));
   }
 
   private setBitMarker(next: BitMarker | null): void {

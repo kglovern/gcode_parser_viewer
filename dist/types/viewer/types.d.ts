@@ -11,6 +11,7 @@ export type GCodeViewerTheme = {
         processed?: string;
         boundingBox: string;
         machineBed: string;
+        machineBedKeepout: string;
         grid: {
             major: string;
             minor: string;
@@ -74,6 +75,16 @@ export type GCodeViewerOptions = {
         max: {
             x: number;
             y: number;
+        } | null;
+        keepout: {
+            min: {
+                x: number;
+                y: number;
+            };
+            max: {
+                x: number;
+                y: number;
+            };
         } | null;
     };
     geometry: {

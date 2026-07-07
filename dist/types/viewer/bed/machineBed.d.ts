@@ -6,5 +6,14 @@ export declare function createMachineBedGroup(min: {
 }, max: {
     x: number;
     y: number;
-}, options: GCodeViewerOptions): THREE.Group;
+}, options: GCodeViewerOptions, keepout?: {
+    min: {
+        x: number;
+        y: number;
+    };
+    max: {
+        x: number;
+        y: number;
+    };
+} | null): THREE.Group;
 export declare function disposeMachineBedGroup(group: THREE.Object3D): void;

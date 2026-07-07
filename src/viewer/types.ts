@@ -13,6 +13,7 @@ export type GCodeViewerTheme = {
     processed?: string;
     boundingBox: string;
     machineBed: string;
+    machineBedKeepout: string;
     grid: {
       major: string;
       minor: string;
@@ -75,6 +76,7 @@ export type GCodeViewerOptions = {
     visible: boolean;
     min: { x: number; y: number } | null;
     max: { x: number; y: number } | null;
+    keepout: { min: { x: number; y: number }; max: { x: number; y: number } } | null;
   };
   geometry: {
     arcSegments: number;
@@ -108,6 +110,7 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
     processed: "#6b7280",
     boundingBox: "#77a9d7",
     machineBed: "#fbbf24",
+    machineBedKeepout: "#df3b3b",
     grid: { major: "#2f3840", minor: "#1f252b" },
     axes: { x: "#df3b3b", y: "#06b881", z: "#295d8d" },
   },
@@ -130,7 +133,7 @@ export const defaultGCodeViewerOptions: GCodeViewerOptions = {
   progress: { mode: "grey" },
   grid: { sizeX: 1000, sizeY: 1000, axisDepth: 200, labels: true },
   boundingBox: { visible: false, labels: false },
-  machineBed: { visible: false, min: null, max: null },
+  machineBed: { visible: false, min: null, max: null, keepout: null },
   geometry: { arcSegments: 30, batching: { progressEveryLines: 5000, yieldEveryLines: 50000 } },
   render: { antialias: true, theme: defaultGCodeViewerTheme },
   camera: {
