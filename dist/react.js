@@ -1,15 +1,15 @@
 import * as o from "react";
-import { a as w, G as V } from "./GCodeSVGRenderer-BrTJFrH-.js";
+import { a as w, G as V } from "./GCodeSVGRenderer-BhyNQYf7.js";
 const G = o.forwardRef(
-  function(u, c) {
-    const { id: l, options: n, callbacks: a, className: m, style: d } = u, i = o.useRef(null), t = o.useRef(null);
+  function(c, m) {
+    const { id: l, options: n, callbacks: a, className: f, style: u } = c, i = o.useRef(null), t = o.useRef(null);
     return o.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const f = new w({ id: l, container: e, options: n, callbacks: a });
-      return t.current = f, () => {
-        t.current = null, f.dispose();
+      const d = new w({ id: l, container: e, options: n, callbacks: a });
+      return t.current = d, () => {
+        t.current = null, d.dispose();
       };
     }, [l]), o.useEffect(() => {
       var e;
@@ -18,7 +18,7 @@ const G = o.forwardRef(
       var e;
       (e = t.current) == null || e.setCallbacks(a ?? {});
     }, [a]), o.useImperativeHandle(
-      c,
+      m,
       () => {
         const e = () => {
           const r = t.current;
@@ -114,13 +114,13 @@ const G = o.forwardRef(
         };
       },
       [l]
-    ), o.createElement("div", { ref: i, className: m, style: d });
+    ), o.createElement("div", { ref: i, className: f, style: u });
   }
 ), R = o.forwardRef(
-  function(u, c) {
-    const { id: l, options: n, className: a, style: m } = u, d = o.useRef(null), i = o.useRef(null);
+  function(c, m) {
+    const { id: l, options: n, className: a, style: f } = c, u = o.useRef(null), i = o.useRef(null);
     return o.useEffect(() => {
-      const t = d.current;
+      const t = u.current;
       if (!t) return;
       const e = new V(t, n);
       return i.current = e, () => {
@@ -129,7 +129,7 @@ const G = o.forwardRef(
     }, []), o.useEffect(() => {
       var t;
       n && ((t = i.current) == null || t.setOptions(n));
-    }, [n]), o.useImperativeHandle(c, () => {
+    }, [n]), o.useImperativeHandle(m, () => {
       const t = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
@@ -140,7 +140,7 @@ const G = o.forwardRef(
         loadFromFile: (e) => t().loadFromFile(e),
         loadFromText: (e) => t().loadFromText(e),
         loadFromWorkerData: (e) => t().loadFromWorkerData(e),
-        loadFromPrecomputedGroups: (e) => t().loadFromPrecomputedGroups(e),
+        loadFromPrecomputedGroups: (e, d) => t().loadFromPrecomputedGroups(e, d),
         clear: () => t().clear(),
         resetView: () => t().resetView(),
         setOptions: (e) => t().setOptions(e),
@@ -151,9 +151,9 @@ const G = o.forwardRef(
         dispose: () => t().dispose()
       };
     }, []), o.createElement("div", {
-      ref: d,
+      ref: u,
       className: a,
-      style: { width: "100%", height: "100%", ...m }
+      style: { width: "100%", height: "100%", ...f }
     });
   }
 );

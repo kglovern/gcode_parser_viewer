@@ -5,7 +5,7 @@ export type GCodeSVGOptions = {
   strokeWidth: number;
   arcSegments: number;
   padding: number;
-  projectionMode: 'perspective' | 'isometric';
+  projectionMode: 'perspective' | 'isometric' | 'top';
   showOrigin: boolean;
   originColor: string;
   crosshairColor: string;

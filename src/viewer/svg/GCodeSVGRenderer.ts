@@ -9,7 +9,8 @@ type Pt2 = { x: number; y: number };
 const DEFAULT_ROT_X = 0;
 const DEFAULT_ROT_Y = 0;
 
-type SegmentGroup = { color: string; opacity: number; verts: Float32Array };
+// stride 6 = 3D segments [x1,y1,z1,x2,y2,z2]; stride 4 = 2D top-down segments [x1,y1,x2,y2]
+type SegmentGroup = { color: string; opacity: number; verts: Float32Array; stride: 4 | 6 };
 
 export class GCodeSVGRenderer {
   private svg: SVGSVGElement;
@@ -52,6 +53,8 @@ export class GCodeSVGRenderer {
   private rapidVerts: Float32Array = new Float32Array(0);
   private cutVerts: Float32Array = new Float32Array(0);
   private bounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: true };
+  // False when loaded from 2D data with no Z metadata — hides the Z dimension label
+  private hasZInfo = true;
 
   constructor(container: HTMLElement, options?: Partial<GCodeSVGOptions>) {
     this.options = { ...defaultGCodeSVGOptions, ...options };
@@ -99,7 +102,11 @@ export class GCodeSVGRenderer {
     this.cutVerts = cutting;
     this.workerMode = false;
     this.syncSegmentGroupsFromLines();
-    this.bounds = computeBounds(rapid, cutting);
+    this.hasZInfo = true;
+    this.bounds = computeBounds([
+      { verts: rapid, stride: 6 },
+      { verts: cutting, stride: 6 },
+    ]);
     if (!this.bounds.empty) {
       this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
       this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
@@ -141,6 +148,7 @@ export class GCodeSVGRenderer {
     this.cutVerts = new Float32Array(0);
     this.workerMode = false;
     this.segmentGroups = [];
+    this.hasZInfo = true;
     this.bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, minZ: 0, maxZ: 0, empty: true };
     this.rebuildAndRender();
   }
@@ -157,8 +165,10 @@ export class GCodeSVGRenderer {
       color: g.hexColor,
       opacity: g.opacity,
       verts: g.positions,
+      stride: 6 as const,
     }));
-    this.bounds = computeBounds(...groups.map(g => g.positions));
+    this.hasZInfo = true;
+    this.bounds = computeBounds(groups.map(g => ({ verts: g.positions, stride: 6 })));
     if (!this.bounds.empty) {
       this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
       this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
@@ -178,7 +188,8 @@ export class GCodeSVGRenderer {
   }
 
   loadFromPrecomputedGroups(
-    groups: { hexColor: string; opacity: number; positionsBuffer: ArrayBuffer; positionsLen: number }[]
+    groups: { hexColor: string; opacity: number; positionsBuffer: ArrayBuffer; positionsLen: number; stride?: 4 | 6 }[],
+    meta?: { minZ?: number; maxZ?: number }
   ): void {
     this.workerMode = true;
     this.rapidVerts = new Float32Array(0);
@@ -187,8 +198,15 @@ export class GCodeSVGRenderer {
       color: g.hexColor,
       opacity: g.opacity,
       verts: new Float32Array(g.positionsBuffer, 0, g.positionsLen),
+      stride: g.stride ?? 6,
     }));
-    this.bounds = computeBounds(...this.segmentGroups.map(g => g.verts));
+    this.bounds = computeBounds(this.segmentGroups);
+    const hasMetaZ = meta?.minZ !== undefined && meta?.maxZ !== undefined;
+    if (hasMetaZ && !this.bounds.empty) {
+      this.bounds.minZ = meta.minZ!;
+      this.bounds.maxZ = meta.maxZ!;
+    }
+    this.hasZInfo = hasMetaZ || this.segmentGroups.every(g => g.stride === 6);
     if (!this.bounds.empty) {
       this.centerX = (this.bounds.minX + this.bounds.maxX) / 2;
       this.centerY = (this.bounds.minY + this.bounds.maxY) / 2;
@@ -209,8 +227,8 @@ export class GCodeSVGRenderer {
 
   private syncSegmentGroupsFromLines(): void {
     this.segmentGroups = [
-      { color: this.options.rapidColor, opacity: 0.5, verts: this.rapidVerts },
-      { color: this.options.cutColor, opacity: 1.0, verts: this.cutVerts },
+      { color: this.options.rapidColor, opacity: 0.5, verts: this.rapidVerts, stride: 6 },
+      { color: this.options.cutColor, opacity: 1.0, verts: this.cutVerts, stride: 6 },
     ];
   }
 
@@ -228,7 +246,7 @@ export class GCodeSVGRenderer {
     this.rebuildAndRender();
   }
 
-  setProjectionMode(mode: 'perspective' | 'isometric'): void {
+  setProjectionMode(mode: 'perspective' | 'isometric' | 'top'): void {
     this.options = { ...this.options, projectionMode: mode };
     this.rebuildAndRender();
   }
@@ -268,6 +286,10 @@ export class GCodeSVGRenderer {
   }
 
   private project = (x: number, y: number, z: number): Pt2 => {
+    // Fixed top-down view: world XY maps straight to screen (Y flipped), Z ignored.
+    if (this.options.projectionMode === 'top') {
+      return { x, y: -y };
+    }
     const dx = x - this.centerX;
     const dy = y - this.centerY;
     const dz = z - this.centerZ;
@@ -302,14 +324,19 @@ export class GCodeSVGRenderer {
     }
 
     for (let i = 0; i < this.segmentGroups.length; i++) {
-      const { color, opacity, verts } = this.segmentGroups[i];
+      const { color, opacity, verts, stride } = this.segmentGroups[i];
       const el = this.pathEls[i];
       el.setAttribute("stroke", color);
       el.setAttribute("stroke-opacity", String(opacity));
       el.setAttribute("stroke-width", sw);
       el.setAttribute("stroke-linecap", "round");
       el.setAttribute("stroke-linejoin", "round");
-      el.setAttribute("d", verticesToPath(verts, this.project, fmt));
+      el.setAttribute(
+        "d",
+        stride === 4
+          ? verticesToPath2D(verts, fmt)
+          : verticesToPath(verts, this.project, fmt)
+      );
     }
 
     this.renderBbox();
@@ -408,6 +435,35 @@ export class GCodeSVGRenderer {
 
     const { minX, maxX, minY, maxY, minZ, maxZ } = this.bounds;
     const p = this.project;
+
+    if (this.options.projectionMode === 'top') {
+      const c0 = p(minX, minY, 0), c1 = p(maxX, minY, 0);
+      const c2 = p(maxX, maxY, 0), c3 = p(minX, maxY, 0);
+      this.bboxPath.setAttribute(
+        "d",
+        `M${f(c0.x)} ${f(c0.y)}L${f(c1.x)} ${f(c1.y)}L${f(c2.x)} ${f(c2.y)}L${f(c3.x)} ${f(c3.y)}Z`
+      );
+
+      const projW = Math.abs(c1.x - c0.x);
+      const projH = Math.abs(c3.y - c0.y);
+      const fontSize = Math.max(projW, projH) * 0.07;
+      const gap = fontSize * 0.5;
+
+      setLabel(this.bboxLabelX, mid(c0, c1), outward(mid(c0, c1), mid(c2, c3), gap), fontSize, `X: ${fd(maxX - minX)}`);
+      const screenMinY = Math.min(c0.y, c1.y, c2.y, c3.y);
+      const screenMaxY = Math.max(c0.y, c1.y, c2.y, c3.y);
+      const screenMaxX = Math.max(c0.x, c1.x, c2.x, c3.x);
+      const screenMinX = Math.min(c0.x, c1.x, c2.x, c3.x);
+      const yPos = { x: screenMaxX + gap, y: (screenMinY + screenMaxY) / 2 };
+      setLabel(this.bboxLabelY, yPos, yPos, fontSize, `Y: ${fd(maxY - minY)}`);
+      if (this.hasZInfo) {
+        const zPos = { x: (screenMinX + screenMaxX) / 2, y: screenMinY - fontSize };
+        setLabel(this.bboxLabelZ, zPos, zPos, fontSize, `Z: ${fd(maxZ - minZ)}`);
+      } else {
+        this.bboxLabelZ.setAttribute("visibility", "hidden");
+      }
+      return;
+    }
 
     const b0 = p(minX, minY, minZ), b1 = p(maxX, minY, minZ);
     const b2 = p(maxX, maxY, minZ), b3 = p(minX, maxY, minZ);
@@ -663,6 +719,29 @@ function fd(n: number): string {
 
 // ── Path building ────────────────────────────────────────────────────────────
 
+// Fast path for stride-4 (2D top-down) data: no projection call, no point allocation.
+function verticesToPath2D(
+  verts: Float32Array,
+  fmt: (n: number) => string
+): string {
+  if (verts.length === 0) return "";
+  const parts: string[] = [];
+  const EPS = 1e-6;
+  let prevX = NaN, prevY = NaN;
+  for (let i = 0; i + 3 < verts.length; i += 4) {
+    const x0 = verts[i], y0 = -verts[i + 1];
+    const x1 = verts[i + 2], y1 = -verts[i + 3];
+    if (Math.abs(x0 - prevX) < EPS && Math.abs(y0 - prevY) < EPS) {
+      parts.push(`L${fmt(x1)} ${fmt(y1)}`);
+    } else {
+      parts.push(`M${fmt(x0)} ${fmt(y0)}L${fmt(x1)} ${fmt(y1)}`);
+    }
+    prevX = x1;
+    prevY = y1;
+  }
+  return parts.join("");
+}
+
 function verticesToPath(
   verts: Float32Array,
   project: (x: number, y: number, z: number) => Pt2,
@@ -688,20 +767,38 @@ function verticesToPath(
 
 // ── Bounds computation ───────────────────────────────────────────────────────
 
-function computeBounds(...arrays: Float32Array[]): Bounds {
+function computeBounds(arrays: { verts: Float32Array; stride: number }[]): Bounds {
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   let empty = true;
-  for (const verts of arrays) {
-    for (let i = 0; i + 5 < verts.length; i += 6) {
-      const x0 = verts[i], y0 = verts[i + 1], z0 = verts[i + 2];
-      const x1 = verts[i + 3], y1 = verts[i + 4], z1 = verts[i + 5];
-      if (x0 < minX) minX = x0; if (y0 < minY) minY = y0; if (z0 < minZ) minZ = z0;
-      if (x0 > maxX) maxX = x0; if (y0 > maxY) maxY = y0; if (z0 > maxZ) maxZ = z0;
-      if (x1 < minX) minX = x1; if (y1 < minY) minY = y1; if (z1 < minZ) minZ = z1;
-      if (x1 > maxX) maxX = x1; if (y1 > maxY) maxY = y1; if (z1 > maxZ) maxZ = z1;
-      empty = false;
+  let sawZ = false;
+  for (const { verts, stride } of arrays) {
+    if (stride === 4) {
+      for (let i = 0; i + 3 < verts.length; i += 4) {
+        const x0 = verts[i], y0 = verts[i + 1];
+        const x1 = verts[i + 2], y1 = verts[i + 3];
+        if (x0 < minX) minX = x0; if (y0 < minY) minY = y0;
+        if (x0 > maxX) maxX = x0; if (y0 > maxY) maxY = y0;
+        if (x1 < minX) minX = x1; if (y1 < minY) minY = y1;
+        if (x1 > maxX) maxX = x1; if (y1 > maxY) maxY = y1;
+        empty = false;
+      }
+    } else {
+      for (let i = 0; i + 5 < verts.length; i += 6) {
+        const x0 = verts[i], y0 = verts[i + 1], z0 = verts[i + 2];
+        const x1 = verts[i + 3], y1 = verts[i + 4], z1 = verts[i + 5];
+        if (x0 < minX) minX = x0; if (y0 < minY) minY = y0; if (z0 < minZ) minZ = z0;
+        if (x0 > maxX) maxX = x0; if (y0 > maxY) maxY = y0; if (z0 > maxZ) maxZ = z0;
+        if (x1 < minX) minX = x1; if (y1 < minY) minY = y1; if (z1 < minZ) minZ = z1;
+        if (x1 > maxX) maxX = x1; if (y1 > maxY) maxY = y1; if (z1 > maxZ) maxZ = z1;
+        empty = false;
+        sawZ = true;
+      }
     }
+  }
+  if (!empty && !sawZ) {
+    minZ = 0;
+    maxZ = 0;
   }
   return { minX, minY, maxX, maxY, minZ, maxZ, empty };
 }

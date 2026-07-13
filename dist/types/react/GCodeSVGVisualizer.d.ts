@@ -11,11 +11,15 @@ export type GCodeSVGRendererHandle = {
         opacity: number;
         positionsBuffer: ArrayBuffer;
         positionsLen: number;
-    }[]): void;
+        stride?: 4 | 6;
+    }[], meta?: {
+        minZ?: number;
+        maxZ?: number;
+    }): void;
     clear(): void;
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;
-    setProjectionMode(mode: 'perspective' | 'isometric'): void;
+    setProjectionMode(mode: 'perspective' | 'isometric' | 'top'): void;
     setBitPosition(pos: {
         x: number;
         y: number;
