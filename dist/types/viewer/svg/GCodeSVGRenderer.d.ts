@@ -31,6 +31,7 @@ export declare class GCodeSVGRenderer {
     private pinchLastDist;
     private pinchLastMid;
     private rafPending;
+    private overlayRafPending;
     private rapidVerts;
     private cutVerts;
     private bounds;
@@ -66,7 +67,11 @@ export declare class GCodeSVGRenderer {
     private updateTrig;
     private project;
     private rebuildAndRender;
+    private rebuildToolpaths;
+    private renderOverlays;
+    private simplifyTolerance;
     private scheduleDraw;
+    private scheduleOverlayDraw;
     private fitView;
     private applyViewBox;
     private applyOptions;

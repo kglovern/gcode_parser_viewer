@@ -48,6 +48,9 @@ export class GCodeSVGRenderer {
   private pinchLastDist = 0;
   private pinchLastMid: Pt2 = { x: 0, y: 0 };
   private rafPending = false;
+  // Separate rAF flag for overlay-only redraws (bit/crosshair) so they never
+  // trigger — or get starved by — a full toolpath rebuild.
+  private overlayRafPending = false;
 
   // Geometry
   private rapidVerts: Float32Array = new Float32Array(0);
@@ -258,12 +261,14 @@ export class GCodeSVGRenderer {
   setBitPosition(pos: { x: number; y: number; z: number }): void {
     this.crosshairPos = pos;
     this.crosshairVisible = true;
-    this.rebuildAndRender();
+    // Moving the tool marker only touches the crosshair overlay — never rebuild
+    // the (potentially huge) toolpath paths. This is O(1) regardless of file size.
+    this.scheduleOverlayDraw();
   }
 
   setBitVisible(visible: boolean): void {
     this.crosshairVisible = visible;
-    this.rebuildAndRender();
+    this.scheduleOverlayDraw();
   }
 
   dispose(): void {
@@ -311,8 +316,21 @@ export class GCodeSVGRenderer {
   // ── Rendering ─────────────────────────────────────────────────────────────
 
   private rebuildAndRender(draft = false): void {
+    this.rebuildToolpaths(draft);
+    this.renderOverlays();
+  }
+
+  // Expensive: re-projects and re-serialises every vertex into SVG path `d`
+  // strings. Only call when geometry, projection, or stroke width changes —
+  // never for bit-position/crosshair updates (use scheduleOverlayDraw instead).
+  private rebuildToolpaths(draft = false): void {
     const fmt = draft ? fDraft : f;
     const sw = String(this.options.strokeWidth);
+    // Screen-space simplification tolerance: merge consecutive projected points
+    // closer than a fraction of the model extent. Sub-pixel at typical view
+    // sizes (no visible loss) but it caps drawn segment density so large files
+    // (100k+ segments) don't choke SVG paint.
+    const tol = this.simplifyTolerance();
 
     while (this.pathEls.length < this.segmentGroups.length) {
       const el = makePath();
@@ -334,15 +352,31 @@ export class GCodeSVGRenderer {
       el.setAttribute(
         "d",
         stride === 4
-          ? verticesToPath2D(verts, fmt)
-          : verticesToPath(verts, this.project, fmt)
+          ? verticesToPath2D(verts, fmt, tol)
+          : verticesToPath(verts, this.project, fmt, tol)
       );
     }
+  }
 
+  // Cheap O(1) overlays that don't depend on toolpath geometry.
+  private renderOverlays(): void {
     this.renderBbox();
     this.renderOriginMarker();
     this.renderCrosshairMarker();
     this.applyViewBox();
+  }
+
+  // World-space distance below which consecutive projected points are merged.
+  // Derived from the bounds diagonal so it scales with model size and stays
+  // deterministic (independent of zoom / layout timing).
+  private simplifyTolerance(): number {
+    if (this.bounds.empty) return 0;
+    const diag = Math.hypot(
+      this.bounds.maxX - this.bounds.minX,
+      this.bounds.maxY - this.bounds.minY,
+      this.bounds.maxZ - this.bounds.minZ
+    );
+    return diag / 1500;
   }
 
   private scheduleDraw(): void {
@@ -351,6 +385,17 @@ export class GCodeSVGRenderer {
     requestAnimationFrame(() => {
       this.rafPending = false;
       this.rebuildAndRender(true); // draft precision during active drag
+    });
+  }
+
+  // rAF-coalesced redraw of just the overlays (bbox/origin/crosshair/viewBox).
+  // Used for bit-position updates so a running job never rebuilds the toolpath.
+  private scheduleOverlayDraw(): void {
+    if (this.overlayRafPending) return;
+    this.overlayRafPending = true;
+    requestAnimationFrame(() => {
+      this.overlayRafPending = false;
+      this.renderOverlays();
     });
   }
 
@@ -720,48 +765,78 @@ function fd(n: number): string {
 // ── Path building ────────────────────────────────────────────────────────────
 
 // Fast path for stride-4 (2D top-down) data: no projection call, no point allocation.
+// `tol` (>0) merges consecutive points within that distance of the last emitted
+// point, preserving polyline connectivity and every run's true endpoint.
 function verticesToPath2D(
   verts: Float32Array,
-  fmt: (n: number) => string
+  fmt: (n: number) => string,
+  tol = 0
 ): string {
   if (verts.length === 0) return "";
   const parts: string[] = [];
   const EPS = 1e-6;
-  let prevX = NaN, prevY = NaN;
+  const tol2 = tol * tol;
+  let prevX = NaN, prevY = NaN;   // end of previous input segment (continuity check)
+  let lastX = NaN, lastY = NaN;   // last point actually emitted
+  let pendingX = NaN, pendingY = NaN; // deferred (within-tol) tail of current run
+  let hasPending = false;
   for (let i = 0; i + 3 < verts.length; i += 4) {
     const x0 = verts[i], y0 = -verts[i + 1];
     const x1 = verts[i + 2], y1 = -verts[i + 3];
     if (Math.abs(x0 - prevX) < EPS && Math.abs(y0 - prevY) < EPS) {
-      parts.push(`L${fmt(x1)} ${fmt(y1)}`);
+      const dx = x1 - lastX, dy = y1 - lastY;
+      if (tol2 > 0 && dx * dx + dy * dy < tol2) {
+        pendingX = x1; pendingY = y1; hasPending = true;
+      } else {
+        parts.push(`L${fmt(x1)} ${fmt(y1)}`);
+        lastX = x1; lastY = y1; hasPending = false;
+      }
     } else {
+      if (hasPending) { parts.push(`L${fmt(pendingX)} ${fmt(pendingY)}`); hasPending = false; }
       parts.push(`M${fmt(x0)} ${fmt(y0)}L${fmt(x1)} ${fmt(y1)}`);
+      lastX = x1; lastY = y1;
     }
     prevX = x1;
     prevY = y1;
   }
+  if (hasPending) parts.push(`L${fmt(pendingX)} ${fmt(pendingY)}`);
   return parts.join("");
 }
 
 function verticesToPath(
   verts: Float32Array,
   project: (x: number, y: number, z: number) => Pt2,
-  fmt: (n: number) => string
+  fmt: (n: number) => string,
+  tol = 0
 ): string {
   if (verts.length === 0) return "";
   const parts: string[] = [];
   const EPS = 1e-6;
-  let prevX = NaN, prevY = NaN;
+  const tol2 = tol * tol;
+  let prevX = NaN, prevY = NaN;   // end of previous input segment (continuity check)
+  let lastX = NaN, lastY = NaN;   // last point actually emitted
+  let pendingX = NaN, pendingY = NaN; // deferred (within-tol) tail of current run
+  let hasPending = false;
   for (let i = 0; i + 5 < verts.length; i += 6) {
     const p0 = project(verts[i], verts[i + 1], verts[i + 2]);
     const p1 = project(verts[i + 3], verts[i + 4], verts[i + 5]);
     if (Math.abs(p0.x - prevX) < EPS && Math.abs(p0.y - prevY) < EPS) {
-      parts.push(`L${fmt(p1.x)} ${fmt(p1.y)}`);
+      const dx = p1.x - lastX, dy = p1.y - lastY;
+      if (tol2 > 0 && dx * dx + dy * dy < tol2) {
+        pendingX = p1.x; pendingY = p1.y; hasPending = true;
+      } else {
+        parts.push(`L${fmt(p1.x)} ${fmt(p1.y)}`);
+        lastX = p1.x; lastY = p1.y; hasPending = false;
+      }
     } else {
+      if (hasPending) { parts.push(`L${fmt(pendingX)} ${fmt(pendingY)}`); hasPending = false; }
       parts.push(`M${fmt(p0.x)} ${fmt(p0.y)}L${fmt(p1.x)} ${fmt(p1.y)}`);
+      lastX = p1.x; lastY = p1.y;
     }
     prevX = p1.x;
     prevY = p1.y;
   }
+  if (hasPending) parts.push(`L${fmt(pendingX)} ${fmt(pendingY)}`);
   return parts.join("");
 }
 
