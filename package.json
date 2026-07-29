@@ -1,6 +1,6 @@
 {
   "name": "@sienci/gviewer",
-  "version": "0.1.24",
+  "version": "0.1.26",
   "description": "GCode visualization library using Three.js",
   "repository": {
     "type": "git",

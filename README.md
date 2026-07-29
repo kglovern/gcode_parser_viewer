@@ -24,7 +24,9 @@ npm install react react-dom   # required for the React component
 | `@sienci/gviewer` | Parser, virtualizer, geometry builders, `WorkerGeometryData`, shared types |
 | `@sienci/gviewer/viewer` | `GCodeViewer`, `GCodeSVGRenderer`, themes, viewer types, `WorkerGeometryData` |
 | `@sienci/gviewer/react` | `GCodeVisualizer`, `GCodeSVGVisualizer` React components |
-| `@sienci/gviewer/viewer/viewcube.css` | Stylesheet for the ViewCube overlay |
+| `@sienci/gviewer/viewer/viewcube.css` | Raw ViewCube stylesheet, kept for advanced overriding/inspection only — the ViewCube self-injects an identical `<style>` tag at runtime, so importing this is optional |
+
+As of 0.1.27, the ViewCube's styles are injected automatically; you no longer need to import `viewcube.css` yourself.
 
 ---
 
@@ -36,7 +38,6 @@ npm install react react-dom   # required for the React component
 import { useRef } from "react";
 import { GCodeVisualizer } from "@sienci/gviewer/react";
 import type { GCodeViewerHandle } from "@sienci/gviewer/viewer";
-import "@sienci/gviewer/viewer/viewcube.css";
 
 export function App() {
   const ref = useRef<GCodeViewerHandle>(null);
@@ -299,7 +300,6 @@ Full 3D viewer with orbit controls, grid, bounding box, bit marker, and ViewCube
 
 ```ts
 import { GCodeViewer } from "@sienci/gviewer/viewer";
-import "@sienci/gviewer/viewer/viewcube.css";
 
 const viewer = new GCodeViewer({
   id: "my-viewer",
@@ -570,7 +570,6 @@ renderer.setOptions({
 ```tsx
 import { GCodeVisualizer } from "@sienci/gviewer/react";
 import type { GCodeViewerHandle, GCodeViewerOptions } from "@sienci/gviewer/viewer";
-import "@sienci/gviewer/viewer/viewcube.css";
 ```
 
 #### Props

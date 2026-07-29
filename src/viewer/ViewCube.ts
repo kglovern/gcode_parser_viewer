@@ -1,4 +1,21 @@
 import type { GCodeViewerCameraView } from "./types";
+import viewcubeCss from "./viewcube.css?inline";
+
+const VIEWCUBE_STYLE_ELEMENT_ID = "gviewer-viewcube-style";
+
+// Consumers historically had to manually import "@sienci/gviewer/viewer/viewcube.css",
+// but that side-effect import silently gets dropped by some bundler/CSS-tooling
+// combinations (e.g. Tailwind v4's Vite plugin) since it's several packages deep in
+// node_modules. Self-injecting here guarantees the styles apply for any consumer.
+function ensureViewCubeStyles(): void {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(VIEWCUBE_STYLE_ELEMENT_ID)) return;
+  const style = document.createElement("style");
+  style.id = VIEWCUBE_STYLE_ELEMENT_ID;
+  style.setAttribute("data-gviewer", "viewcube");
+  style.textContent = viewcubeCss;
+  document.head.appendChild(style);
+}
 
 type ViewCubeArgs = {
   container: HTMLElement;
@@ -12,6 +29,7 @@ export class ViewCube {
   private readonly faceButtons: Map<string, HTMLButtonElement>;
 
   constructor(args: ViewCubeArgs) {
+    ensureViewCubeStyles();
     this.onSelectView = args.onSelectView;
     this.faceButtons = new Map();
 
