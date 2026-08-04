@@ -41,9 +41,9 @@
 }
 
 .gViewer-viewcube__face.is-active{
-  border-color: rgba(14,246,174,0.95);
-  box-shadow: 0 0 0 1px rgba(14,246,174,0.35), 0 10px 30px rgba(0,0,0,0.35);
-  color: rgba(14,246,174,0.95);
+  border-color: rgba(96,165,250,0.95);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.35), 0 10px 30px rgba(0,0,0,0.35);
+  color: rgba(96,165,250,0.95);
 }
 
 .gViewer-viewcube__face--front{ transform: translateZ(42px); }
