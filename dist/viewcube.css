@@ -52,3 +52,24 @@
 .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(42px); }
 .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(42px); }
 .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(42px); }
+
+@media (orientation: portrait){
+  .gViewer-viewcube{
+    left:60px;
+    bottom:110px;
+    width:64px;
+    height:64px;
+  }
+
+  .gViewer-viewcube__face{
+    width:64px;
+    height:64px;
+  }
+
+  .gViewer-viewcube__face--front{ transform: translateZ(32px); }
+  .gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(32px); }
+  .gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(32px); }
+  .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(32px); }
+  .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(32px); }
+  .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(32px); }
+}
