@@ -1,4 +1,4 @@
-import type { WorkerGeometryData } from "../types";
+import type { LoadWorkerDataOptions, WorkerGeometryData } from "../types";
 import { GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
@@ -56,6 +56,21 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
     seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
     showAll(): void;
+    /**
+     * Show or hide one of the `lineGroups` the toolpath was loaded with.
+     *
+     * This is deliberately independent of `showAll()`, `hideUntilLine()` and
+     * `resetColors()`, which are all about *progress*: they move draw ranges and
+     * colors, while this flips object visibility. So the two compose in either
+     * order - but note a hidden group therefore stays hidden across a `showAll()`,
+     * which looks surprising if you expect "show all" to mean everything. Call
+     * `showAllLineGroups()` for that.
+     *
+     * A no-op when the load passed no `lineGroups`, or for the catch-all stream of
+     * lines outside every group, which has no index and is always visible.
+     */
+    setLineGroupVisible(groupIndex: number, visible: boolean): void;
+    showAllLineGroups(): void;
     resetColors(): void;
     snapCameraToView(view: GCodeViewerCameraView, options?: {
         durationMs?: number;
@@ -116,7 +131,13 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): Promise<void>;
     loadFromLines(lines: readonly string[]): Promise<void>;
-    loadFromWorkerData(data: WorkerGeometryData): Promise<void>;
+    /**
+     * Pass `options.lineGroups` to split the toolpath into separately hideable
+     * streams by source-line range; `setLineGroupVisible` then shows or hides a
+     * group. Without it the toolpath is one rapid + one cut stream, exactly as
+     * before, and only a prefix can be hidden (`hideUntilLine`).
+     */
+    loadFromWorkerData(data: WorkerGeometryData, options?: LoadWorkerDataOptions): Promise<void>;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;

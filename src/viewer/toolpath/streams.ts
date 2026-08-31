@@ -12,6 +12,9 @@ export type ToolpathStreamState = {
   greyCursorVertex: number;
   kind: ToolpathStreamKind;
   cutBucketIndex: number | null;
+  /** Which of the load's `lineGroups` this stream holds, or null for the always-visible
+   *  catch-all and for ungrouped loads. Drives setLineGroupVisible. */
+  lineGroupIndex: number | null;
   /** Set when colors came from the worker's pre-baked colorArrayBuffer (e.g. toolchange palette).
    *  refreshToolpathStreamColors skips these streams so theme changes don't flatten per-tool colors. */
   workerColors?: Float32Array;
@@ -20,6 +23,7 @@ export type ToolpathStreamState = {
 export type ToolpathStreamSpec = {
   kind: ToolpathStreamKind;
   cutBucketIndex: number | null;
+  lineGroupIndex?: number | null;
   positions: Float32Array;
   prefixEndVertex: Int32Array;
   opacity: number;
@@ -69,6 +73,7 @@ export function createToolpathStreams(args: {
       greyCursorVertex: 0,
       kind: spec.kind,
       cutBucketIndex: spec.cutBucketIndex,
+      lineGroupIndex: spec.lineGroupIndex ?? null,
       workerColors: spec.colors ? baseColors : undefined,
     });
 

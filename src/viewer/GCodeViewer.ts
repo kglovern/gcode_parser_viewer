@@ -4,7 +4,7 @@ import {
   buildToolpathGeometryFromLinesBatched,
   buildWorkerToolpathStreams,
 } from "../geometry";
-import type { WorkerGeometryData } from "../types";
+import type { LoadWorkerDataOptions, WorkerGeometryData } from "../types";
 import { GCodeVirtualizer } from "../virtualizer";
 import {
   applyStreamGreyCursor,
@@ -336,6 +336,33 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
   }
 
+  /**
+   * Show or hide one of the `lineGroups` the toolpath was loaded with.
+   *
+   * This is deliberately independent of `showAll()`, `hideUntilLine()` and
+   * `resetColors()`, which are all about *progress*: they move draw ranges and
+   * colors, while this flips object visibility. So the two compose in either
+   * order - but note a hidden group therefore stays hidden across a `showAll()`,
+   * which looks surprising if you expect "show all" to mean everything. Call
+   * `showAllLineGroups()` for that.
+   *
+   * A no-op when the load passed no `lineGroups`, or for the catch-all stream of
+   * lines outside every group, which has no index and is always visible.
+   */
+  setLineGroupVisible(groupIndex: number, visible: boolean): void {
+    for (const stream of this.toolpathStreams) {
+      if (stream.lineGroupIndex === groupIndex) {
+        stream.line.visible = visible;
+      }
+    }
+  }
+
+  showAllLineGroups(): void {
+    for (const stream of this.toolpathStreams) {
+      stream.line.visible = true;
+    }
+  }
+
   resetColors(): void {
     for (const stream of this.toolpathStreams) {
       stream.greyCursorVertex = 0;
@@ -507,29 +534,40 @@ export class GCodeViewer implements GCodeViewerHandle {
     await this.renderScene();
   }
 
-  async loadFromWorkerData(data: WorkerGeometryData): Promise<void> {
+  /**
+   * Pass `options.lineGroups` to split the toolpath into separately hideable
+   * streams by source-line range; `setLineGroupVisible` then shows or hides a
+   * group. Without it the toolpath is one rapid + one cut stream, exactly as
+   * before, and only a prefix can be hidden (`hideUntilLine`).
+   */
+  async loadFromWorkerData(data: WorkerGeometryData, options?: LoadWorkerDataOptions): Promise<void> {
     // Worker data carries no source-line strings, so seek-by-line bit motion
     // (which re-derives positions from currentLines) stays disabled; the host
     // app drives the bit from the live DRO instead. Per-line `prefixEndVertex`
     // is still built from `frames` so progress greying/hiding works.
     this.currentLines = [];
-    const { rapid, cut } = buildWorkerToolpathStreams(data);
+    const { rapids, cuts } = buildWorkerToolpathStreams(data, options);
     // Only lock cut stream colors when the file has actual toolchanges (palette
     // cycling). Rapids and single-tool cuts always follow the live theme so that
     // theme changes update them without requiring a full re-parse.
     const hasToolchangeColors = (data.toolchangeCount ?? 0) > 0;
 
     this.setToolpathGeometry({
-      rapid: {
+      rapids: rapids.map((rapid) => ({
         positions: rapid.positions,
         colors: undefined,
         prefixEndVertex: rapid.prefixEndVertex,
-      },
-      cuts: [{
+        lineGroupIndex: rapid.lineGroupIndex,
+      })),
+      cuts: cuts.map((cut) => ({
         positions: cut.positions,
         colors: hasToolchangeColors ? cut.colors : undefined,
         prefixEndVertex: cut.prefixEndVertex,
-      }],
+        // Line groups are not laser-power buckets: every cut stream here sits in
+        // bucket 0, so splitting by group leaves opacity untouched.
+        cutBucketIndex: 0,
+        lineGroupIndex: cut.lineGroupIndex,
+      })),
       cutBucketCount: 1,
     });
   }
@@ -973,30 +1011,38 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private setToolpathGeometry(args: {
-    rapid: { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array };
-    cuts: { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array }[];
+    rapids: readonly { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array; lineGroupIndex?: number | null }[];
+    cuts: readonly { positions: Float32Array; prefixEndVertex: Int32Array; colors?: Float32Array; cutBucketIndex?: number | null; lineGroupIndex?: number | null }[];
     cutBucketCount: number;
   }): void {
     this.setGeometryEmpty();
     this.toolpathCutBucketCount = Math.max(1, Math.floor(args.cutBucketCount));
 
     const specs = [
-      {
+      ...args.rapids.map((rapid) => ({
         kind: "rapid" as const,
         cutBucketIndex: null,
-        positions: args.rapid.positions,
-        prefixEndVertex: args.rapid.prefixEndVertex,
-        colors: args.rapid.colors,
+        lineGroupIndex: rapid.lineGroupIndex ?? null,
+        positions: rapid.positions,
+        prefixEndVertex: rapid.prefixEndVertex,
+        colors: rapid.colors,
         opacity: clamp01(this.options.render.theme.rapidOpacity ?? 0.3),
-      },
-      ...args.cuts.map((cut, index) => ({
-        kind: "cut" as const,
-        cutBucketIndex: index,
-        positions: cut.positions,
-        prefixEndVertex: cut.prefixEndVertex,
-        colors: cut.colors,
-        opacity: this.cutBucketOpacity(index),
       })),
+      ...args.cuts.map((cut, index) => {
+        // Array position is the laser-power bucket by default, but a grouped
+        // load passes several cut streams per bucket and must say which one it
+        // means, or splitting by line group would silently shift opacities.
+        const cutBucketIndex = cut.cutBucketIndex ?? index;
+        return {
+          kind: "cut" as const,
+          cutBucketIndex,
+          lineGroupIndex: cut.lineGroupIndex ?? null,
+          positions: cut.positions,
+          prefixEndVertex: cut.prefixEndVertex,
+          colors: cut.colors,
+          opacity: this.cutBucketOpacity(cutBucketIndex),
+        };
+      }),
     ];
 
     const { streams, bounds } = createToolpathStreams({
@@ -1108,7 +1154,7 @@ export class GCodeViewer implements GCodeViewerHandle {
         return;
       }
       this.setToolpathGeometry({
-        rapid: result.rapid,
+        rapids: [result.rapid],
         cuts: result.cuts,
         cutBucketCount: result.cutBucketCount,
       });
@@ -1145,6 +1191,9 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
   }
 
+  // Whole-toolpath visibility for sim3d. Shares `line.visible` with
+  // setLineGroupVisible, so turning the toolpath back on here also un-hides any
+  // hidden line groups; sim3d and grouped loads are not used together today.
   private setToolpathStreamsVisible(visible: boolean): void {
     for (const stream of this.toolpathStreams) {
       stream.line.visible = visible;

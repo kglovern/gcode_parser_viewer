@@ -81,3 +81,26 @@ export type WorkerGeometryData = {
     isLaser?: boolean;
     toolchangeCount?: number;
 };
+/**
+ * An inclusive range of source lines the host wants to show or hide as a unit,
+ * e.g. everything cut with one tool.
+ *
+ * Indices are 0-based and match `hideUntilLine`/`seekToLine` — the same source
+ * line indexing used by `prefixEndVertex` — not 1-based editor line numbers.
+ */
+export type LineRangeGroup = {
+    start: number;
+    end: number;
+};
+export type LoadWorkerDataOptions = {
+    /**
+     * Split the toolpath into separately hideable streams by source-line range,
+     * so `setLineGroupVisible` can hide an interior span. Without this the
+     * toolpath is one rapid stream plus one cut stream, and only a *prefix* can
+     * be hidden (via `hideUntilLine`, which sets a single contiguous draw range).
+     *
+     * Groups are matched in order, so where ranges overlap the first one wins.
+     * Lines in no group land in an always-visible stream.
+     */
+    lineGroups?: readonly LineRangeGroup[];
+};

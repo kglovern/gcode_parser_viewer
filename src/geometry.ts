@@ -1,4 +1,4 @@
-import { ArcMoveCallback, LinearMoveCallback, PlaneMode, Position, WorkerGeometryData } from "./types";
+import { ArcMoveCallback, LinearMoveCallback, PlaneMode, Position, WorkerGeometryData, LoadWorkerDataOptions } from "./types";
 import { GCodeParser } from "./parser";
 import { GCodeVirtualizer } from "./virtualizer";
 
@@ -849,15 +849,20 @@ export type WorkerToolpathStream = {
   positions: Float32Array;
   colors: Float32Array;
   prefixEndVertex: Int32Array;
+  /**
+   * Index into the `lineGroups` this stream was built for, or null for the
+   * catch-all stream holding lines that fell in no group.
+   */
+  lineGroupIndex: number | null;
 };
 
 export type WorkerToolpathStreams = {
-  rapid: WorkerToolpathStream;
-  cut: WorkerToolpathStream;
+  rapids: WorkerToolpathStream[];
+  cuts: WorkerToolpathStream[];
 };
 
 /**
- * Builds two line-ordered toolpath streams (rapid + cut) from worker geometry,
+ * Builds line-ordered toolpath streams (rapid + cut) from worker geometry,
  * preserving per-vertex colours and producing per-stream `prefixEndVertex`
  * arrays (indexed by source line) so `hideUntilLine`/progress greying works on
  * the worker-data path.
@@ -865,8 +870,24 @@ export type WorkerToolpathStreams = {
  * Unlike `buildWorkerSegmentGroups`, segments are appended in source-line order
  * (driven by `frames`) rather than grouped by colour, which is what the
  * cumulative `prefixEndVertex` cursor requires.
+ *
+ * With no `lineGroups`, the result is exactly one rapid stream and one cut
+ * stream, both with a null `lineGroupIndex`. Passing `lineGroups` splits both by
+ * source-line range instead - one rapid and one cut stream per group, plus a
+ * trailing pair for the lines in no group - so a host can hide an interior span
+ * by flipping those streams' visibility, which a single contiguous draw range
+ * (all `hideUntilLine` can offer) cannot express. Each group keeps its own
+ * carry-forward `prefixEndVertex`, so progress greying stays correct within
+ * every stream.
+ *
+ * Grouping costs an `Int32Array(framesLen)` per stream, so memory grows with
+ * lines x groups. It is meant for interactive review of a file already held in
+ * memory, not for the live job path.
  */
-export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerToolpathStreams {
+export function buildWorkerToolpathStreams(
+  data: WorkerGeometryData,
+  options?: LoadWorkerDataOptions
+): WorkerToolpathStreams {
   const vertices = new Float32Array(data.vertices);
   const frames = new Uint32Array(data.frames);
   const colorArray = new Float32Array(data.colorArrayBuffer); // RGBA, stride 4 — used for rapid/cut classification
@@ -878,12 +899,31 @@ export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerTool
   const srcColor = savedColorArray ?? colorArray;
   const { verticesLen, framesLen } = data;
 
-  const rapidPos: number[] = [];
-  const rapidRgb: number[] = [];
-  const cutPos: number[] = [];
-  const cutRgb: number[] = [];
-  const rapidPrefixEndVertex = new Int32Array(framesLen);
-  const cutPrefixEndVertex = new Int32Array(framesLen);
+  // One bucket per line group, plus a trailing catch-all for lines in no group
+  // (typically the preamble before the first toolchange). The catch-all carries
+  // a null group index, so a host can never hide it.
+  const lineGroups = options?.lineGroups ?? [];
+  const ungroupedBucket = lineGroups.length;
+  const bucketCount = ungroupedBucket + 1;
+
+  const bucketForLine = new Int32Array(framesLen).fill(ungroupedBucket);
+  // Walk groups back to front so that where ranges overlap the earliest group
+  // wins, matching the documented first-match rule.
+  for (let g = lineGroups.length - 1; g >= 0; g--) {
+    const start = Math.max(0, Math.floor(lineGroups[g].start));
+    const end = Math.min(framesLen - 1, Math.floor(lineGroups[g].end));
+    for (let i = start; i <= end; i++) {
+      bucketForLine[i] = g;
+    }
+  }
+
+  const perBucket = <T>(create: () => T): T[] => Array.from({ length: bucketCount }, create);
+  const rapidPos = perBucket<number[]>(() => []);
+  const rapidRgb = perBucket<number[]>(() => []);
+  const cutPos = perBucket<number[]>(() => []);
+  const cutRgb = perBucket<number[]>(() => []);
+  const rapidPrefixEndVertex = perBucket(() => new Int32Array(framesLen));
+  const cutPrefixEndVertex = perBucket(() => new Int32Array(framesLen));
 
   for (let i = 0; i < framesLen; i++) {
     const startVtx = frames[i];
@@ -892,8 +932,9 @@ export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerTool
     if (endVtx > startVtx + 1) {
       // Route the whole line by its first vertex's opacity (rapid moves are dimmer).
       const isRapid = colorArray[startVtx * 4 + 3] < 0.75;
-      const pos = isRapid ? rapidPos : cutPos;
-      const rgb = isRapid ? rapidRgb : cutRgb;
+      const bucket = bucketForLine[i];
+      const pos = isRapid ? rapidPos[bucket] : cutPos[bucket];
+      const rgb = isRapid ? rapidRgb[bucket] : cutRgb[bucket];
 
       for (let j = startVtx; j < endVtx - 1; j++) {
         const j0 = j * 3;
@@ -906,21 +947,29 @@ export function buildWorkerToolpathStreams(data: WorkerGeometryData): WorkerTool
     }
 
     // Cumulative vertex count per stream through this line (carry-forward for
-    // lines that contributed nothing to a given stream).
-    rapidPrefixEndVertex[i] = rapidPos.length / 3;
-    cutPrefixEndVertex[i] = cutPos.length / 3;
+    // lines that contributed nothing to a given stream). Every bucket is written
+    // on every line, including lines outside its own range, so each stream's
+    // progress cursor stays valid across the whole file.
+    for (let b = 0; b < bucketCount; b++) {
+      rapidPrefixEndVertex[b][i] = rapidPos[b].length / 3;
+      cutPrefixEndVertex[b][i] = cutPos[b].length / 3;
+    }
   }
 
+  const toStreams = (
+    pos: number[][],
+    rgb: number[][],
+    prefixEndVertex: Int32Array[]
+  ): WorkerToolpathStream[] =>
+    pos.map((bucketPos, b) => ({
+      positions: Float32Array.from(bucketPos),
+      colors: Float32Array.from(rgb[b]),
+      prefixEndVertex: prefixEndVertex[b],
+      lineGroupIndex: b === ungroupedBucket ? null : b,
+    }));
+
   return {
-    rapid: {
-      positions: Float32Array.from(rapidPos),
-      colors: Float32Array.from(rapidRgb),
-      prefixEndVertex: rapidPrefixEndVertex,
-    },
-    cut: {
-      positions: Float32Array.from(cutPos),
-      colors: Float32Array.from(cutRgb),
-      prefixEndVertex: cutPrefixEndVertex,
-    },
+    rapids: toStreams(rapidPos, rapidRgb, rapidPrefixEndVertex),
+    cuts: toStreams(cutPos, cutRgb, cutPrefixEndVertex),
   };
 }
