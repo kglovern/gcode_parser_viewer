@@ -1,5 +1,9 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { GCodeViewerCameraView } from "../types";
+export declare class VerticalInvertOrbitControls extends OrbitControls {
+    _rotateUp(angle: number): void;
+}
 export declare function ensureContainerOverlayLayout(container: HTMLElement): void;
 export declare function easeInOutCubic(t: number): number;
 export declare function viewDirection(view: GCodeViewerCameraView): THREE.Vector3;
