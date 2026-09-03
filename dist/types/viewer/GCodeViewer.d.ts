@@ -1,5 +1,5 @@
 import type { LoadWorkerDataOptions, WorkerGeometryData } from "../types";
-import { GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
+import { GCodeViewerCameraProjection, GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
     private readonly container;
@@ -7,7 +7,10 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private readonly renderer;
     private readonly scene;
     private readonly toolpathRoot;
-    private readonly camera;
+    private readonly perspectiveCamera;
+    private readonly orthographicCamera;
+    private camera;
+    private readonly orthoViewHeight;
     private readonly controls;
     private viewCube;
     private readonly viewCubeCorrection;
@@ -72,6 +75,19 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     setLineGroupVisible(groupIndex: number, visible: boolean): void;
     showAllLineGroups(): void;
     resetColors(): void;
+    /**
+     * Swap the projection the viewer renders through, preserving the current
+     * framing and view direction. Delegates through setOptions so getOptions()
+     * stays the single source of truth for the active projection.
+     */
+    setCameraProjection(projection: GCodeViewerCameraProjection): void;
+    getCameraProjection(): GCodeViewerCameraProjection;
+    /**
+     * `options.distance` is the camera standoff, which only affects framing under
+     * a perspective camera; an orthographic camera frames by frustum height, so
+     * the value moves the camera without changing how much of the model is
+     * visible. Use focusToModel() to reframe in either projection.
+     */
     snapCameraToView(view: GCodeViewerCameraView, options?: {
         durationMs?: number;
         distance?: number;
@@ -115,14 +131,31 @@ export declare class GCodeViewer implements GCodeViewerHandle {
      * and mapped back onto the laid-out canvas rect, so overlays drawn in fixed
      * (viewport) coordinates line up with picked scene points and track pan/zoom.
      *
-     * `z` is the point's height in scene space (default 0); it changes the
-     * projected pixel under the perspective camera, so callers placing markers
-     * off the Z=0 plane should pass it. Returns null when the canvas has no layout.
+     * `z` is the point's height in scene space (default 0). It changes the
+     * projected pixel under the perspective camera (though not under an
+     * orthographic one, which has no divide-by-z), so callers placing markers off
+     * the Z=0 plane should pass it. Returns null when the canvas has no layout.
      */
     worldToScreen(x: number, y: number, z?: number): {
         x: number;
         y: number;
     } | null;
+    private isPerspectiveActive;
+    private viewportAspect;
+    /** Ortho zoom that frames `height` world units vertically. */
+    private orthoZoomForHeight;
+    /** World units the ortho camera currently frames vertically. */
+    private orthoFramedHeight;
+    private applyCameraDepthRange;
+    /**
+     * Swap the active camera, preserving view direction and apparent framing.
+     *
+     * The two projections are bridged by the vertical extent visible at the orbit
+     * target: an ortho frustum of that height shows the same content the
+     * perspective camera showed at that standoff. Going back the other way, the
+     * framed height determines the standoff to restore.
+     */
+    private setActiveProjection;
     private startSnapToView;
     private startCameraLerp;
     loadFromUrl(url: string, args?: {

@@ -243,6 +243,22 @@ export default function App() {
       </section>
 
       <section>
+        <label className="section-label">Camera</label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={options.camera?.projection === "orthographic"}
+            onChange={(e) =>
+              patchOptions({
+                camera: { projection: e.target.checked ? "orthographic" : "perspective" },
+              } as Partial<GCodeViewerOptions>)
+            }
+          />
+          Orthographic
+        </label>
+      </section>
+
+      <section>
         <label className="section-label">Mode</label>
         <label className="checkbox-label">
           <input

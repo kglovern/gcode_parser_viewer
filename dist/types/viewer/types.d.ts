@@ -109,6 +109,13 @@ export type GCodeViewerOptions = {
         theme: GCodeViewerTheme;
     };
     camera: {
+        /**
+         * Perspective is the default. Orthographic removes the divide-by-z, so
+         * toolpath segments sharing X/Y but differing in Z land on the same pixel
+         * in an axis-aligned view instead of splaying apart away from the centre.
+         */
+        projection: GCodeViewerCameraProjection;
+        /** Perspective vertical FOV. Also seeds ortho framing when projections swap. */
         fov: number;
         focusDurationMs: number;
         orbit: {
@@ -174,6 +181,8 @@ export type GCodeViewerHandle = {
         durationMs?: number;
         distance?: number;
     }): void;
+    setCameraProjection(projection: GCodeViewerCameraProjection): void;
+    getCameraProjection(): GCodeViewerCameraProjection;
     setRotateEnabled(enabled: boolean): void;
     setCameraFollowEnabled(enabled: boolean): void;
     screenToWorld(clientX: number, clientY: number, options?: {
@@ -219,4 +228,5 @@ export type GCodeViewerCreateArgs = {
     options?: Partial<GCodeViewerOptions>;
     callbacks?: GCodeViewerCallbacks;
 };
+export type GCodeViewerCameraProjection = "perspective" | "orthographic";
 export type GCodeViewerCameraView = "front" | "back" | "left" | "right" | "top" | "bottom" | "front-top-left" | "front-top-right" | "front-bottom-left" | "front-bottom-right" | "back-top-left" | "back-top-right" | "back-bottom-left" | "back-bottom-right";

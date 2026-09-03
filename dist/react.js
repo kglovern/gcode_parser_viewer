@@ -1,23 +1,23 @@
 import * as o from "react";
-import { a as w, G as V } from "./GCodeSVGRenderer-BqDBmJJH.js";
+import { a as w, G as C } from "./GCodeSVGRenderer-D4QGoHWJ.js";
 const G = o.forwardRef(
-  function(c, m) {
-    const { id: l, options: n, callbacks: a, className: f, style: u } = c, i = o.useRef(null), t = o.useRef(null);
+  function(u, m) {
+    const { id: a, options: s, callbacks: l, className: f, style: c } = u, i = o.useRef(null), t = o.useRef(null);
     return o.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const d = new w({ id: l, container: e, options: n, callbacks: a });
+      const d = new w({ id: a, container: e, options: s, callbacks: l });
       return t.current = d, () => {
         t.current = null, d.dispose();
       };
-    }, [l]), o.useEffect(() => {
+    }, [a]), o.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setOptions(n ?? {});
-    }, [n]), o.useEffect(() => {
+      (e = t.current) == null || e.setOptions(s ?? {});
+    }, [s]), o.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setCallbacks(a ?? {});
-    }, [a]), o.useImperativeHandle(
+      (e = t.current) == null || e.setCallbacks(l ?? {});
+    }, [l]), o.useImperativeHandle(
       m,
       () => {
         const e = () => {
@@ -28,13 +28,19 @@ const G = o.forwardRef(
         };
         return {
           get id() {
-            return l;
+            return a;
           },
           setCallbacks(r) {
             e().setCallbacks(r);
           },
-          snapCameraToView(r, s) {
-            e().snapCameraToView(r, s);
+          snapCameraToView(r, n) {
+            e().snapCameraToView(r, n);
+          },
+          setCameraProjection(r) {
+            e().setCameraProjection(r);
+          },
+          getCameraProjection() {
+            return e().getCameraProjection();
           },
           setRotateEnabled(r) {
             e().setRotateEnabled(r);
@@ -42,14 +48,14 @@ const G = o.forwardRef(
           setCameraFollowEnabled(r) {
             e().setCameraFollowEnabled(r);
           },
-          screenToWorld(r, s, p) {
-            return e().screenToWorld(r, s, p);
+          screenToWorld(r, n, p) {
+            return e().screenToWorld(r, n, p);
           },
-          worldToScreen(r, s, p) {
-            return e().worldToScreen(r, s, p);
+          worldToScreen(r, n, p) {
+            return e().worldToScreen(r, n, p);
           },
-          setBitPosition(r, s) {
-            e().setBitPosition(r, s);
+          setBitPosition(r, n) {
+            e().setBitPosition(r, n);
           },
           setBitVisible(r) {
             e().setBitVisible(r);
@@ -60,11 +66,11 @@ const G = o.forwardRef(
           setToolpathRotationA(r) {
             e().setToolpathRotationA(r);
           },
-          hideUntilLine(r, s) {
-            e().hideUntilLine(r, s);
+          hideUntilLine(r, n) {
+            e().hideUntilLine(r, n);
           },
-          seekToLine(r, s) {
-            e().seekToLine(r, s);
+          seekToLine(r, n) {
+            e().seekToLine(r, n);
           },
           showAll() {
             e().showAll();
@@ -72,8 +78,8 @@ const G = o.forwardRef(
           resetColors() {
             e().resetColors();
           },
-          loadFromUrl(r, s) {
-            return e().loadFromUrl(r, s);
+          loadFromUrl(r, n) {
+            return e().loadFromUrl(r, n);
           },
           loadFromFile(r) {
             return e().loadFromFile(r);
@@ -113,23 +119,23 @@ const G = o.forwardRef(
           }
         };
       },
-      [l]
-    ), o.createElement("div", { ref: i, className: f, style: u });
+      [a]
+    ), o.createElement("div", { ref: i, className: f, style: c });
   }
 ), R = o.forwardRef(
-  function(c, m) {
-    const { id: l, options: n, className: a, style: f } = c, u = o.useRef(null), i = o.useRef(null);
+  function(u, m) {
+    const { id: a, options: s, className: l, style: f } = u, c = o.useRef(null), i = o.useRef(null);
     return o.useEffect(() => {
-      const t = u.current;
+      const t = c.current;
       if (!t) return;
-      const e = new V(t, n);
+      const e = new C(t, s);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
     }, []), o.useEffect(() => {
       var t;
-      n && ((t = i.current) == null || t.setOptions(n));
-    }, [n]), o.useImperativeHandle(m, () => {
+      s && ((t = i.current) == null || t.setOptions(s));
+    }, [s]), o.useImperativeHandle(m, () => {
       const t = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
@@ -151,8 +157,8 @@ const G = o.forwardRef(
         dispose: () => t().dispose()
       };
     }, []), o.createElement("div", {
-      ref: u,
-      className: a,
+      ref: c,
+      className: l,
       style: { width: "100%", height: "100%", ...f }
     });
   }

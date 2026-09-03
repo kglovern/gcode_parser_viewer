@@ -17,6 +17,7 @@ import {
 import {
   defaultGCodeViewerOptions,
   GCodeViewerBitType,
+  GCodeViewerCameraProjection,
   GCodeViewerCameraView,
   GCodeViewerBounds,
   GCodeViewerCallbacks,
@@ -37,11 +38,19 @@ import { ViewCube } from "./ViewCube";
 import { createBoundingBoxGroup, disposeBoundingBoxGroup } from "./bbox/boundingBox";
 import { createMachineBedGroup, disposeMachineBedGroup } from "./bed/machineBed";
 import {
+  distanceForFrustumHeight,
   dominantCameraFace,
   easeInOutCubic,
   ensureContainerOverlayLayout,
+  fitDistanceForBounds,
+  frustumHeightAtDistance,
+  intersectRayWithZPlane,
+  orthoDepthRange,
+  orthoFrustumFor,
+  perspectiveDepthRange,
   VerticalInvertOrbitControls,
   viewDirection,
+  type GCodeViewerCameraLike,
 } from "./camera/camera";
 import {
   createAxes,
@@ -74,7 +83,18 @@ export class GCodeViewer implements GCodeViewerHandle {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
   private readonly toolpathRoot: THREE.Group;
-  private readonly camera: THREE.PerspectiveCamera;
+  // Both cameras live for the lifetime of the viewer; `camera` points at the
+  // active one. They're synced only at swap time, never per frame — only one
+  // is ever rendered, and keeping both continuously consistent would double
+  // the invariants (aspect vs left/right, fov vs zoom) for no benefit.
+  private readonly perspectiveCamera: THREE.PerspectiveCamera;
+  private readonly orthographicCamera: THREE.OrthographicCamera;
+  private camera: GCodeViewerCameraLike;
+  // World-space vertical extent the ortho camera frames at zoom 1. Fixed for
+  // the viewer's lifetime: it is the base the frustum is built from, and all
+  // framing — user dolly, view snaps, focus — rides on camera.zoom on top of
+  // it. Keeping the base constant means resize only has to redo left/right.
+  private readonly orthoViewHeight: number;
   private readonly controls: OrbitControls;
   private viewCube: ViewCube | null = null;
   private readonly viewCubeCorrection: THREE.Matrix4;
@@ -121,6 +141,11 @@ export class GCodeViewer implements GCodeViewerHandle {
         toPosition: THREE.Vector3;
         fromTarget: THREE.Vector3;
         toTarget: THREE.Vector3;
+        // Ortho only, and only for moves that reframe: the standoff lerp above
+        // changes nothing an ortho viewer can see, so the framing change has to
+        // ride along as a zoom lerp or it would snap at kickoff.
+        fromZoom: number | null;
+        toZoom: number | null;
         dampingEnabled: boolean;
         // "linear" for continuous tool-follow tracking, where a fresh lerp
         // restarts roughly every status-report tick — eased in/out would
@@ -178,13 +203,42 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.toolpathRoot.name = "gviewer:toolpath-root";
     this.scene.add(this.toolpathRoot);
 
-    this.camera = new THREE.PerspectiveCamera(this.options.camera.fov, 1, 0.1, 100000);
-    this.camera.up.set(0, 0, 1);
-    this.camera.position.set(
-      this.options.camera.initialPosition.x,
-      this.options.camera.initialPosition.y,
-      this.options.camera.initialPosition.z
+    const initialPosition = this.options.camera.initialPosition;
+    // Standoff implied by the configured start position, used to seed both the
+    // ortho frustum and the depth ranges. Without it the perspective camera
+    // would start on a 0.1/100000 near:far ratio — a 10^6 span that leaves so
+    // little depth precision that near-coplanar toolpath passes z-fight until
+    // the first focus or view snap recomputes it.
+    const initialDistance = Math.max(
+      1e-6,
+      Math.hypot(initialPosition.x, initialPosition.y, initialPosition.z)
     );
+
+    this.perspectiveCamera = new THREE.PerspectiveCamera(this.options.camera.fov, 1, 0.1, 100000);
+    this.orthographicCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+    this.orthoViewHeight = frustumHeightAtDistance(initialDistance, this.options.camera.fov);
+
+    for (const camera of [this.perspectiveCamera, this.orthographicCamera]) {
+      // Must precede the OrbitControls constructor: it snapshots _quat from
+      // object.up once and never re-reads it, so a later change to up would
+      // silently leave the controls orbiting in the wrong frame.
+      camera.up.set(0, 0, 1);
+      camera.position.set(initialPosition.x, initialPosition.y, initialPosition.z);
+    }
+
+    Object.assign(this.perspectiveCamera, perspectiveDepthRange(initialDistance));
+    this.perspectiveCamera.updateProjectionMatrix();
+    Object.assign(
+      this.orthographicCamera,
+      orthoFrustumFor(this.orthoViewHeight, 1),
+      orthoDepthRange(initialDistance, initialDistance)
+    );
+    this.orthographicCamera.updateProjectionMatrix();
+
+    this.camera =
+      this.options.camera.projection === "orthographic"
+        ? this.orthographicCamera
+        : this.perspectiveCamera;
 
     this.controls = new VerticalInvertOrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = this.options.camera.orbit.enableDamping;
@@ -206,17 +260,18 @@ export class GCodeViewer implements GCodeViewerHandle {
       onSelectView: (view) => {
         const center = new THREE.Vector3();
         let distance: number;
+        // With bounds the snap is also a refit, so ortho should follow the new
+        // framing; without them it only reorients and must leave zoom alone.
+        const reframe = this.currentBounds !== null;
         if (this.currentBounds) {
           this.currentBounds.getCenter(center);
           const size = new THREE.Vector3();
           this.currentBounds.getSize(size);
-          const halfMax = Math.max(size.x, size.y, 1) / 2;
-          const fovRadians = THREE.MathUtils.degToRad(this.camera.fov);
-          distance = (halfMax / Math.tan(fovRadians / 2)) * 1.25 + size.z;
+          distance = fitDistanceForBounds(size, this.options.camera.fov);
         } else {
           distance = this.camera.position.distanceTo(this.controls.target);
         }
-        this.startSnapToView(view, center, Math.max(1e-6, distance), 400);
+        this.startSnapToView(view, center, Math.max(1e-6, distance), 400, reframe);
       },
     });
 
@@ -375,6 +430,25 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
   }
 
+  /**
+   * Swap the projection the viewer renders through, preserving the current
+   * framing and view direction. Delegates through setOptions so getOptions()
+   * stays the single source of truth for the active projection.
+   */
+  setCameraProjection(projection: GCodeViewerCameraProjection): void {
+    this.setOptions({ camera: { ...this.options.camera, projection } });
+  }
+
+  getCameraProjection(): GCodeViewerCameraProjection {
+    return this.options.camera.projection;
+  }
+
+  /**
+   * `options.distance` is the camera standoff, which only affects framing under
+   * a perspective camera; an orthographic camera frames by frustum height, so
+   * the value moves the camera without changing how much of the model is
+   * visible. Use focusToModel() to reframe in either projection.
+   */
   snapCameraToView(view: GCodeViewerCameraView, options: { durationMs?: number; distance?: number } = {}): void {
     const durationMs = Math.max(0, Math.floor(options.durationMs ?? 240));
     const target = this.controls.target.clone();
@@ -429,10 +503,17 @@ export class GCodeViewer implements GCodeViewerHandle {
     raycaster.setFromCamera(ndc, this.camera);
 
     const planeZ = options?.planeZ ?? this.lastBitPosition.z ?? 0;
-    // Plane normal·p + constant = 0 → for z = planeZ, constant = -planeZ.
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
-    const hit = new THREE.Vector3();
-    if (!raycaster.ray.intersectPlane(plane, hit)) {
+    // Under perspective the ray origin is the eye, so a hit behind it really is
+    // a miss. Under ortho the origin sits on the camera plane, and the negative
+    // near keeps geometry behind that plane on screen — so a pick plane above a
+    // camera dollied down into the model is a real hit, not a miss.
+    const hit = intersectRayWithZPlane(
+      raycaster.ray.origin,
+      raycaster.ray.direction,
+      planeZ,
+      !this.isPerspectiveActive()
+    );
+    if (!hit) {
       return null;
     }
 
@@ -447,9 +528,10 @@ export class GCodeViewer implements GCodeViewerHandle {
    * and mapped back onto the laid-out canvas rect, so overlays drawn in fixed
    * (viewport) coordinates line up with picked scene points and track pan/zoom.
    *
-   * `z` is the point's height in scene space (default 0); it changes the
-   * projected pixel under the perspective camera, so callers placing markers
-   * off the Z=0 plane should pass it. Returns null when the canvas has no layout.
+   * `z` is the point's height in scene space (default 0). It changes the
+   * projected pixel under the perspective camera (though not under an
+   * orthographic one, which has no divide-by-z), so callers placing markers off
+   * the Z=0 plane should pass it. Returns null when the canvas has no layout.
    */
   worldToScreen(
     x: number,
@@ -468,19 +550,106 @@ export class GCodeViewer implements GCodeViewerHandle {
     };
   }
 
+  private isPerspectiveActive(): boolean {
+    return this.camera === this.perspectiveCamera;
+  }
+
+  private viewportAspect(): number {
+    const width = this.container.clientWidth || 1;
+    const height = this.container.clientHeight || 1;
+    return width / height;
+  }
+
+  /** Ortho zoom that frames `height` world units vertically. */
+  private orthoZoomForHeight(height: number): number {
+    return this.orthoViewHeight / Math.max(1e-6, height);
+  }
+
+  /** World units the ortho camera currently frames vertically. */
+  private orthoFramedHeight(): number {
+    return this.orthoViewHeight / Math.max(1e-6, this.orthographicCamera.zoom);
+  }
+
+  // Both cameras are kept on a sane depth range, not just the active one, so a
+  // later projection swap doesn't inherit a stale frustum.
+  private applyCameraDepthRange(distance: number): void {
+    const dim = Math.max(1, distance);
+    Object.assign(this.perspectiveCamera, perspectiveDepthRange(dim));
+    Object.assign(this.orthographicCamera, orthoDepthRange(dim, dim));
+    this.perspectiveCamera.updateProjectionMatrix();
+    this.orthographicCamera.updateProjectionMatrix();
+  }
+
+  /**
+   * Swap the active camera, preserving view direction and apparent framing.
+   *
+   * The two projections are bridged by the vertical extent visible at the orbit
+   * target: an ortho frustum of that height shows the same content the
+   * perspective camera showed at that standoff. Going back the other way, the
+   * framed height determines the standoff to restore.
+   */
+  private setActiveProjection(projection: GCodeViewerCameraProjection): void {
+    const wantsPerspective = projection !== "orthographic";
+    if (wantsPerspective === this.isPerspectiveActive()) {
+      return;
+    }
+
+    const target = this.controls.target;
+    const distance = Math.max(1e-6, this.camera.position.distanceTo(target));
+    const aspect = this.viewportAspect();
+
+    if (wantsPerspective) {
+      const height = this.orthoFramedHeight();
+      const toDistance = Math.max(1e-6, distanceForFrustumHeight(height, this.options.camera.fov));
+      const direction = this.camera.position.clone().sub(target).normalize();
+      this.perspectiveCamera.position.copy(target).addScaledVector(direction, toDistance);
+      this.perspectiveCamera.quaternion.copy(this.camera.quaternion);
+      this.perspectiveCamera.aspect = aspect;
+      this.camera = this.perspectiveCamera;
+      this.applyCameraDepthRange(toDistance);
+    } else {
+      const height = frustumHeightAtDistance(distance, this.options.camera.fov);
+      this.orthographicCamera.zoom = this.orthoZoomForHeight(height);
+      this.orthographicCamera.position.copy(this.camera.position);
+      this.orthographicCamera.quaternion.copy(this.camera.quaternion);
+      Object.assign(this.orthographicCamera, orthoFrustumFor(this.orthoViewHeight, aspect));
+      this.camera = this.orthographicCamera;
+      this.applyCameraDepthRange(distance);
+    }
+
+    // A tween in flight holds endpoints captured against the outgoing camera's
+    // standoff; lerping into them after the swap would yank the camera.
+    if (this.cameraFocusTransition) {
+      this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
+      this.cameraFocusTransition = null;
+    }
+
+    // OrbitControls reads `this.object` on every call and re-derives its
+    // spherical state from object.position each update(), so reassigning the
+    // camera keeps target, listeners and damping intact. Both cameras share
+    // the same `up`, which is what the controls' constructor-time _quat
+    // snapshot depends on.
+    this.controls.object = this.camera;
+    this.controls.update();
+  }
+
   private startSnapToView(
     view: GCodeViewerCameraView,
     toTarget: THREE.Vector3,
     distance: number,
-    durationMs: number
+    durationMs: number,
+    reframe = false
   ): void {
     const direction = viewDirection(view);
     const toPosition = toTarget.clone().add(direction.multiplyScalar(distance));
-    const maxDim = Math.max(1, distance);
-    this.camera.near = maxDim / 1000;
-    this.camera.far = maxDim * 50;
-    this.camera.updateProjectionMatrix();
-    this.startCameraLerp(toTarget, toPosition, durationMs);
+    this.applyCameraDepthRange(distance);
+    // Under ortho the standoff doesn't frame anything — zoom does — so a snap
+    // that means to reframe has to carry the zoom change with it.
+    const toZoom =
+      reframe && !this.isPerspectiveActive()
+        ? this.orthoZoomForHeight(frustumHeightAtDistance(distance, this.options.camera.fov))
+        : undefined;
+    this.startCameraLerp(toTarget, toPosition, durationMs, "easeInOutCubic", toZoom);
   }
 
   // Shared tween kickoff for any camera position+target move (view snapping,
@@ -490,7 +659,8 @@ export class GCodeViewer implements GCodeViewerHandle {
     toTarget: THREE.Vector3,
     toPosition: THREE.Vector3,
     durationMs: number,
-    easing: "easeInOutCubic" | "linear" = "easeInOutCubic"
+    easing: "easeInOutCubic" | "linear" = "easeInOutCubic",
+    toZoom?: number
   ): void {
     if (this.cameraFocusTransition) {
       this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
@@ -503,6 +673,8 @@ export class GCodeViewer implements GCodeViewerHandle {
       toPosition,
       fromTarget: this.controls.target.clone(),
       toTarget,
+      fromZoom: toZoom === undefined ? null : this.orthographicCamera.zoom,
+      toZoom: toZoom ?? null,
       dampingEnabled: this.controls.enableDamping,
       easing,
     };
@@ -598,8 +770,13 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
 
     if (previous.camera.fov !== this.options.camera.fov) {
-      this.camera.fov = this.options.camera.fov;
-      this.camera.updateProjectionMatrix();
+      // Written unconditionally, even while ortho is active, so a later swap
+      // back picks up the new fov (which also seeds the framing conversion).
+      this.perspectiveCamera.fov = this.options.camera.fov;
+      this.perspectiveCamera.updateProjectionMatrix();
+    }
+    if (previous.camera.projection !== this.options.camera.projection) {
+      this.setActiveProjection(this.options.camera.projection);
     }
     if (previous.camera.orbit.enableDamping !== this.options.camera.orbit.enableDamping) {
       this.controls.enableDamping = this.options.camera.orbit.enableDamping;
@@ -754,8 +931,16 @@ export class GCodeViewer implements GCodeViewerHandle {
       Math.floor(rect.height || this.container.clientHeight || window.innerHeight)
     );
     this.renderer.setSize(width, height, false);
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+
+    // Both cameras are re-fitted, not just the active one, so a projection swap
+    // after a resize doesn't come up with a stale aspect. Ortho holds top and
+    // bottom and varies left/right, matching how a perspective camera keeps its
+    // vertical fov and widens horizontally.
+    const aspect = width / height;
+    this.perspectiveCamera.aspect = aspect;
+    this.perspectiveCamera.updateProjectionMatrix();
+    Object.assign(this.orthographicCamera, orthoFrustumFor(this.orthoViewHeight, aspect));
+    this.orthographicCamera.updateProjectionMatrix();
   }
 
   focusToModel(): void {
@@ -774,6 +959,10 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.options.camera.initialPosition.y,
       this.options.camera.initialPosition.z
     );
+    // orthoViewHeight is defined as the framing at the initial standoff, so
+    // zoom 1 is exactly the ortho equivalent of restoring that position.
+    this.orthographicCamera.zoom = 1;
+    this.orthographicCamera.updateProjectionMatrix();
     this.controls.update();
   }
 
@@ -1243,17 +1432,21 @@ export class GCodeViewer implements GCodeViewerHandle {
     const size = new THREE.Vector3();
     bounds.getSize(size);
 
-    const halfMax = Math.max(size.x, size.y, 1) / 2;
-    const fovRadians = THREE.MathUtils.degToRad(this.camera.fov);
-    const distance = (halfMax / Math.tan(fovRadians / 2)) * 1.25 + size.z;
+    const distance = fitDistanceForBounds(size, this.options.camera.fov);
 
     const direction = viewDirection("front-top-left");
     const toPosition = center.clone().add(direction.multiplyScalar(distance));
-    const maxDim = Math.max(size.x, size.y, size.z, 1);
-    this.camera.near = maxDim / 1000;
-    this.camera.far = maxDim * 50;
-    this.camera.updateProjectionMatrix();
-    this.startCameraLerp(center, toPosition, this.options.camera.focusDurationMs);
+    this.applyCameraDepthRange(Math.max(size.x, size.y, size.z, distance, 1));
+    const toZoom = this.isPerspectiveActive()
+      ? undefined
+      : this.orthoZoomForHeight(frustumHeightAtDistance(distance, this.options.camera.fov));
+    this.startCameraLerp(
+      center,
+      toPosition,
+      this.options.camera.focusDurationMs,
+      "easeInOutCubic",
+      toZoom
+    );
   }
 
   private updateCameraFocusTransition(): void {
@@ -1268,10 +1461,20 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.camera.position.lerpVectors(this.cameraFocusTransition.fromPosition, this.cameraFocusTransition.toPosition, eased);
     this.controls.target.lerpVectors(this.cameraFocusTransition.fromTarget, this.cameraFocusTransition.toTarget, eased);
 
+    const { fromZoom, toZoom } = this.cameraFocusTransition;
+    if (fromZoom !== null && toZoom !== null) {
+      this.orthographicCamera.zoom = THREE.MathUtils.lerp(fromZoom, toZoom, eased);
+      this.orthographicCamera.updateProjectionMatrix();
+    }
+
     if (t >= 1) {
       const restoreDamping = this.cameraFocusTransition.dampingEnabled;
       this.camera.position.copy(this.cameraFocusTransition.toPosition);
       this.controls.target.copy(this.cameraFocusTransition.toTarget);
+      if (toZoom !== null) {
+        this.orthographicCamera.zoom = toZoom;
+        this.orthographicCamera.updateProjectionMatrix();
+      }
       this.cameraFocusTransition = null;
       this.controls.enableDamping = false;
       this.controls.update();
