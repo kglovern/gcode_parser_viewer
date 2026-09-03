@@ -69,11 +69,11 @@ export declare function orthoDepthRange(distance: number, maxDim: number): {
 /**
  * Intersect a ray with the horizontal plane at `planeZ`.
  *
- * THREE.Ray.intersectPlane rejects hits behind the ray origin, which is wrong
- * for an orthographic camera: Raycaster.setFromCamera puts the ortho ray origin
- * at NDC z = (near + far) / (near - far), i.e. mid-frustum for the symmetric
- * range orthoDepthRange returns, so roughly half of all picks land behind it.
- * Under perspective the origin is the eye and a backward hit really is a miss,
- * hence the `allowBehind` switch.
+ * THREE.Ray.intersectPlane rejects hits behind the ray origin. Under a
+ * perspective camera that origin is the eye, and a backward hit really is a
+ * miss. Under ortho the origin sits on the camera plane, but the negative near
+ * from orthoDepthRange means geometry *behind* that plane is still on screen —
+ * so a pick plane above a camera dollied down into the model is a legitimate
+ * hit that intersectPlane would silently drop. Hence `allowBehind`.
  */
 export declare function intersectRayWithZPlane(origin: THREE.Vector3, direction: THREE.Vector3, planeZ: number, allowBehind: boolean): THREE.Vector3 | null;
