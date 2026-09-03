@@ -53,6 +53,40 @@
 .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(42px); }
 .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(42px); }
 
+.gViewer-viewcube__corner{
+  position:absolute;
+  width:20px;
+  height:20px;
+  top:32px;
+  left:32px;
+  border-radius:50%;
+  background:rgba(12,16,20,0.45);
+  border:1px solid rgba(120,140,160,0.30);
+  cursor:pointer;
+  padding:0;
+  user-select:none;
+}
+
+.gViewer-viewcube__corner:hover{
+  background:rgba(12,16,20,0.75);
+  border-color:rgba(160,190,220,0.65);
+}
+
+.gViewer-viewcube__corner.is-active{
+  border-color: rgba(96,165,250,0.95);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.35);
+}
+
+.gViewer-viewcube__corner--front-top-right{ transform: rotateY(45deg) rotateX(-35.264deg) translateZ(72.746px); }
+/* front-top-left is the restored gSender iso view; 35.264deg = atan(1/sqrt2), the tilt that points a face-oriented marker straight through a cube vertex */
+.gViewer-viewcube__corner--front-top-left{ transform: rotateY(-45deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--front-bottom-right{ transform: rotateY(45deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--front-bottom-left{ transform: rotateY(-45deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-top-right{ transform: rotateY(135deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-top-left{ transform: rotateY(-135deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-bottom-right{ transform: rotateY(135deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-bottom-left{ transform: rotateY(-135deg) rotateX(35.264deg) translateZ(72.746px); }
+
 @media (orientation: portrait){
   .gViewer-viewcube{
     left:60px;
@@ -72,4 +106,20 @@
   .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(32px); }
   .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(32px); }
   .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(32px); }
+
+  .gViewer-viewcube__corner{
+    width:15px;
+    height:15px;
+    top:24.5px;
+    left:24.5px;
+  }
+
+  .gViewer-viewcube__corner--front-top-right{ transform: rotateY(45deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-top-left{ transform: rotateY(-45deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-bottom-right{ transform: rotateY(45deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-bottom-left{ transform: rotateY(-45deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-top-right{ transform: rotateY(135deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-top-left{ transform: rotateY(-135deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-bottom-right{ transform: rotateY(135deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-bottom-left{ transform: rotateY(-135deg) rotateX(35.264deg) translateZ(55.426px); }
 }

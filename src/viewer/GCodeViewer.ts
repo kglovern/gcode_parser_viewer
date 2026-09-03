@@ -40,6 +40,7 @@ import {
   dominantCameraFace,
   easeInOutCubic,
   ensureContainerOverlayLayout,
+  VerticalInvertOrbitControls,
   viewDirection,
 } from "./camera/camera";
 import {
@@ -185,7 +186,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.options.camera.initialPosition.z
     );
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls = new VerticalInvertOrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = this.options.camera.orbit.enableDamping;
     // "start" only fires from OrbitControls' own pointerdown/wheel/touchstart
     // handlers, never from the programmatic controls.update() calls

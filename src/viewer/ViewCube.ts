@@ -59,6 +59,43 @@ export class ViewCube {
       this.faceButtons.set(face.view, button);
     }
 
+    const corners: Array<{ view: GCodeViewerCameraView; className: string; title: string }> = [
+      { view: "front-top-left", className: "gViewer-viewcube__corner--front-top-left", title: "Front Top Left" },
+      { view: "front-top-right", className: "gViewer-viewcube__corner--front-top-right", title: "Front Top Right" },
+      {
+        view: "front-bottom-left",
+        className: "gViewer-viewcube__corner--front-bottom-left",
+        title: "Front Bottom Left",
+      },
+      {
+        view: "front-bottom-right",
+        className: "gViewer-viewcube__corner--front-bottom-right",
+        title: "Front Bottom Right",
+      },
+      { view: "back-top-left", className: "gViewer-viewcube__corner--back-top-left", title: "Back Top Left" },
+      { view: "back-top-right", className: "gViewer-viewcube__corner--back-top-right", title: "Back Top Right" },
+      {
+        view: "back-bottom-left",
+        className: "gViewer-viewcube__corner--back-bottom-left",
+        title: "Back Bottom Left",
+      },
+      {
+        view: "back-bottom-right",
+        className: "gViewer-viewcube__corner--back-bottom-right",
+        title: "Back Bottom Right",
+      },
+    ];
+
+    for (const corner of corners) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `gViewer-viewcube__corner ${corner.className}`;
+      button.title = corner.title;
+      button.setAttribute("aria-label", corner.title);
+      button.addEventListener("click", () => this.onSelectView(corner.view));
+      this.cube.appendChild(button);
+    }
+
     args.container.appendChild(this.root);
   }
 

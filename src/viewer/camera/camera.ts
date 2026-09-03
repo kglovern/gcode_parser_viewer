@@ -1,5 +1,21 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { GCodeViewerCameraView } from "../types";
+
+// Stock OrbitControls' vertical drag direction (drag down orbits the camera
+// toward the top pole) reads as inverted to this viewer's users, and there's
+// no public per-axis rotate speed to flip just that axis. `_rotateUp` is a
+// real prototype method but isn't part of OrbitControls' public .d.ts (it's
+// only underscore-prefixed-private by convention), so calling it needs a
+// type assertion; a future three.js release could rename or remove it
+// without a compile error, so re-check this override after upgrading three.
+type OrbitControlsWithPrivateRotate = OrbitControls & { _rotateUp(angle: number): void };
+
+export class VerticalInvertOrbitControls extends OrbitControls {
+  _rotateUp(angle: number): void {
+    (OrbitControls.prototype as unknown as OrbitControlsWithPrivateRotate)._rotateUp.call(this, -angle);
+  }
+}
 
 export function ensureContainerOverlayLayout(container: HTMLElement): void {
   const style = window.getComputedStyle(container);
