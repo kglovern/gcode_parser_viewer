@@ -208,14 +208,21 @@ function createBitGeometry(options: GCodeViewerOptions): THREE.BufferGeometry {
   return createCircleGeometry(size);
 }
 
-function resolveDrillColor(options: GCodeViewerOptions): string {
-  return options.bit.colorSource === "custom" ? options.bit.color : DRILL_COLOR;
+// `colorSource: "custom"` applies to every solid bit type, not just the drill —
+// the circle and triangle markers exist to show a position, and a caller needs
+// to be able to keep them clear of its own toolpath palette. Each type keeps its
+// own default for the non-custom case.
+function resolveBitColor(options: GCodeViewerOptions): string {
+  if (options.bit.colorSource === "custom") {
+    return options.bit.color;
+  }
+  return options.bit.type === "drill" ? DRILL_COLOR : BIT_COLOR;
 }
 
 function createDrillMesh(options: GCodeViewerOptions): THREE.Mesh {
   const opacity = clamp01(options.bit.opacity);
   const geometry = createDrillGeometry(Math.max(0.001, options.bit.size));
-  const drillColor = new THREE.Color(resolveDrillColor(options));
+  const drillColor = new THREE.Color(resolveBitColor(options));
   const texture = getBrushedMetalTexture();
   const material = new THREE.MeshStandardMaterial({
     color: drillColor,
@@ -243,7 +250,7 @@ function createBitMesh(options: GCodeViewerOptions): THREE.Mesh {
   const opacity = clamp01(options.bit.opacity);
   const geometry = createBitGeometry(options);
   const material = new THREE.MeshBasicMaterial({
-    color: new THREE.Color(BIT_COLOR),
+    color: new THREE.Color(resolveBitColor(options)),
     transparent: opacity < 1,
     opacity,
     side: THREE.DoubleSide,
@@ -346,7 +353,7 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
     } else {
       const mesh = bitObject as THREE.Mesh;
       const material = mesh.material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial;
-      const nextColor = new THREE.Color(nextType === "drill" ? resolveDrillColor(nextOptions) : BIT_COLOR);
+      const nextColor = new THREE.Color(resolveBitColor(nextOptions));
       material.color = nextColor;
       if (nextType === "drill") {
         (material as THREE.MeshStandardMaterial).emissive = nextColor;
