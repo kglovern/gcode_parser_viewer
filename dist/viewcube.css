@@ -1,0 +1,125 @@
+.gViewer-viewcube{
+  position:absolute;
+  left:60px;
+  bottom:60px;
+  width:84px;
+  height:84px;
+  z-index:9999;
+  perspective:600px;
+  pointer-events:auto;
+}
+
+.gViewer-viewcube__cube{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  transition:transform 60ms linear;
+}
+
+.gViewer-viewcube__face{
+  position:absolute;
+  width:84px;
+  height:84px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font:600 11px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:rgba(240,245,252,0.88);
+  background:rgba(12,16,20,0.70);
+  border:1px solid rgba(120,140,160,0.35);
+  border-radius:14px;
+  cursor:pointer;
+  user-select:none;
+  padding:0;
+}
+
+.gViewer-viewcube__face:hover{
+  background:rgba(12,16,20,0.86);
+  border-color:rgba(160,190,220,0.55);
+}
+
+.gViewer-viewcube__face.is-active{
+  border-color: rgba(96,165,250,0.95);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.35), 0 10px 30px rgba(0,0,0,0.35);
+  color: rgba(96,165,250,0.95);
+}
+
+.gViewer-viewcube__face--front{ transform: translateZ(42px); }
+.gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(42px); }
+.gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(42px); }
+.gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(42px); }
+.gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(42px); }
+.gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(42px); }
+
+.gViewer-viewcube__corner{
+  position:absolute;
+  width:20px;
+  height:20px;
+  top:32px;
+  left:32px;
+  border-radius:50%;
+  background:rgba(12,16,20,0.45);
+  border:1px solid rgba(120,140,160,0.30);
+  cursor:pointer;
+  padding:0;
+  user-select:none;
+}
+
+.gViewer-viewcube__corner:hover{
+  background:rgba(12,16,20,0.75);
+  border-color:rgba(160,190,220,0.65);
+}
+
+.gViewer-viewcube__corner.is-active{
+  border-color: rgba(96,165,250,0.95);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.35);
+}
+
+.gViewer-viewcube__corner--front-top-right{ transform: rotateY(45deg) rotateX(-35.264deg) translateZ(72.746px); }
+/* front-top-left is the restored gSender iso view; 35.264deg = atan(1/sqrt2), the tilt that points a face-oriented marker straight through a cube vertex */
+.gViewer-viewcube__corner--front-top-left{ transform: rotateY(-45deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--front-bottom-right{ transform: rotateY(45deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--front-bottom-left{ transform: rotateY(-45deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-top-right{ transform: rotateY(135deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-top-left{ transform: rotateY(-135deg) rotateX(-35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-bottom-right{ transform: rotateY(135deg) rotateX(35.264deg) translateZ(72.746px); }
+.gViewer-viewcube__corner--back-bottom-left{ transform: rotateY(-135deg) rotateX(35.264deg) translateZ(72.746px); }
+
+@media (orientation: portrait){
+  .gViewer-viewcube{
+    left:60px;
+    bottom:110px;
+    width:64px;
+    height:64px;
+  }
+
+  .gViewer-viewcube__face{
+    width:64px;
+    height:64px;
+  }
+
+  .gViewer-viewcube__face--front{ transform: translateZ(32px); }
+  .gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(32px); }
+  .gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(32px); }
+  .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(32px); }
+  .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(32px); }
+  .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(32px); }
+
+  .gViewer-viewcube__corner{
+    width:15px;
+    height:15px;
+    top:24.5px;
+    left:24.5px;
+  }
+
+  .gViewer-viewcube__corner--front-top-right{ transform: rotateY(45deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-top-left{ transform: rotateY(-45deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-bottom-right{ transform: rotateY(45deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--front-bottom-left{ transform: rotateY(-45deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-top-right{ transform: rotateY(135deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-top-left{ transform: rotateY(-135deg) rotateX(-35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-bottom-right{ transform: rotateY(135deg) rotateX(35.264deg) translateZ(55.426px); }
+  .gViewer-viewcube__corner--back-bottom-left{ transform: rotateY(-135deg) rotateX(35.264deg) translateZ(55.426px); }
+}
