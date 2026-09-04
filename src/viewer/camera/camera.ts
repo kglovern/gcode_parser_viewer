@@ -1,5 +1,24 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { GCodeViewerCameraView } from "../types";
+
+/** Either projection the viewer can render through. */
+export type GCodeViewerCameraLike = THREE.PerspectiveCamera | THREE.OrthographicCamera;
+
+// Stock OrbitControls' vertical drag direction (drag down orbits the camera
+// toward the top pole) reads as inverted to this viewer's users, and there's
+// no public per-axis rotate speed to flip just that axis. `_rotateUp` is a
+// real prototype method but isn't part of OrbitControls' public .d.ts (it's
+// only underscore-prefixed-private by convention), so calling it needs a
+// type assertion; a future three.js release could rename or remove it
+// without a compile error, so re-check this override after upgrading three.
+type OrbitControlsWithPrivateRotate = OrbitControls & { _rotateUp(angle: number): void };
+
+export class VerticalInvertOrbitControls extends OrbitControls {
+  _rotateUp(angle: number): void {
+    (OrbitControls.prototype as unknown as OrbitControlsWithPrivateRotate)._rotateUp.call(this, -angle);
+  }
+}
 
 export function ensureContainerOverlayLayout(container: HTMLElement): void {
   const style = window.getComputedStyle(container);
@@ -101,7 +120,7 @@ export function dominantCameraFace(
 }
 
 export function orbitCameraByPixels(args: {
-  camera: THREE.PerspectiveCamera;
+  camera: GCodeViewerCameraLike;
   target: THREE.Vector3;
   deltaX: number;
   deltaY: number;
@@ -128,4 +147,87 @@ export function orbitCameraByPixels(args: {
 
   args.camera.position.copy(target.clone().add(next));
   args.camera.lookAt(target);
+}
+
+/**
+ * Vertical world-space extent visible at `distance` under a perspective camera
+ * of vertical field of view `fovDeg`. The bridge between the two projections:
+ * an orthographic frustum of this height frames the same content as the
+ * perspective camera does at that distance.
+ */
+export function frustumHeightAtDistance(distance: number, fovDeg: number): number {
+  return 2 * distance * Math.tan(THREE.MathUtils.degToRad(fovDeg) / 2);
+}
+
+/** Inverse of frustumHeightAtDistance: the standoff that frames `height`. */
+export function distanceForFrustumHeight(height: number, fovDeg: number): number {
+  return height / 2 / Math.tan(THREE.MathUtils.degToRad(fovDeg) / 2);
+}
+
+/**
+ * How far back to sit to frame a model of the given size. `size.z` is added
+ * rather than folded into the fit because the camera generally looks down at
+ * the model from above, so the model's height eats into the standoff.
+ */
+export function fitDistanceForBounds(
+  size: { x: number; y: number; z: number },
+  fovDeg: number,
+  margin = 1.25
+): number {
+  const halfMax = Math.max(size.x, size.y, 1) / 2;
+  return distanceForFrustumHeight(halfMax * 2, fovDeg) * margin + size.z;
+}
+
+/** Symmetric orthographic frustum framing `height` world units vertically. */
+export function orthoFrustumFor(
+  height: number,
+  aspect: number
+): { left: number; right: number; top: number; bottom: number } {
+  const halfHeight = Math.max(1e-6, height) / 2;
+  const halfWidth = halfHeight * Math.max(1e-6, aspect);
+  return { left: -halfWidth, right: halfWidth, top: halfHeight, bottom: -halfHeight };
+}
+
+/** Perspective near/far for a model of extent `maxDim`. */
+export function perspectiveDepthRange(maxDim: number): { near: number; far: number } {
+  const dim = Math.max(1, maxDim);
+  return { near: dim / 1000, far: dim * 50 };
+}
+
+/**
+ * Orthographic near/far. Ortho depth is linear — there's no divide-by-z eating
+ * precision near the camera — so a negative near costs nothing and guarantees
+ * geometry behind the camera plane still draws, which matters because an ortho
+ * camera is routinely positioned inside or below the model it is framing.
+ */
+export function orthoDepthRange(distance: number, maxDim: number): { near: number; far: number } {
+  const span = Math.max(1, Math.max(distance, maxDim)) * 4;
+  return { near: -span, far: span };
+}
+
+/**
+ * Intersect a ray with the horizontal plane at `planeZ`.
+ *
+ * THREE.Ray.intersectPlane rejects hits behind the ray origin. Under a
+ * perspective camera that origin is the eye, and a backward hit really is a
+ * miss. Under ortho the origin sits on the camera plane, but the negative near
+ * from orthoDepthRange means geometry *behind* that plane is still on screen —
+ * so a pick plane above a camera dollied down into the model is a legitimate
+ * hit that intersectPlane would silently drop. Hence `allowBehind`.
+ */
+export function intersectRayWithZPlane(
+  origin: THREE.Vector3,
+  direction: THREE.Vector3,
+  planeZ: number,
+  allowBehind: boolean
+): THREE.Vector3 | null {
+  const denominator = direction.z;
+  if (Math.abs(denominator) < 1e-9) {
+    return null;
+  }
+  const t = (planeZ - origin.z) / denominator;
+  if (t < 0 && !allowBehind) {
+    return null;
+  }
+  return origin.clone().addScaledVector(direction, t);
 }

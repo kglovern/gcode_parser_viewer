@@ -358,6 +358,31 @@ viewer.snapCameraToView("front", { durationMs: 300 });
 //        | "front-top-left" | "front-top-right" | ... (14 presets)
 ```
 
+The optional `distance` on `snapCameraToView` is the camera standoff, which only
+frames under a perspective camera. An orthographic camera frames by frustum
+height, so the value moves the camera without changing how much is visible — use
+`focusToModel()` to reframe in either projection.
+
+##### Projection
+
+The camera is perspective by default. Under perspective, two toolpath segments
+that share X/Y but sit at different Z do not project to the same pixel — they lie
+on the same ray through the camera — so in a top-down view stacked cut passes
+splay apart, increasingly so away from the centre of the frame. Orthographic
+projection has no divide-by-z, so those passes land on exactly the same pixel.
+
+```ts
+viewer.setCameraProjection("orthographic");
+viewer.getCameraProjection();  // "perspective" | "orthographic"
+
+// Equivalent, and how it's set at construction:
+viewer.setOptions({ camera: { ...viewer.getOptions().camera, projection: "orthographic" } });
+```
+
+Swapping preserves the view direction and the apparent framing, so the model does
+not jump. Orbit, pan, zoom, picking and the ViewCube all work in both
+projections; under ortho, zoom changes the frustum rather than the standoff.
+
 ##### Picking & interaction
 
 ```ts
@@ -432,7 +457,7 @@ viewer.setOptions({
   },
   grid: { size: 1000, axisDepth: 200, labels: true },
   boundingBox: { visible: true, labels: true },
-  camera: { fov: 45 },
+  camera: { fov: 45, projection: "perspective" },
 });
 
 viewer.getOptions();   // returns current options (readonly)
@@ -477,7 +502,8 @@ type GCodeViewerOptions = {
   };
   render: { antialias: boolean; theme: GCodeViewerTheme };
   camera: {
-    fov: number;
+    projection: "perspective" | "orthographic";  // default: "perspective"
+    fov: number;                                 // perspective only; also seeds ortho framing on swap
     focusDurationMs: number;
     orbit: { enableDamping: boolean };
     initialPosition: { x: number; y: number; z: number };
@@ -597,6 +623,7 @@ ref.current?.loadFromWorkerData(workerData);
 ref.current?.focusToModel();
 ref.current?.hideUntilLine(currentLine, "grey");
 ref.current?.snapCameraToView("top");
+ref.current?.setCameraProjection("orthographic");
 ref.current?.setBitPosition({ x, y, z });
 ```
 
