@@ -10,6 +10,7 @@ export declare class ViewCube {
     private readonly faceButtons;
     constructor(args: ViewCubeArgs);
     setActiveFace(view: "front" | "back" | "left" | "right" | "top" | "bottom"): void;
+    private static readonly Y_ROW_INDICES;
     setRotationMatrix3d(elements: readonly number[]): void;
     dispose(): void;
 }

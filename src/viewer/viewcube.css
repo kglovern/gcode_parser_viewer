@@ -27,7 +27,7 @@
   letter-spacing:0.06em;
   text-transform:uppercase;
   color:rgba(240,245,252,0.88);
-  background:rgba(12,16,20,0.70);
+  background:rgba(12,16,20,0.92);
   border:1px solid rgba(120,140,160,0.35);
   border-radius:14px;
   cursor:pointer;
@@ -46,12 +46,12 @@
   color: rgba(96,165,250,0.95);
 }
 
-.gViewer-viewcube__face--front{ transform: translateZ(42px); }
-.gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(42px); }
-.gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(42px); }
-.gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(42px); }
-.gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(42px); }
-.gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(42px); }
+.gViewer-viewcube__face--front{ transform: translateZ(42px) scaleY(-1); }
+.gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(42px) scaleY(-1); }
+.gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(42px) scaleY(-1); }
+.gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(42px) scaleY(-1); }
+.gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(42px) scaleY(-1); }
+.gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(42px) scaleY(-1); }
 
 @media (orientation: portrait){
   .gViewer-viewcube{
@@ -66,10 +66,10 @@
     height:64px;
   }
 
-  .gViewer-viewcube__face--front{ transform: translateZ(32px); }
-  .gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(32px); }
-  .gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(32px); }
-  .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(32px); }
-  .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(32px); }
-  .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(32px); }
+  .gViewer-viewcube__face--front{ transform: translateZ(32px) scaleY(-1); }
+  .gViewer-viewcube__face--back{ transform: rotateY(180deg) translateZ(32px) scaleY(-1); }
+  .gViewer-viewcube__face--left{ transform: rotateY(-90deg) translateZ(32px) scaleY(-1); }
+  .gViewer-viewcube__face--right{ transform: rotateY(90deg) translateZ(32px) scaleY(-1); }
+  .gViewer-viewcube__face--top{ transform: rotateX(-90deg) translateZ(32px) scaleY(-1); }
+  .gViewer-viewcube__face--bottom{ transform: rotateX(90deg) translateZ(32px) scaleY(-1); }
 }

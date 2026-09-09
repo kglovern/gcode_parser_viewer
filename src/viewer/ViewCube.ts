@@ -72,10 +72,17 @@ export class ViewCube {
     }
   }
 
+  // The matrix is computed in Three.js's Y-up convention, but CSS 3D transforms
+  // operate in a Y-down space (standard DOM coordinates). Negating the Y-output
+  // row (indices 1, 5, 9, 13 in this column-major layout) converts between the
+  // two, matching the same correction Three.js's own CSS3DRenderer applies.
+  private static readonly Y_ROW_INDICES = new Set([1, 5, 9, 13]);
+
   setRotationMatrix3d(elements: readonly number[]): void {
     const values = Array.from({ length: 16 }, (_, index) => {
       const value = elements[index] ?? 0;
-      return Number.isFinite(value) ? String(Math.abs(value) < 1e-12 ? 0 : Number(value.toFixed(8))) : "0";
+      const corrected = ViewCube.Y_ROW_INDICES.has(index) ? -value : value;
+      return Number.isFinite(corrected) ? String(Math.abs(corrected) < 1e-12 ? 0 : Number(corrected.toFixed(8))) : "0";
     });
     this.cube.style.transform = `matrix3d(${values.join(",")})`;
   }
