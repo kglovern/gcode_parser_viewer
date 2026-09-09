@@ -439,10 +439,10 @@
   resolved "https://registry.yarnpkg.com/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.62.2.tgz#3671ce3f9b928d5c01f879792d5c0b60ae14d4ad"
   integrity sha512-BfzEnDJOt9T8M989/lA37EcJgat01wLRnoi5dQf3QzOH7jzpqTAzdDbVfRljVr5r+jzKqpbHeyOfAaXxAd0PAA==
 
-"@sienci/gviewer@^0.1.25":
-  version "0.1.25"
-  resolved "https://registry.yarnpkg.com/@sienci/gviewer/-/gviewer-0.1.25.tgz#7ceac5cfbbd40794ddb809077ac6180f0c5e1878"
-  integrity sha512-m9ltzg8romNIlzON8wa5ps3QKL1+rIAwZ26KoJ2yPwWooKFOqqQVH+fLS93lj719vNuanJJwQFdcMQMU/ZvudQ==
+"@sienci/gviewer@^0.1.32":
+  version "0.1.32"
+  resolved "https://registry.yarnpkg.com/@sienci/gviewer/-/gviewer-0.1.32.tgz#12a01f7dcd8cb6c46e444278911078b9ee9e26d1"
+  integrity sha512-YoU0vbs7DPaHWjm0MR0aUJ6O8Y06d5kQGL7mHf3GWdwCW5U9eJsOvewbQ183vKz6N1i4d+STt+O7jvjT2Fadsw==
   dependencies:
     gsap "^3.15.0"
 
