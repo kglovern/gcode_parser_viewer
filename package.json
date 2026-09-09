@@ -51,7 +51,6 @@
     "build:demo": "vite build --config vite.demo.config.ts"
   },
   "dependencies": {
-    "@sienci/gviewer": "^0.1.32",
     "gsap": "^3.15.0"
   },
   "peerDependencies": {
