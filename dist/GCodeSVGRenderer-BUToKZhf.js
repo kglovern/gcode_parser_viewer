@@ -68,15 +68,18 @@ function me(i) {
     return;
   const A = i.stream.line.geometry.getAttribute("color"), e = xe(i.options), P = Math.min(B, t), r = Math.max(B, t);
   if (t > B)
-    for (let s = B; s < t; s += 1) {
-      const v = s * 3;
-      i.stream.simColors[v] = e.r, i.stream.simColors[v + 1] = e.g, i.stream.simColors[v + 2] = e.b;
+    for (let c = B; c < t; c += 1) {
+      const n = c * 3;
+      i.stream.simColors[n] = e.r, i.stream.simColors[n + 1] = e.g, i.stream.simColors[n + 2] = e.b;
     }
   else {
-    const s = t * 3, v = B * 3;
-    i.stream.simColors.set(i.stream.baseColors.subarray(s, v), s);
+    const c = t * 3, n = B * 3;
+    i.stream.simColors.set(i.stream.baseColors.subarray(c, n), c);
   }
-  A.clearUpdateRanges(), A.addUpdateRange(P * 3, (r - P) * 3), A.needsUpdate = !0, i.stream.greyCursorVertex = t;
+  let s = P * 3, v = r * 3;
+  for (const c of A.updateRanges)
+    s = Math.min(s, c.start), v = Math.max(v, c.start + c.count);
+  A.clearUpdateRanges(), A.addUpdateRange(s, v - s), A.needsUpdate = !0, i.stream.greyCursorVertex = t;
 }
 function LA(i, Q, t) {
   const B = t.render.theme.colors, A = t.mode.laser ? B.laser ?? B.cutting : B.cutting, e = new l.Color(i === "rapid" ? B.rapid : A), P = new Float32Array(Q * 3);
