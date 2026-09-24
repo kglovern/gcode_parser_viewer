@@ -162,8 +162,18 @@ export function applyStreamGreyCursor(args: {
     args.stream.simColors.set(args.stream.baseColors.subarray(startOff, endOff), startOff);
   }
 
+  // Ranges only upload (and get cleared by three.js) on the next render. When rendering
+  // is paused (e.g. the window is backgrounded) several cursor moves can queue up, so
+  // merge with any still-pending range instead of discarding it — otherwise only the
+  // last step reaches the GPU and earlier processed lines keep their original colour.
+  let start = startVertex * 3;
+  let end = endVertex * 3;
+  for (const range of attr.updateRanges) {
+    start = Math.min(start, range.start);
+    end = Math.max(end, range.start + range.count);
+  }
   attr.clearUpdateRanges();
-  attr.addUpdateRange(startVertex * 3, (endVertex - startVertex) * 3);
+  attr.addUpdateRange(start, end - start);
   attr.needsUpdate = true;
   args.stream.greyCursorVertex = next;
 }
