@@ -19,6 +19,18 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Guard against self-dependency
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const name = pkg.name;
+            const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+            if (name in deps) {
+              console.error(`package.json lists itself (${name}) as a dependency`);
+              process.exit(1);
+            }
+          '
+
       - run: npm ci
 
       - run: npm run build
