@@ -1,4 +1,4 @@
-import { ArcMoveCallback, LinearMoveCallback, Position, WorkerGeometryData, LoadWorkerDataOptions } from "./types";
+import { ArcMoveCallback, LinearMoveCallback, Position, WorkerGeometryData, WorkerSegmentsData, LoadWorkerDataOptions } from "./types";
 export type VertexCollector = {
     onLinearMove?: (args: Parameters<LinearMoveCallback>[0], vertices: number[]) => void;
     onArcMove?: (args: Parameters<ArcMoveCallback>[0], vertices: number[]) => void;
@@ -97,6 +97,21 @@ export type WorkerSegmentGroup = {
     rgbColors: Float32Array;
 };
 export declare function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmentGroup[];
+/**
+ * Group a {@link WorkerSegmentsData} toolpath into one flat segment list per
+ * colour for the SVG renderer: rapids in `rapidColor`, cuts in their palette
+ * slot's colour (when the file has toolchanges) or `cutColor`. Laser-off cuts
+ * are left out, as in the 3D view.
+ */
+export declare function buildSegmentsSegmentGroups(data: WorkerSegmentsData, colors: {
+    rapidColor: string;
+    cutColor: string;
+    rapidOpacity?: number;
+}): {
+    hexColor: string;
+    opacity: number;
+    positions: Float32Array;
+}[];
 export type WorkerToolpathStream = {
     positions: Float32Array;
     colors: Float32Array;

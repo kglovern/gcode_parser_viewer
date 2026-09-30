@@ -1,5 +1,5 @@
-import { buildMovementVerticesFromLines, buildWorkerSegmentGroups } from "../../geometry";
-import type { WorkerGeometryData } from "../../types";
+import { buildMovementVerticesFromLines, buildSegmentsSegmentGroups, buildWorkerSegmentGroups } from "../../geometry";
+import type { WorkerGeometryData, WorkerSegmentsData } from "../../types";
 import { GCodeSVGOptions, defaultGCodeSVGOptions } from "./types";
 
 type ViewBox = { x: number; y: number; w: number; h: number };
@@ -157,13 +157,27 @@ export class GCodeSVGRenderer {
   }
 
   loadFromWorkerData(data: WorkerGeometryData): void {
-    const groups = buildWorkerSegmentGroups(data);
-    this.workerMode = true;
-    this.rapidVerts = new Float32Array(0);
-    this.cutVerts = new Float32Array(0);
     // Use the per-group hex color baked by the worker so toolchange palette
     // segments render with distinct colors. setOptions won't overwrite these
     // because applyOptions skips syncSegmentGroupsFromLines in workerMode.
+    this.adoptWorkerGroups(buildWorkerSegmentGroups(data));
+  }
+
+  /**
+   * Load a worker toolpath in its draw layout ({@link WorkerSegmentsData}).
+   * Rapids use `rapidColor` and cuts `cutColor`, or the palette slot colour
+   * when the file has toolchanges; laser-off cuts are not drawn.
+   */
+  loadFromSegments(data: WorkerSegmentsData): void {
+    this.adoptWorkerGroups(
+      buildSegmentsSegmentGroups(data, { rapidColor: this.options.rapidColor, cutColor: this.options.cutColor })
+    );
+  }
+
+  private adoptWorkerGroups(groups: { hexColor: string; opacity: number; positions: Float32Array }[]): void {
+    this.workerMode = true;
+    this.rapidVerts = new Float32Array(0);
+    this.cutVerts = new Float32Array(0);
     this.segmentGroups = groups.map(g => ({
       color: g.hexColor,
       opacity: g.opacity,

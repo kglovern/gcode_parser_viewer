@@ -1,4 +1,4 @@
-import type { LoadWorkerDataOptions, WorkerGeometryData } from "../types";
+import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
 import { GCodeViewerCameraProjection, GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
@@ -27,6 +27,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private bitMarker;
     private preLaserBitType;
     private toolpathStreams;
+    private segmentsToolpath;
     private toolpathCutBucketCount;
     private toolpathRotationA;
     private lastBitPosition;
@@ -171,6 +172,13 @@ export declare class GCodeViewer implements GCodeViewerHandle {
      * before, and only a prefix can be hidden (`hideUntilLine`).
      */
     loadFromWorkerData(data: WorkerGeometryData, options?: LoadWorkerDataOptions): Promise<void>;
+    /**
+     * Load a worker toolpath already in its draw layout ({@link WorkerSegmentsData}).
+     * The transferred buffers become the GPU attributes directly; colours, progress
+     * greying and `lineGroups` visibility are applied in the shader. Line indices for
+     * `hideUntilLine`/`lineGroups` follow `data.prefixEndVertex`.
+     */
+    loadFromSegments(data: WorkerSegmentsData, options?: LoadWorkerDataOptions): Promise<void>;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;

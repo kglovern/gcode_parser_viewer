@@ -1,9 +1,9 @@
-import * as o from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-BUToKZhf.js";
-const G = o.forwardRef(
-  function(u, m) {
-    const { id: a, options: s, callbacks: l, className: f, style: c } = u, i = o.useRef(null), t = o.useRef(null);
-    return o.useEffect(() => {
+import * as n from "react";
+import { a as w, G as C } from "./GCodeSVGRenderer-CtpHWvGY.js";
+const g = n.forwardRef(
+  function(c, m) {
+    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), t = n.useRef(null);
+    return n.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
@@ -11,13 +11,13 @@ const G = o.forwardRef(
       return t.current = d, () => {
         t.current = null, d.dispose();
       };
-    }, [a]), o.useEffect(() => {
+    }, [a]), n.useEffect(() => {
       var e;
       (e = t.current) == null || e.setOptions(s ?? {});
-    }, [s]), o.useEffect(() => {
+    }, [s]), n.useEffect(() => {
       var e;
       (e = t.current) == null || e.setCallbacks(l ?? {});
-    }, [l]), o.useImperativeHandle(
+    }, [l]), n.useImperativeHandle(
       m,
       () => {
         const e = () => {
@@ -33,8 +33,8 @@ const G = o.forwardRef(
           setCallbacks(r) {
             e().setCallbacks(r);
           },
-          snapCameraToView(r, n) {
-            e().snapCameraToView(r, n);
+          snapCameraToView(r, o) {
+            e().snapCameraToView(r, o);
           },
           setCameraProjection(r) {
             e().setCameraProjection(r);
@@ -48,14 +48,14 @@ const G = o.forwardRef(
           setCameraFollowEnabled(r) {
             e().setCameraFollowEnabled(r);
           },
-          screenToWorld(r, n, p) {
-            return e().screenToWorld(r, n, p);
+          screenToWorld(r, o, p) {
+            return e().screenToWorld(r, o, p);
           },
-          worldToScreen(r, n, p) {
-            return e().worldToScreen(r, n, p);
+          worldToScreen(r, o, p) {
+            return e().worldToScreen(r, o, p);
           },
-          setBitPosition(r, n) {
-            e().setBitPosition(r, n);
+          setBitPosition(r, o) {
+            e().setBitPosition(r, o);
           },
           setBitVisible(r) {
             e().setBitVisible(r);
@@ -66,11 +66,11 @@ const G = o.forwardRef(
           setToolpathRotationA(r) {
             e().setToolpathRotationA(r);
           },
-          hideUntilLine(r, n) {
-            e().hideUntilLine(r, n);
+          hideUntilLine(r, o) {
+            e().hideUntilLine(r, o);
           },
-          seekToLine(r, n) {
-            e().seekToLine(r, n);
+          seekToLine(r, o) {
+            e().seekToLine(r, o);
           },
           showAll() {
             e().showAll();
@@ -78,8 +78,8 @@ const G = o.forwardRef(
           resetColors() {
             e().resetColors();
           },
-          loadFromUrl(r, n) {
-            return e().loadFromUrl(r, n);
+          loadFromUrl(r, o) {
+            return e().loadFromUrl(r, o);
           },
           loadFromFile(r) {
             return e().loadFromFile(r);
@@ -92,6 +92,9 @@ const G = o.forwardRef(
           },
           loadFromWorkerData(r) {
             return e().loadFromWorkerData(r);
+          },
+          loadFromSegments(r, o) {
+            return e().loadFromSegments(r, o);
           },
           unload() {
             e().unload();
@@ -120,22 +123,22 @@ const G = o.forwardRef(
         };
       },
       [a]
-    ), o.createElement("div", { ref: i, className: f, style: c });
+    ), n.createElement("div", { ref: i, className: f, style: u });
   }
-), R = o.forwardRef(
-  function(u, m) {
-    const { id: a, options: s, className: l, style: f } = u, c = o.useRef(null), i = o.useRef(null);
-    return o.useEffect(() => {
-      const t = c.current;
+), G = n.forwardRef(
+  function(c, m) {
+    const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
+    return n.useEffect(() => {
+      const t = u.current;
       if (!t) return;
       const e = new C(t, s);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
-    }, []), o.useEffect(() => {
+    }, []), n.useEffect(() => {
       var t;
       s && ((t = i.current) == null || t.setOptions(s));
-    }, [s]), o.useImperativeHandle(m, () => {
+    }, [s]), n.useImperativeHandle(m, () => {
       const t = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
@@ -146,6 +149,7 @@ const G = o.forwardRef(
         loadFromFile: (e) => t().loadFromFile(e),
         loadFromText: (e) => t().loadFromText(e),
         loadFromWorkerData: (e) => t().loadFromWorkerData(e),
+        loadFromSegments: (e) => t().loadFromSegments(e),
         loadFromPrecomputedGroups: (e, d) => t().loadFromPrecomputedGroups(e, d),
         clear: () => t().clear(),
         resetView: () => t().resetView(),
@@ -156,14 +160,14 @@ const G = o.forwardRef(
         getSVGElement: () => t().getSVGElement(),
         dispose: () => t().dispose()
       };
-    }, []), o.createElement("div", {
-      ref: c,
+    }, []), n.createElement("div", {
+      ref: u,
       className: l,
       style: { width: "100%", height: "100%", ...f }
     });
   }
 );
 export {
-  R as GCodeSVGVisualizer,
-  G as GCodeVisualizer
+  G as GCodeSVGVisualizer,
+  g as GCodeVisualizer
 };

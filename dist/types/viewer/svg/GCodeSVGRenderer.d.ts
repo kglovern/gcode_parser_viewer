@@ -1,4 +1,4 @@
-import type { WorkerGeometryData } from "../../types";
+import type { WorkerGeometryData, WorkerSegmentsData } from "../../types";
 import { GCodeSVGOptions } from "./types";
 export declare class GCodeSVGRenderer {
     private svg;
@@ -42,6 +42,13 @@ export declare class GCodeSVGRenderer {
     loadFromText(gcode: string): void;
     clear(): void;
     loadFromWorkerData(data: WorkerGeometryData): void;
+    /**
+     * Load a worker toolpath in its draw layout ({@link WorkerSegmentsData}).
+     * Rapids use `rapidColor` and cuts `cutColor`, or the palette slot colour
+     * when the file has toolchanges; laser-off cuts are not drawn.
+     */
+    loadFromSegments(data: WorkerSegmentsData): void;
+    private adoptWorkerGroups;
     loadFromPrecomputedGroups(groups: {
         hexColor: string;
         opacity: number;

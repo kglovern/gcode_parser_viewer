@@ -348,6 +348,38 @@ await viewer.loadFromWorkerData(workerData);
 
 > **Note:** `seekToLine()` and `hideUntilLine()` are no-ops when data is loaded this way, because per-line vertex ranges are not included in the worker response. Pass GCode text to `loadFromLines()` if you need those features.
 
+##### Loading a worker toolpath in its draw layout (`segments-v1`)
+
+`loadFromSegments` takes a toolpath a worker has already laid out for drawing, so nothing is copied or re-packed on the main thread. Each chunk's buffers become a `LineSegments`' attributes as-is; colour, laser power shading, progress greying and line-group hiding happen in the shader. Use it in preference to `loadFromWorkerData` for large files.
+
+```ts
+import type { WorkerSegmentsData } from "@sienci/gviewer/viewer";
+import { SEGMENT_ATTR_RAPID } from "@sienci/gviewer/viewer";
+
+const data: WorkerSegmentsData = {
+  format: "segments-v1",
+  chunks: [
+    {
+      positions, // ArrayBuffer, Float32 x,y,z per vertex as segment pairs (v0,v1)(v2,v3)…
+      attrs,     // ArrayBuffer, Uint8 per vertex: SEGMENT_ATTR_RAPID (0x80) | palette slot
+      power,     // optional ArrayBuffer, Float32 per vertex (laser power, 0 = off)
+      vertexCount,
+    },
+  ],
+  totalVertices,
+  prefixEndVertex, // ArrayBuffer, Uint32 per line: vertices emitted through that line
+  paletteHex: ["#3e85c7", "#4A90E2", /* … */], // slot k -> colour, used when toolchangeCount > 0
+  toolchangeCount,
+  isLaser,
+  maxPower,
+};
+
+await viewer.loadFromSegments(data, { lineGroups: [{ start: 0, end: 120 }] });
+viewer.hideUntilLine(lineIndex, "grey"); // greys lines 0..lineIndex (inclusive)
+```
+
+Line indices follow `prefixEndVertex`, the same "vertices after line i" convention as the text-loading path, so `hideUntilLine` and `lineGroups` work here too. Without toolchanges, cuts use the theme's cutting colour (or laser colour in laser mode) and rapids the theme's rapid colour, so theme changes apply without reloading. In laser files a cut's opacity is its power relative to `maxPower`, and laser-off cuts are not drawn. `GCodeSVGRenderer.loadFromSegments` draws the same data in the SVG view.
+
 ##### Camera
 
 ```ts

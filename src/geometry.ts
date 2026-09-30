@@ -1,4 +1,14 @@
-import { ArcMoveCallback, LinearMoveCallback, PlaneMode, Position, WorkerGeometryData, LoadWorkerDataOptions } from "./types";
+import {
+  ArcMoveCallback,
+  LinearMoveCallback,
+  PlaneMode,
+  Position,
+  SEGMENT_ATTR_RAPID,
+  SEGMENT_ATTR_SLOT_MASK,
+  WorkerGeometryData,
+  WorkerSegmentsData,
+  LoadWorkerDataOptions,
+} from "./types";
 import { GCodeParser } from "./parser";
 import { GCodeVirtualizer } from "./virtualizer";
 
@@ -838,6 +848,54 @@ export function buildWorkerSegmentGroups(data: WorkerGeometryData): WorkerSegmen
     positions: new Float32Array(pos),
     rgbColors: new Float32Array(rgb),
   }));
+}
+
+/**
+ * Group a {@link WorkerSegmentsData} toolpath into one flat segment list per
+ * colour for the SVG renderer: rapids in `rapidColor`, cuts in their palette
+ * slot's colour (when the file has toolchanges) or `cutColor`. Laser-off cuts
+ * are left out, as in the 3D view.
+ */
+export function buildSegmentsSegmentGroups(
+  data: WorkerSegmentsData,
+  colors: { rapidColor: string; cutColor: string; rapidOpacity?: number }
+): { hexColor: string; opacity: number; positions: Float32Array }[] {
+  const palette = (data.toolchangeCount ?? 0) > 0 ? data.paletteHex : undefined;
+  const usePower = Boolean(data.isLaser);
+  const keyOf = (attr: number): number => ((attr & SEGMENT_ATTR_RAPID) !== 0 ? -1 : attr & SEGMENT_ATTR_SLOT_MASK);
+
+  // Two passes (count, then fill) so each group is sized exactly once.
+  const counts = new Map<number, number>();
+  for (const chunk of data.chunks) {
+    const attrs = new Uint8Array(chunk.attrs, 0, chunk.vertexCount);
+    const power = usePower && chunk.power ? new Float32Array(chunk.power, 0, chunk.vertexCount) : null;
+    for (let v = 0; v < chunk.vertexCount; v += 2) {
+      const attr = attrs[v];
+      if (power && (attr & SEGMENT_ATTR_RAPID) === 0 && power[v] === 0) continue;
+      const key = keyOf(attr);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+
+  const groups = new Map<number, { hexColor: string; opacity: number; positions: Float32Array; length: number }>();
+  for (const [key, segments] of counts) {
+    const hexColor = key < 0 ? colors.rapidColor : palette?.[key] ?? colors.cutColor;
+    const opacity = key < 0 ? colors.rapidOpacity ?? 0.5 : 1;
+    groups.set(key, { hexColor, opacity, positions: new Float32Array(segments * 6), length: 0 });
+  }
+  for (const chunk of data.chunks) {
+    const positions = new Float32Array(chunk.positions, 0, chunk.vertexCount * 3);
+    const attrs = new Uint8Array(chunk.attrs, 0, chunk.vertexCount);
+    const power = usePower && chunk.power ? new Float32Array(chunk.power, 0, chunk.vertexCount) : null;
+    for (let v = 0; v < chunk.vertexCount; v += 2) {
+      const attr = attrs[v];
+      if (power && (attr & SEGMENT_ATTR_RAPID) === 0 && power[v] === 0) continue;
+      const group = groups.get(keyOf(attr))!;
+      group.positions.set(positions.subarray(v * 3, v * 3 + 6), group.length);
+      group.length += 6;
+    }
+  }
+  return Array.from(groups.values()).map(({ hexColor, opacity, positions }) => ({ hexColor, opacity, positions }));
 }
 
 function workerRgbToHex(r: number, g: number, b: number): string {

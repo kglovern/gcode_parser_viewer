@@ -93,6 +93,51 @@ export type WorkerGeometryData = {
   toolchangeCount?: number;
 };
 
+/** Bit 7 of a segments vertex attribute: the vertex belongs to a rapid (G0) move. */
+export const SEGMENT_ATTR_RAPID = 0x80;
+/** Bits 0-6 of a segments vertex attribute: the palette slot of a cutting move. */
+export const SEGMENT_ATTR_SLOT_MASK = 0x7f;
+
+/**
+ * One drawable chunk of a {@link WorkerSegmentsData} toolpath. Chunks never
+ * split a segment, so each is uploaded as its own `LineSegments`.
+ */
+export type WorkerSegmentsChunk = {
+  /** Float32 x,y,z per vertex, as segment pairs (v0,v1)(v2,v3)… */
+  positions: ArrayBuffer;
+  /** Uint8 per vertex: {@link SEGMENT_ATTR_RAPID} | palette slot. */
+  attrs: ArrayBuffer;
+  /** Float32 per vertex, laser files only: laser power (S), 0 when off. */
+  power?: ArrayBuffer;
+  vertexCount: number;
+};
+
+/**
+ * Worker toolpath in its final draw layout. The buffers are uploaded as-is,
+ * colour and progress greying are resolved in the shader, and nothing is
+ * re-packed on the main thread.
+ *
+ * Line indexing is the same as the text-loading path: `prefixEndVertex[i]` is
+ * the number of vertices emitted through line `i` (0-based), and
+ * `hideUntilLine(i)` / `lineGroups` use those same line indices.
+ */
+export type WorkerSegmentsData = {
+  format: "segments-v1";
+  chunks: readonly WorkerSegmentsChunk[];
+  totalVertices: number;
+  /** Uint32 per line: cumulative vertex count after that line. */
+  prefixEndVertex: ArrayBuffer;
+  /**
+   * Hex colour per palette slot. Used when `toolchangeCount > 0`; otherwise
+   * cutting moves take the theme's cutting (or, in laser mode, laser) colour.
+   */
+  paletteHex?: readonly string[];
+  toolchangeCount?: number;
+  isLaser?: boolean;
+  /** Highest `power` in the file; power is drawn as opacity relative to it. */
+  maxPower?: number;
+};
+
 /**
  * An inclusive range of source lines the host wants to show or hide as a unit,
  * e.g. everything cut with one tool.

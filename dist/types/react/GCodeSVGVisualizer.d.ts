@@ -1,11 +1,12 @@
 import * as React from "react";
 import type { GCodeSVGOptions } from "../viewer/svg/types";
-import type { WorkerGeometryData } from "../types";
+import type { WorkerGeometryData, WorkerSegmentsData } from "../types";
 export type GCodeSVGRendererHandle = {
     loadFromLines(lines: string[]): void;
     loadFromFile(file: File): Promise<void>;
     loadFromText(gcode: string): void;
     loadFromWorkerData(data: WorkerGeometryData): void;
+    loadFromSegments(data: WorkerSegmentsData): void;
     loadFromPrecomputedGroups(groups: {
         hexColor: string;
         opacity: number;

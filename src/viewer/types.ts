@@ -1,4 +1,4 @@
-import type { WorkerGeometryData } from "../types";
+import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
 
 export type GridUnits = "mm" | "in";
 
@@ -207,6 +207,7 @@ export type GCodeViewerHandle = {
   loadFromText(gcode: string): Promise<void>;
   loadFromLines(lines: readonly string[]): Promise<void>;
   loadFromWorkerData(data: WorkerGeometryData): Promise<void>;
+  loadFromSegments(data: WorkerSegmentsData, options?: LoadWorkerDataOptions): Promise<void>;
   unload(): void;
   setOptions(next: Partial<GCodeViewerOptions>): void;
   getOptions(): Readonly<GCodeViewerOptions>;

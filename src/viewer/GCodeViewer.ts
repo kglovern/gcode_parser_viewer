@@ -4,7 +4,7 @@ import {
   buildToolpathGeometryFromLinesBatched,
   buildWorkerToolpathStreams,
 } from "../geometry";
-import type { LoadWorkerDataOptions, WorkerGeometryData } from "../types";
+import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
 import { GCodeVirtualizer } from "../virtualizer";
 import {
   applyStreamGreyCursor,
@@ -14,6 +14,18 @@ import {
   refreshToolpathStreamOpacities,
   type ToolpathStreamState,
 } from "./toolpath/streams";
+import {
+  applySegmentsTheme,
+  createSegmentsToolpath,
+  disposeSegmentsToolpath,
+  resetSegmentsColors,
+  setSegmentsLineGroupVisible,
+  setSegmentsProgress,
+  setSegmentsVisible,
+  showAllSegments,
+  showAllSegmentsLineGroups,
+  type SegmentsToolpathState,
+} from "./toolpath/segments";
 import {
   defaultGCodeViewerOptions,
   GCodeViewerBitType,
@@ -115,6 +127,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   private preLaserBitType: GCodeViewerBitType = "drill";
 
   private toolpathStreams: ToolpathStreamState[] = [];
+  private segmentsToolpath: SegmentsToolpathState | null = null;
   private toolpathCutBucketCount = 1;
   private toolpathRotationA = 0;
 
@@ -351,6 +364,10 @@ export class GCodeViewer implements GCodeViewerHandle {
     const resolvedMode = mode ?? this.options.progress.mode;
     const index = Math.floor(lineIndex);
 
+    if (this.segmentsToolpath) {
+      setSegmentsProgress(this.segmentsToolpath, index, resolvedMode);
+    }
+
     for (const stream of this.toolpathStreams) {
       const cursor =
         index < 0 ? 0 : stream.prefixEndVertex[Math.min(index, stream.prefixEndVertex.length - 1)];
@@ -387,6 +404,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   showAll(): void {
+    if (this.segmentsToolpath) {
+      showAllSegments(this.segmentsToolpath);
+    }
     for (const stream of this.toolpathStreams) {
       stream.line.geometry.setDrawRange(0, stream.totalVertices);
     }
@@ -406,6 +426,9 @@ export class GCodeViewer implements GCodeViewerHandle {
    * lines outside every group, which has no index and is always visible.
    */
   setLineGroupVisible(groupIndex: number, visible: boolean): void {
+    if (this.segmentsToolpath) {
+      setSegmentsLineGroupVisible(this.segmentsToolpath, groupIndex, visible);
+    }
     for (const stream of this.toolpathStreams) {
       if (stream.lineGroupIndex === groupIndex) {
         stream.line.visible = visible;
@@ -414,12 +437,18 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   showAllLineGroups(): void {
+    if (this.segmentsToolpath) {
+      showAllSegmentsLineGroups(this.segmentsToolpath);
+    }
     for (const stream of this.toolpathStreams) {
       stream.line.visible = true;
     }
   }
 
   resetColors(): void {
+    if (this.segmentsToolpath) {
+      resetSegmentsColors(this.segmentsToolpath);
+    }
     for (const stream of this.toolpathStreams) {
       stream.greyCursorVertex = 0;
       stream.simColors.set(stream.baseColors);
@@ -743,6 +772,30 @@ export class GCodeViewer implements GCodeViewerHandle {
       })),
       cutBucketCount: 1,
     });
+  }
+
+  /**
+   * Load a worker toolpath already in its draw layout ({@link WorkerSegmentsData}).
+   * The transferred buffers become the GPU attributes directly; colours, progress
+   * greying and `lineGroups` visibility are applied in the shader. Line indices for
+   * `hideUntilLine`/`lineGroups` follow `data.prefixEndVertex`.
+   */
+  async loadFromSegments(data: WorkerSegmentsData, options?: LoadWorkerDataOptions): Promise<void> {
+    this.currentLines = [];
+    // Free the previous toolpath before adopting the new one, so the two are
+    // never resident together.
+    this.setGeometryEmpty();
+    const { state, bounds } = createSegmentsToolpath({
+      data,
+      options: this.options,
+      parent: this.toolpathRoot,
+      lineGroups: options?.lineGroups,
+    });
+    this.segmentsToolpath = state;
+    this.currentBounds = bounds ? bounds.clone() : null;
+    this.emitBoundsChanged();
+    this.refreshBoundingBox();
+    this.setToolpathRotationA(this.toolpathRotationA);
   }
 
   unload(): void {
@@ -1193,6 +1246,10 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setSim3dHandle(null);
     disposeToolpathStreams(this.toolpathRoot as unknown as THREE.Scene, this.toolpathStreams);
     this.toolpathStreams = [];
+    if (this.segmentsToolpath) {
+      disposeSegmentsToolpath(this.toolpathRoot, this.segmentsToolpath);
+      this.segmentsToolpath = null;
+    }
     this.toolpathCutBucketCount = 1;
     this.linePositions = null;
     this.currentBounds = null;
@@ -1249,9 +1306,15 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   private refreshToolpathColors(): void {
     refreshToolpathStreamColors(this.toolpathStreams, this.options);
+    if (this.segmentsToolpath) {
+      applySegmentsTheme(this.segmentsToolpath, this.options);
+    }
   }
 
   private refreshToolpathOpacities(): void {
+    if (this.segmentsToolpath) {
+      applySegmentsTheme(this.segmentsToolpath, this.options);
+    }
     refreshToolpathStreamOpacities({
       streams: this.toolpathStreams,
       options: this.options,
@@ -1387,6 +1450,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   private setToolpathStreamsVisible(visible: boolean): void {
     for (const stream of this.toolpathStreams) {
       stream.line.visible = visible;
+    }
+    if (this.segmentsToolpath) {
+      setSegmentsVisible(this.segmentsToolpath, visible);
     }
   }
 
