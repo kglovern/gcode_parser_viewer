@@ -10,6 +10,11 @@ import type { GCodeViewerOptions } from "../types";
  * for laser files, a per-vertex power value; progress greying and line-group
  * hiding are uniforms compared against `gl_VertexID`, so neither rewrites or
  * re-uploads any vertex data.
+ *
+ * Each chunk is drawn in two passes over the same geometry: cuts, then rapids
+ * (renderOrder). Drawn in file order in one pass, an early rapid would write
+ * depth and hide the cuts under it, instead of the translucent rapid blending
+ * over them as the separate rapid/cut streams always did.
  */
 /** Palette slots the shader can colour; higher slots reuse the last one. */
 export declare const SEGMENT_PALETTE_SLOTS = 32;
@@ -32,7 +37,11 @@ type ChunkUniforms = {
     uSegHidden: Uniform<THREE.Vector2[]>;
 };
 export type SegmentsChunkState = {
-    line: THREE.LineSegments;
+    geometry: THREE.BufferGeometry;
+    /** Draws only the cutting segments. */
+    cutLine: THREE.LineSegments;
+    /** Draws only the rapid segments, after every cut pass. */
+    rapidLine: THREE.LineSegments;
     /** Index of this chunk's first vertex in the whole toolpath. */
     base: number;
     count: number;
@@ -48,6 +57,8 @@ export type SegmentsToolpathState = {
     lineGroupRanges: readonly (readonly [number, number])[];
     hiddenGroups: Set<number>;
 };
+/** Draws rapids after all cuts, so their opacity blends over the cuts below. */
+export declare const SEGMENT_RAPID_RENDER_ORDER = 1;
 /** Theme and palette colours/opacities into the shared uniforms. */
 export declare function applySegmentsTheme(state: Pick<SegmentsToolpathState, "shared" | "paletteHex">, options: Readonly<GCodeViewerOptions>): void;
 export declare function createSegmentsToolpath(args: {

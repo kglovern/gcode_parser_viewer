@@ -53,13 +53,19 @@ describe("createSegmentsToolpath", () => {
     const data = twoChunkData();
     const { parent, state, bounds } = load(data);
 
-    expect(parent.children).toHaveLength(2);
+    // Two passes (cuts, then rapids) per chunk over one shared geometry.
+    expect(parent.children).toHaveLength(4);
+    for (const c of state.chunks) {
+      expect(c.cutLine.geometry).toBe(c.geometry);
+      expect(c.rapidLine.geometry).toBe(c.geometry);
+      expect(c.rapidLine.renderOrder).toBeGreaterThan(c.cutLine.renderOrder);
+    }
     expect(state.chunks.map((c) => [c.base, c.count])).toEqual([
       [0, 6],
       [6, 4],
     ]);
-    const position = state.chunks[0].line.geometry.getAttribute("position") as THREE.BufferAttribute;
-    const attr = state.chunks[1].line.geometry.getAttribute("aSegAttr") as THREE.BufferAttribute;
+    const position = state.chunks[0].geometry.getAttribute("position") as THREE.BufferAttribute;
+    const attr = state.chunks[1].geometry.getAttribute("aSegAttr") as THREE.BufferAttribute;
     expect((position.array as Float32Array).buffer).toBe(data.chunks[0].positions);
     expect((attr.array as Uint8Array).buffer).toBe(data.chunks[1].attrs);
     expect(bounds?.min.toArray()).toEqual([0, 0, 0]);
@@ -67,9 +73,9 @@ describe("createSegmentsToolpath", () => {
   });
 
   it("only adds the power attribute for laser files", () => {
-    expect(load(twoChunkData()).state.chunks[0].line.geometry.getAttribute("aSegPower")).toBeUndefined();
+    expect(load(twoChunkData()).state.chunks[0].geometry.getAttribute("aSegPower")).toBeUndefined();
     const laser = load(twoChunkData({ isLaser: true, maxPower: 1000 }));
-    expect(laser.state.chunks[0].line.geometry.getAttribute("aSegPower")).toBeDefined();
+    expect(laser.state.chunks[0].geometry.getAttribute("aSegPower")).toBeDefined();
     expect(laser.state.shared.uSegMaxPower.value).toBe(1000);
     expect(load(twoChunkData({ isLaser: true, maxPower: 0.5 })).state.shared.uSegMaxPower.value).toBe(0.5);
     expect(load(twoChunkData({ isLaser: true, maxPower: 0 })).state.shared.uSegMaxPower.value).toBe(1);
@@ -84,9 +90,30 @@ describe("createSegmentsToolpath", () => {
 });
 
 describe("segments shader injection", () => {
+  const compile = (material: THREE.LineBasicMaterial) => {
+    const shader = {
+      uniforms: {},
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+    } as unknown as THREE.WebGLProgramParametersWithUniforms;
+    material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    return shader;
+  };
+
+  it("draws cuts and rapids in separate passes of the same program source", () => {
+    const { state } = load(twoChunkData());
+    const cut = state.chunks[0].cutLine.material as THREE.LineBasicMaterial;
+    const rapid = state.chunks[0].rapidLine.material as THREE.LineBasicMaterial;
+    expect(cut.defines).toEqual({});
+    expect(rapid.defines).toEqual({ SEG_PASS_RAPID: "" });
+    expect(cut.customProgramCacheKey()).toBe("gviewer-segments-v1-cut");
+    expect(rapid.customProgramCacheKey()).toBe("gviewer-segments-v1-rapid");
+    expect(compile(rapid).vertexShader).toContain("#ifdef SEG_PASS_RAPID");
+  });
+
   it("finds its hook points in three's basic line shader", () => {
     const { state } = load(twoChunkData({ isLaser: true }));
-    const material = state.chunks[0].line.material as THREE.LineBasicMaterial;
+    const material = state.chunks[0].cutLine.material as THREE.LineBasicMaterial;
     const shader = {
       uniforms: {},
       vertexShader: THREE.ShaderLib.basic.vertexShader,
@@ -102,7 +129,7 @@ describe("segments shader injection", () => {
       expect.arrayContaining(["uSegSlotColors", "uSegCursor", "uSegHidden", "uSegMaxPower"])
     );
     expect(material.defines).toEqual({ SEG_USE_POWER: "" });
-    expect(material.customProgramCacheKey()).toBe("gviewer-segments-v1-power");
+    expect(material.customProgramCacheKey()).toBe("gviewer-segments-v1-cut-power");
   });
 });
 
@@ -126,7 +153,7 @@ describe("segments progress", () => {
   it("hides through a line with the draw range", () => {
     const { state } = load(twoChunkData());
     setSegmentsProgress(state, 1, "hide"); // 4 vertices hidden
-    expect(state.chunks.map((c) => [c.line.geometry.drawRange.start, c.line.geometry.drawRange.count])).toEqual([
+    expect(state.chunks.map((c) => [c.geometry.drawRange.start, c.geometry.drawRange.count])).toEqual([
       [4, 2],
       [0, 4],
     ]);

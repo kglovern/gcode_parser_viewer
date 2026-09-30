@@ -16,6 +16,11 @@ import { processedRgb } from "./streams";
  * for laser files, a per-vertex power value; progress greying and line-group
  * hiding are uniforms compared against `gl_VertexID`, so neither rewrites or
  * re-uploads any vertex data.
+ *
+ * Each chunk is drawn in two passes over the same geometry: cuts, then rapids
+ * (renderOrder). Drawn in file order in one pass, an early rapid would write
+ * depth and hide the cuts under it, instead of the translucent rapid blending
+ * over them as the separate rapid/cut streams always did.
  */
 
 /** Palette slots the shader can colour; higher slots reuse the last one. */
@@ -41,7 +46,11 @@ type ChunkUniforms = {
 };
 
 export type SegmentsChunkState = {
-  line: THREE.LineSegments;
+  geometry: THREE.BufferGeometry;
+  /** Draws only the cutting segments. */
+  cutLine: THREE.LineSegments;
+  /** Draws only the rapid segments, after every cut pass. */
+  rapidLine: THREE.LineSegments;
   /** Index of this chunk's first vertex in the whole toolpath. */
   base: number;
   count: number;
@@ -104,6 +113,13 @@ for ( int i = 0; i < ${SEGMENT_MAX_HIDDEN_RANGES}; i++ ) {
   }
 }
 vSegColor = vec4( segColor, segAlpha );
+// Each pass draws one kind; the other kind's segments are moved outside the
+// clip volume so they are dropped before rasterising.
+#ifdef SEG_PASS_RAPID
+if ( !segRapid ) gl_Position = vec4( 2.0, 2.0, 2.0, 1.0 );
+#else
+if ( segRapid ) gl_Position = vec4( 2.0, 2.0, 2.0, 1.0 );
+#endif
 `;
 
 const FRAGMENT_DECLARATIONS = /* glsl */ `
@@ -113,15 +129,24 @@ varying float vSegHidden;
 
 const FRAGMENT_DIFFUSE = "vec4 diffuseColor = vec4( diffuse, opacity );";
 
+/** Draws rapids after all cuts, so their opacity blends over the cuts below. */
+export const SEGMENT_RAPID_RENDER_ORDER = 1;
+
 function createSegmentsMaterial(
   shared: SharedUniforms,
   chunk: ChunkUniforms,
-  usePower: boolean
+  usePower: boolean,
+  pass: "cut" | "rapid"
 ): THREE.LineBasicMaterial {
   const material = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true });
+  const defines: Record<string, string> = {};
   if (usePower) {
-    material.defines = { SEG_USE_POWER: "" };
+    defines.SEG_USE_POWER = "";
   }
+  if (pass === "rapid") {
+    defines.SEG_PASS_RAPID = "";
+  }
+  material.defines = defines;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, shared, chunk);
     shader.vertexShader = shader.vertexShader
@@ -131,8 +156,9 @@ function createSegmentsMaterial(
       .replace("#include <common>", `#include <common>\n${FRAGMENT_DECLARATIONS}`)
       .replace(FRAGMENT_DIFFUSE, "if ( vSegHidden > 0.5 ) discard;\n\tvec4 diffuseColor = vSegColor;");
   };
-  // Every chunk compiles to the same program; only uniform values differ.
-  material.customProgramCacheKey = () => (usePower ? "gviewer-segments-v1-power" : "gviewer-segments-v1");
+  // Every chunk compiles to one program per pass; only uniform values differ.
+  const cacheKey = `gviewer-segments-v1-${pass}${usePower ? "-power" : ""}`;
+  material.customProgramCacheKey = () => cacheKey;
   return material;
 }
 
@@ -233,9 +259,11 @@ export function createSegmentsToolpath(args: {
         value: Array.from({ length: SEGMENT_MAX_HIDDEN_RANGES }, () => new THREE.Vector2()),
       },
     };
-    const line = new THREE.LineSegments(geometry, createSegmentsMaterial(shared, uniforms, usePower));
-    parent.add(line);
-    chunks.push({ line, base, count, uniforms });
+    const cutLine = new THREE.LineSegments(geometry, createSegmentsMaterial(shared, uniforms, usePower, "cut"));
+    const rapidLine = new THREE.LineSegments(geometry, createSegmentsMaterial(shared, uniforms, usePower, "rapid"));
+    rapidLine.renderOrder = SEGMENT_RAPID_RENDER_ORDER;
+    parent.add(cutLine, rapidLine);
+    chunks.push({ geometry, cutLine, rapidLine, base, count, uniforms });
 
     if (geometry.boundingBox) {
       bounds = bounds ? bounds.union(geometry.boundingBox) : geometry.boundingBox.clone();
@@ -258,9 +286,10 @@ export function createSegmentsToolpath(args: {
 
 export function disposeSegmentsToolpath(parent: THREE.Object3D, state: SegmentsToolpathState): void {
   for (const chunk of state.chunks) {
-    parent.remove(chunk.line);
-    chunk.line.geometry.dispose();
-    (chunk.line.material as THREE.Material).dispose();
+    parent.remove(chunk.cutLine, chunk.rapidLine);
+    chunk.geometry.dispose();
+    (chunk.cutLine.material as THREE.Material).dispose();
+    (chunk.rapidLine.material as THREE.Material).dispose();
   }
   state.chunks = [];
 }
@@ -288,10 +317,10 @@ export function setSegmentsProgress(
   for (const chunk of state.chunks) {
     const local = Math.max(0, Math.min(chunk.count, cursor - chunk.base));
     if (mode === "grey") {
-      chunk.line.geometry.setDrawRange(0, chunk.count);
+      chunk.geometry.setDrawRange(0, chunk.count);
       chunk.uniforms.uSegCursor.value = local;
     } else {
-      chunk.line.geometry.setDrawRange(local, chunk.count - local);
+      chunk.geometry.setDrawRange(local, chunk.count - local);
     }
   }
 }
@@ -299,7 +328,7 @@ export function setSegmentsProgress(
 /** Draw every vertex again (progress "hide" undone); greying is kept. */
 export function showAllSegments(state: SegmentsToolpathState): void {
   for (const chunk of state.chunks) {
-    chunk.line.geometry.setDrawRange(0, chunk.count);
+    chunk.geometry.setDrawRange(0, chunk.count);
   }
 }
 
@@ -359,6 +388,7 @@ export function showAllSegmentsLineGroups(state: SegmentsToolpathState): void {
 
 export function setSegmentsVisible(state: SegmentsToolpathState, visible: boolean): void {
   for (const chunk of state.chunks) {
-    chunk.line.visible = visible;
+    chunk.cutLine.visible = visible;
+    chunk.rapidLine.visible = visible;
   }
 }
