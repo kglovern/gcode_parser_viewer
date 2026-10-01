@@ -5,7 +5,7 @@ import {
   type WorkerSegmentsData,
 } from "../../types";
 import type { GCodeViewerOptions } from "../types";
-import { processedRgb } from "./streams";
+import { plannedRgb, processedRgb } from "./streams";
 
 /**
  * Toolpath drawn straight from worker "segments-v1" buffers.
@@ -34,6 +34,7 @@ type SharedUniforms = {
   uSegSlotColors: Uniform<THREE.Color[]>;
   uSegRapidColor: Uniform<THREE.Color>;
   uSegProcessedColor: Uniform<THREE.Color>;
+  uSegPlannedColor: Uniform<THREE.Color>;
   uSegRapidOpacity: Uniform<number>;
   uSegCutOpacity: Uniform<number>;
   uSegMaxPower: Uniform<number>;
@@ -41,6 +42,8 @@ type SharedUniforms = {
 
 type ChunkUniforms = {
   uSegCursor: Uniform<number>;
+  /** Vertex index through the acked-but-not-cut ("planned") boundary; exclusive. */
+  uSegPlannedEnd: Uniform<number>;
   uSegHiddenCount: Uniform<number>;
   uSegHidden: Uniform<THREE.Vector2[]>;
 };
@@ -76,10 +79,12 @@ attribute float aSegPower;
 uniform vec3 uSegSlotColors[ ${SEGMENT_PALETTE_SLOTS} ];
 uniform vec3 uSegRapidColor;
 uniform vec3 uSegProcessedColor;
+uniform vec3 uSegPlannedColor;
 uniform float uSegRapidOpacity;
 uniform float uSegCutOpacity;
 uniform float uSegMaxPower;
 uniform float uSegCursor;
+uniform float uSegPlannedEnd;
 uniform int uSegHiddenCount;
 uniform vec2 uSegHidden[ ${SEGMENT_MAX_HIDDEN_RANGES} ];
 varying vec4 vSegColor;
@@ -105,6 +110,8 @@ if ( !segRapid ) {
 #endif
 if ( segVertex < uSegCursor ) {
   segColor = uSegProcessedColor;
+} else if ( segVertex < uSegPlannedEnd ) {
+  segColor = uSegPlannedColor;
 }
 for ( int i = 0; i < ${SEGMENT_MAX_HIDDEN_RANGES}; i++ ) {
   if ( i >= uSegHiddenCount ) break;
@@ -188,6 +195,8 @@ export function applySegmentsTheme(
   shared.uSegRapidColor.value.set(options.render.theme.colors.rapid);
   const processed = processedRgb(options);
   shared.uSegProcessedColor.value.setRGB(processed.r, processed.g, processed.b);
+  const planned = plannedRgb(options);
+  shared.uSegPlannedColor.value.setRGB(planned.r, planned.g, planned.b);
   shared.uSegRapidOpacity.value = clamp01(options.render.theme.rapidOpacity ?? 0.3);
   shared.uSegCutOpacity.value = clamp01(options.render.theme.opacity);
 }
@@ -225,6 +234,7 @@ export function createSegmentsToolpath(args: {
     uSegSlotColors: { value: Array.from({ length: SEGMENT_PALETTE_SLOTS }, () => new THREE.Color()) },
     uSegRapidColor: { value: new THREE.Color() },
     uSegProcessedColor: { value: new THREE.Color() },
+    uSegPlannedColor: { value: new THREE.Color() },
     uSegRapidOpacity: { value: 0.3 },
     uSegCutOpacity: { value: 1 },
     // Fractional S (e.g. $30=1 lasers) is valid, so no floor of 1 here.
@@ -254,6 +264,7 @@ export function createSegmentsToolpath(args: {
 
     const uniforms: ChunkUniforms = {
       uSegCursor: { value: 0 },
+      uSegPlannedEnd: { value: 0 },
       uSegHiddenCount: { value: 0 },
       uSegHidden: {
         value: Array.from({ length: SEGMENT_MAX_HIDDEN_RANGES }, () => new THREE.Vector2()),
@@ -325,6 +336,20 @@ export function setSegmentsProgress(
   }
 }
 
+/**
+ * Colour vertices through line `toLine` as "planned" (acked, not yet cut),
+ * wherever they fall beyond the chunk's current processed cursor — the
+ * shader's `else if` ordering (see VERTEX_BODY) means the processed cursor
+ * always wins on overlap, so this never needs to know the lower bound
+ * itself. Pass a line before the processed cursor (or < 0) to clear it.
+ */
+export function setSegmentsPlannedEnd(state: SegmentsToolpathState, toLine: number): void {
+  const cursor = toLine < 0 ? 0 : segmentsCursorForLine(state, toLine);
+  for (const chunk of state.chunks) {
+    chunk.uniforms.uSegPlannedEnd.value = Math.max(0, Math.min(chunk.count, cursor - chunk.base));
+  }
+}
+
 /** Draw every vertex again (progress "hide" undone); greying is kept. */
 export function showAllSegments(state: SegmentsToolpathState): void {
   for (const chunk of state.chunks) {
@@ -332,10 +357,11 @@ export function showAllSegments(state: SegmentsToolpathState): void {
   }
 }
 
-/** Clear progress greying. */
+/** Clear progress greying and planned colouring. */
 export function resetSegmentsColors(state: SegmentsToolpathState): void {
   for (const chunk of state.chunks) {
     chunk.uniforms.uSegCursor.value = 0;
+    chunk.uniforms.uSegPlannedEnd.value = 0;
   }
 }
 

@@ -58,6 +58,15 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     setToolpathRotationA(aDegrees: number): void;
     setCallbacks(callbacks: GCodeViewerCallbacks): void;
     hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
+    /**
+     * Colour the span of lines acked by the controller but not yet physically
+     * cut with `theme.colors.planned`. `fromLine` is accepted for API clarity
+     * but not used directly — the lower bound always tracks each stream's/
+     * chunk's current processed cursor (set by `hideUntilLine`), so the two
+     * cursors can never drift apart. Call `hideUntilLine` first in the same
+     * tick. Pass `toLine < fromLine` to clear the planned range.
+     */
+    setPlannedRange(_fromLine: number, toLine: number): void;
     seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
     showAll(): void;
     /**

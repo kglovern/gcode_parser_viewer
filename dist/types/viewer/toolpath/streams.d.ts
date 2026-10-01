@@ -8,6 +8,8 @@ export type ToolpathStreamState = {
     prefixEndVertex: Int32Array;
     totalVertices: number;
     greyCursorVertex: number;
+    /** Vertex index through the acked-but-not-cut ("planned") boundary; exclusive. */
+    plannedCursorVertex: number;
     kind: ToolpathStreamKind;
     cutBucketIndex: number | null;
     /** Which of the load's `lineGroups` this stream holds, or null for the always-visible
@@ -46,8 +48,31 @@ export declare function applyStreamGreyCursor(args: {
     nextCursorVertex: number;
     options: Readonly<GCodeViewerOptions>;
 }): void;
+/**
+ * Paint vertices from the stream's current processed cursor through
+ * `nextPlannedEndVertex` (exclusive) as "planned": acked by the controller
+ * but not yet physically cut. The lower bound is always clamped to the
+ * stream's live `greyCursorVertex` rather than trusting a caller-supplied
+ * value, so planned paint can never land on already-processed vertices
+ * regardless of call order relative to `applyStreamGreyCursor` in the same
+ * tick. Shrinking (the acked boundary rewinding) restores the freed span to
+ * `baseColors` — safe because `applyStreamGreyCursor`'s own restore range
+ * stays adjacent/disjoint from this one as long as the processed cursor
+ * never moves ahead of the acked boundary, which holds by construction
+ * server-side (received >= currentLineRunning always).
+ */
+export declare function applyStreamPlannedCursor(args: {
+    stream: ToolpathStreamState;
+    nextPlannedEndVertex: number;
+    options: Readonly<GCodeViewerOptions>;
+}): void;
 export declare function buildStreamBaseColors(kind: ToolpathStreamKind, totalVertices: number, options: Readonly<GCodeViewerOptions>): Float32Array;
 export declare function processedRgb(options: Readonly<GCodeViewerOptions>): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function plannedRgb(options: Readonly<GCodeViewerOptions>): {
     r: number;
     g: number;
     b: number;

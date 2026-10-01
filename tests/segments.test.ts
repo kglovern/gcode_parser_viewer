@@ -7,6 +7,7 @@ import {
   disposeSegmentsToolpath,
   resetSegmentsColors,
   setSegmentsLineGroupVisible,
+  setSegmentsPlannedEnd,
   setSegmentsProgress,
   showAllSegmentsLineGroups,
 } from "../src/viewer/toolpath/segments";
@@ -126,7 +127,18 @@ describe("segments shader injection", () => {
     expect(shader.fragmentShader).toContain("vec4 diffuseColor = vSegColor;");
     expect(shader.fragmentShader).not.toContain("vec4( diffuse, opacity )");
     expect(Object.keys(shader.uniforms)).toEqual(
-      expect.arrayContaining(["uSegSlotColors", "uSegCursor", "uSegHidden", "uSegMaxPower"])
+      expect.arrayContaining([
+        "uSegSlotColors",
+        "uSegCursor",
+        "uSegPlannedEnd",
+        "uSegPlannedColor",
+        "uSegHidden",
+        "uSegMaxPower",
+      ])
+    );
+    expect(shader.vertexShader).toContain("uniform float uSegPlannedEnd;");
+    expect(shader.vertexShader).toContain(
+      "} else if ( segVertex < uSegPlannedEnd ) {\n  segColor = uSegPlannedColor;"
     );
     expect(material.defines).toEqual({ SEG_USE_POWER: "" });
     expect(material.customProgramCacheKey()).toBe("gviewer-segments-v1-cut-power");
@@ -157,6 +169,22 @@ describe("segments progress", () => {
       [4, 2],
       [0, 4],
     ]);
+  });
+
+  it("colours the planned span through a line by moving each chunk's uSegPlannedEnd", () => {
+    const { state } = load(twoChunkData());
+
+    setSegmentsPlannedEnd(state, 3); // through line 3: 6 vertices
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([6, 0]);
+    setSegmentsPlannedEnd(state, 4); // through line 4: 8 vertices
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([6, 2]);
+    setSegmentsPlannedEnd(state, -1);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([0, 0]);
+    setSegmentsPlannedEnd(state, 99);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([6, 4]);
+
+    resetSegmentsColors(state);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([0, 0]);
   });
 });
 
@@ -216,6 +244,32 @@ describe("applySegmentsTheme", () => {
     applySegmentsTheme(state, options);
     expect(state.shared.uSegRapidColor.value.equals(new THREE.Color("#123456"))).toBe(true);
     expect(state.shared.uSegRapidOpacity.value).toBeCloseTo(0.6);
+  });
+
+  it("colours uSegPlannedColor from the theme's planned colour, falling back to processed then cutting", () => {
+    const { state } = load(twoChunkData());
+    expect(
+      state.shared.uSegPlannedColor.value.equals(
+        new THREE.Color(defaultGCodeViewerOptions.render.theme.colors.planned)
+      )
+    ).toBe(true);
+
+    const withoutPlanned = {
+      ...defaultGCodeViewerOptions,
+      render: {
+        ...defaultGCodeViewerOptions.render,
+        theme: {
+          ...defaultGCodeViewerOptions.render.theme,
+          colors: { ...defaultGCodeViewerOptions.render.theme.colors, planned: undefined },
+        },
+      },
+    };
+    applySegmentsTheme(state, withoutPlanned);
+    expect(
+      state.shared.uSegPlannedColor.value.equals(
+        new THREE.Color(defaultGCodeViewerOptions.render.theme.colors.processed)
+      )
+    ).toBe(true);
   });
 });
 

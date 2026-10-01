@@ -1,5 +1,5 @@
-import { G as o, a as i, V as c, d as r, b as n } from "./GCodeSVGRenderer-DaYpG5UE.js";
-import { SEGMENT_ATTR_RAPID as p, SEGMENT_ATTR_SLOT_MASK as s } from "./gviewer.js";
+import { G as o, a as i, V as c, d as r, b as n } from "./GCodeSVGRenderer-7TQvJfhQ.js";
+import { SEGMENT_ATTR_RAPID as t, SEGMENT_ATTR_SLOT_MASK as s } from "./gviewer.js";
 const e = {
   dark: {
     background: "#111827",
@@ -10,6 +10,7 @@ const e = {
       cutting: "#3e85c7",
       laser: "#a855f7",
       processed: "#6b7280",
+      planned: "#dff204",
       boundingBox: "#e2e8f0",
       machineBed: "#f5a623",
       machineBedKeepout: "#df3b3b",
@@ -26,6 +27,7 @@ const e = {
       cutting: "#111827",
       laser: "#FF0000",
       processed: "#9ca3af",
+      planned: "#b58b00",
       boundingBox: "#4b5563",
       machineBed: "#b45309",
       machineBedKeepout: "#df3b3b",
@@ -42,6 +44,7 @@ const e = {
       cutting: "#3AA99F",
       laser: "#8B7EC8",
       processed: "#6f6e69",
+      planned: "#d0a215",
       boundingBox: "#cecdc3",
       machineBed: "#ffcc66",
       machineBedKeepout: "#d14d41",
@@ -58,6 +61,7 @@ const e = {
       cutting: "#7dcfff",
       laser: "#bb9af7",
       processed: "#565f89",
+      planned: "#e0d068",
       boundingBox: "#c0caf5",
       machineBed: "#e0af68",
       machineBedKeepout: "#f7768e",
@@ -74,6 +78,7 @@ const e = {
       cutting: "#3c3836",
       laser: "#b16286",
       processed: "#928374",
+      planned: "#79740e",
       boundingBox: "#7c6f64",
       machineBed: "#d79921",
       machineBedKeepout: "#cc241d",
@@ -90,6 +95,7 @@ const e = {
       cutting: "#73D0FF",
       laser: "#DFBFFF",
       processed: "#6E7C8F",
+      planned: "#E6B673",
       boundingBox: "#CBCCC6",
       machineBed: "#FFD173",
       machineBedKeepout: "#F28779",
@@ -106,6 +112,7 @@ const e = {
       cutting: "#22A4E6",
       laser: "#A37ACC",
       processed: "#ADAEB1",
+      planned: "#A37A00",
       boundingBox: "#5C6773",
       machineBed: "#F2AE49",
       machineBedKeepout: "#F07171",
@@ -117,7 +124,7 @@ const e = {
 export {
   o as GCodeSVGRenderer,
   i as GCodeViewer,
-  p as SEGMENT_ATTR_RAPID,
+  t as SEGMENT_ATTR_RAPID,
   s as SEGMENT_ATTR_SLOT_MASK,
   c as ViewCube,
   r as defaultGCodeViewerOptions,

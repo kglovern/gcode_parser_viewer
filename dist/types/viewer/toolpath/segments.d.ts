@@ -27,12 +27,15 @@ type SharedUniforms = {
     uSegSlotColors: Uniform<THREE.Color[]>;
     uSegRapidColor: Uniform<THREE.Color>;
     uSegProcessedColor: Uniform<THREE.Color>;
+    uSegPlannedColor: Uniform<THREE.Color>;
     uSegRapidOpacity: Uniform<number>;
     uSegCutOpacity: Uniform<number>;
     uSegMaxPower: Uniform<number>;
 };
 type ChunkUniforms = {
     uSegCursor: Uniform<number>;
+    /** Vertex index through the acked-but-not-cut ("planned") boundary; exclusive. */
+    uSegPlannedEnd: Uniform<number>;
     uSegHiddenCount: Uniform<number>;
     uSegHidden: Uniform<THREE.Vector2[]>;
 };
@@ -78,9 +81,17 @@ export declare function segmentsCursorForLine(state: SegmentsToolpathState, line
  * the processed colour, "hide" stops drawing it.
  */
 export declare function setSegmentsProgress(state: SegmentsToolpathState, lineIndex: number, mode: "hide" | "grey"): void;
+/**
+ * Colour vertices through line `toLine` as "planned" (acked, not yet cut),
+ * wherever they fall beyond the chunk's current processed cursor — the
+ * shader's `else if` ordering (see VERTEX_BODY) means the processed cursor
+ * always wins on overlap, so this never needs to know the lower bound
+ * itself. Pass a line before the processed cursor (or < 0) to clear it.
+ */
+export declare function setSegmentsPlannedEnd(state: SegmentsToolpathState, toLine: number): void;
 /** Draw every vertex again (progress "hide" undone); greying is kept. */
 export declare function showAllSegments(state: SegmentsToolpathState): void;
-/** Clear progress greying. */
+/** Clear progress greying and planned colouring. */
 export declare function resetSegmentsColors(state: SegmentsToolpathState): void;
 export declare function setSegmentsLineGroupVisible(state: SegmentsToolpathState, groupIndex: number, visible: boolean): void;
 export declare function showAllSegmentsLineGroups(state: SegmentsToolpathState): void;

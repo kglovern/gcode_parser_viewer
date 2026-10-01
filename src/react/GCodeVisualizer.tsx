@@ -95,6 +95,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           hideUntilLine(lineIndex: number, mode?: "hide" | "grey") {
             getViewer().hideUntilLine(lineIndex, mode);
           },
+          setPlannedRange(fromLine: number, toLine: number) {
+            getViewer().setPlannedRange(fromLine, toLine);
+          },
           seekToLine(lineIndex: number, mode?: "hide" | "grey") {
             getViewer().seekToLine(lineIndex, mode);
           },

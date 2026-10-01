@@ -11,6 +11,8 @@ export type GCodeViewerTheme = {
     cutting: string;
     laser?: string;
     processed?: string;
+    /** Acked by the controller but not yet physically cut. Falls back to `processed`, then `cutting`. */
+    planned?: string;
     boundingBox: string;
     machineBed: string;
     machineBedKeepout: string;
@@ -116,6 +118,7 @@ export const defaultGCodeViewerTheme: GCodeViewerTheme = {
     cutting: "#3e85c7",
     laser: "#a855f7",
     processed: "#6b7280",
+    planned: "#dff204",
     boundingBox: "#e2e8f0",
     machineBed: "#fbbf24",
     machineBedKeepout: "#df3b3b",
@@ -199,6 +202,18 @@ export type GCodeViewerHandle = {
   setBitSpinning(spinning: boolean): void;
   setToolpathRotationA(aDegrees: number): void;
   hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
+  /**
+   * Colour the span of lines acked by the controller but not yet physically
+   * cut (e.g. `[currentLineRunning, received - 1]`) with `theme.colors.planned`.
+   * `fromLine` documents the intended lower bound but is NOT taken literally:
+   * the implementation always anchors the lower bound to whatever line
+   * `hideUntilLine` most recently resolved, so the two cursors can never
+   * drift apart regardless of call order. Call `hideUntilLine` first in the
+   * same tick so that cursor is current. Pass `toLine < fromLine` (the
+   * normal "nothing queued" state) to clear the planned range — do this on
+   * every tick where that holds, it is not a special case to skip.
+   */
+  setPlannedRange(fromLine: number, toLine: number): void;
   seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
   showAll(): void;
   resetColors(): void;

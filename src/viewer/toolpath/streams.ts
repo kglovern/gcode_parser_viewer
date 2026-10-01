@@ -10,6 +10,8 @@ export type ToolpathStreamState = {
   prefixEndVertex: Int32Array;
   totalVertices: number;
   greyCursorVertex: number;
+  /** Vertex index through the acked-but-not-cut ("planned") boundary; exclusive. */
+  plannedCursorVertex: number;
   kind: ToolpathStreamKind;
   cutBucketIndex: number | null;
   /** Which of the load's `lineGroups` this stream holds, or null for the always-visible
@@ -71,6 +73,7 @@ export function createToolpathStreams(args: {
       prefixEndVertex: spec.prefixEndVertex,
       totalVertices,
       greyCursorVertex: 0,
+      plannedCursorVertex: 0,
       kind: spec.kind,
       cutBucketIndex: spec.cutBucketIndex,
       lineGroupIndex: spec.lineGroupIndex ?? null,
@@ -104,6 +107,7 @@ export function refreshToolpathStreamColors(
     stream.baseColors = nextBase;
     stream.simColors.set(nextBase);
     stream.greyCursorVertex = 0;
+    stream.plannedCursorVertex = 0;
     const attr = stream.line.geometry.getAttribute("color") as THREE.BufferAttribute;
     attr.clearUpdateRanges();
     attr.addUpdateRange(0, stream.simColors.length);
@@ -178,6 +182,63 @@ export function applyStreamGreyCursor(args: {
   args.stream.greyCursorVertex = next;
 }
 
+/**
+ * Paint vertices from the stream's current processed cursor through
+ * `nextPlannedEndVertex` (exclusive) as "planned": acked by the controller
+ * but not yet physically cut. The lower bound is always clamped to the
+ * stream's live `greyCursorVertex` rather than trusting a caller-supplied
+ * value, so planned paint can never land on already-processed vertices
+ * regardless of call order relative to `applyStreamGreyCursor` in the same
+ * tick. Shrinking (the acked boundary rewinding) restores the freed span to
+ * `baseColors` — safe because `applyStreamGreyCursor`'s own restore range
+ * stays adjacent/disjoint from this one as long as the processed cursor
+ * never moves ahead of the acked boundary, which holds by construction
+ * server-side (received >= currentLineRunning always).
+ */
+export function applyStreamPlannedCursor(args: {
+  stream: ToolpathStreamState;
+  nextPlannedEndVertex: number;
+  options: Readonly<GCodeViewerOptions>;
+}): void {
+  const total = args.stream.totalVertices;
+  const greyEnd = Math.max(0, Math.min(total, Math.floor(args.stream.greyCursorVertex)));
+  const next = Math.max(greyEnd, Math.min(total, Math.floor(args.nextPlannedEndVertex)));
+  const previous = Math.max(greyEnd, Math.min(total, Math.floor(args.stream.plannedCursorVertex)));
+  if (next === previous) {
+    args.stream.plannedCursorVertex = next;
+    return;
+  }
+
+  const attr = args.stream.line.geometry.getAttribute("color") as THREE.BufferAttribute;
+  const planned = plannedRgb(args.options);
+
+  if (next > previous) {
+    for (let v = previous; v < next; v += 1) {
+      const off = v * 3;
+      args.stream.simColors[off] = planned.r;
+      args.stream.simColors[off + 1] = planned.g;
+      args.stream.simColors[off + 2] = planned.b;
+    }
+  } else {
+    const startOff = next * 3;
+    const endOff = previous * 3;
+    args.stream.simColors.set(args.stream.baseColors.subarray(startOff, endOff), startOff);
+  }
+
+  const startVertex = Math.min(previous, next);
+  const endVertex = Math.max(previous, next);
+  let start = startVertex * 3;
+  let end = endVertex * 3;
+  for (const range of attr.updateRanges) {
+    start = Math.min(start, range.start);
+    end = Math.max(end, range.start + range.count);
+  }
+  attr.clearUpdateRanges();
+  attr.addUpdateRange(start, end - start);
+  attr.needsUpdate = true;
+  args.stream.plannedCursorVertex = next;
+}
+
 export function buildStreamBaseColors(
   kind: ToolpathStreamKind,
   totalVertices: number,
@@ -202,6 +263,12 @@ export function processedRgb(options: Readonly<GCodeViewerOptions>): { r: number
   const processedColor = new THREE.Color(themeColors.processed ?? themeColors.cutting);
   const processed = background.clone().lerp(processedColor, 0.65);
   return { r: processed.r, g: processed.g, b: processed.b };
+}
+
+export function plannedRgb(options: Readonly<GCodeViewerOptions>): { r: number; g: number; b: number } {
+  const themeColors = options.render.theme.colors;
+  const planned = new THREE.Color(themeColors.planned ?? themeColors.processed ?? themeColors.cutting);
+  return { r: planned.r, g: planned.g, b: planned.b };
 }
 
 export function cutBucketOpacity(args: { bucketIndex: number; bucketCount: number; baseOpacity: number }): number {

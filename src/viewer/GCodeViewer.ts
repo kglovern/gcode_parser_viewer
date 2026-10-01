@@ -8,6 +8,7 @@ import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } fr
 import { GCodeVirtualizer } from "../virtualizer";
 import {
   applyStreamGreyCursor,
+  applyStreamPlannedCursor,
   createToolpathStreams,
   disposeToolpathStreams,
   refreshToolpathStreamColors,
@@ -20,6 +21,7 @@ import {
   disposeSegmentsToolpath,
   resetSegmentsColors,
   setSegmentsLineGroupVisible,
+  setSegmentsPlannedEnd,
   setSegmentsProgress,
   setSegmentsVisible,
   showAllSegments,
@@ -376,7 +378,33 @@ export class GCodeViewer implements GCodeViewerHandle {
         applyStreamGreyCursor({ stream, nextCursorVertex: cursor, options: this.options });
       } else {
         stream.line.geometry.setDrawRange(cursor, Math.max(0, stream.totalVertices - cursor));
+        // "hide" mode never repaints simColors, but still advance the cursor
+        // so setPlannedRange's lower-bound clamp (which reads greyCursorVertex)
+        // stays accurate regardless of which progress mode is active.
+        stream.greyCursorVertex = Math.max(0, Math.min(stream.totalVertices, cursor));
       }
+    }
+  }
+
+  /**
+   * Colour the span of lines acked by the controller but not yet physically
+   * cut with `theme.colors.planned`. `fromLine` is accepted for API clarity
+   * but not used directly — the lower bound always tracks each stream's/
+   * chunk's current processed cursor (set by `hideUntilLine`), so the two
+   * cursors can never drift apart. Call `hideUntilLine` first in the same
+   * tick. Pass `toLine < fromLine` to clear the planned range.
+   */
+  setPlannedRange(_fromLine: number, toLine: number): void {
+    const index = Math.floor(toLine);
+
+    if (this.segmentsToolpath) {
+      setSegmentsPlannedEnd(this.segmentsToolpath, index);
+    }
+
+    for (const stream of this.toolpathStreams) {
+      const cursor =
+        index < 0 ? 0 : stream.prefixEndVertex[Math.min(index, stream.prefixEndVertex.length - 1)];
+      applyStreamPlannedCursor({ stream, nextPlannedEndVertex: cursor, options: this.options });
     }
   }
 
@@ -451,6 +479,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
     for (const stream of this.toolpathStreams) {
       stream.greyCursorVertex = 0;
+      stream.plannedCursorVertex = 0;
       stream.simColors.set(stream.baseColors);
       const attr = stream.line.geometry.getAttribute("color") as THREE.BufferAttribute;
       attr.clearUpdateRanges();
@@ -900,7 +929,8 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.render.theme.colors.cutting !== this.options.render.theme.colors.cutting ||
       previous.render.theme.colors.laser !== this.options.render.theme.colors.laser ||
       previous.render.theme.background !== this.options.render.theme.background ||
-      previous.render.theme.colors.processed !== this.options.render.theme.colors.processed;
+      previous.render.theme.colors.processed !== this.options.render.theme.colors.processed ||
+      previous.render.theme.colors.planned !== this.options.render.theme.colors.planned;
     if (toolpathColorsChanged) {
       this.refreshToolpathColors();
     }
