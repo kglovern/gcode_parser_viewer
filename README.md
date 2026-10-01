@@ -723,3 +723,14 @@ dist/
 ## License
 
 MIT
+
+### Rotary worker previews
+
+`WorkerSegmentsData.rotary` optionally supplies `{ axis: "X" | "Y", centerlineZ: number }`.
+Vertices must already be inverse-rotated by their programmed A into the stock frame,
+then expressed in work coordinates at A=0 (including the centerline Z translation).
+`setToolpathRotationA()` applies live A about that centerline without rewriting any
+vertex buffers. The tool marker remains in work coordinates. Omitted metadata keeps
+legacy X-axis rotation about Z=0; each load/unload resets the previous file's datum.
+This supports hosts such as RotatoCAM-aware gSender workers that read stock-top Z zero
+from posted metadata. It does not parse that metadata or change machine commands.
