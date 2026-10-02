@@ -30,6 +30,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private segmentsToolpath;
     private toolpathCutBucketCount;
     private toolpathRotationA;
+    private rotary;
     private lastBitPosition;
     private sim3dHandle;
     private currentLines;

@@ -123,6 +123,12 @@ export type WorkerSegmentsChunk = {
  */
 export type WorkerSegmentsData = {
   format: "segments-v1";
+  /**
+   * Live A rotation for vertices already inverse-rotated into the stock frame,
+   * expressed in work coordinates at A=0. The centerline is (0,0,centerlineZ)
+   * in mm, parallel to axis. Omission preserves rotation about X at Z=0.
+   */
+  rotary?: { axis: "X" | "Y"; centerlineZ: number };
   chunks: readonly WorkerSegmentsChunk[];
   totalVertices: number;
   /** Uint32 per line: cumulative vertex count after that line. */
