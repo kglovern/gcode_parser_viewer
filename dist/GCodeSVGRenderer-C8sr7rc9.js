@@ -3288,8 +3288,15 @@ class Or {
     this.ensureBitMarker(), (Q = this.bitMarker) == null || Q.setSpinning(t);
   }
   setToolpathRotationA(t) {
-    const Q = Number(t) || 0;
-    this.toolpathRotationA = Q, this.toolpathRoot.rotation.x = E.MathUtils.degToRad(Q);
+    var i, r;
+    const Q = Number.isFinite(t) ? t : 0;
+    this.toolpathRotationA = Q;
+    const B = E.MathUtils.degToRad(Q), e = ((i = this.rotary) == null ? void 0 : i.axis) === "Y", A = Number.isFinite((r = this.rotary) == null ? void 0 : r.centerlineZ) ? this.rotary.centerlineZ : 0;
+    this.toolpathRoot.rotation.set(e ? 0 : B, e ? B : 0, 0), this.toolpathRoot.position.set(
+      e ? -A * Math.sin(B) : 0,
+      e ? 0 : A * Math.sin(B),
+      A * (1 - Math.cos(B))
+    );
   }
   setCallbacks(t) {
     this.callbacks = t;
@@ -3563,7 +3570,7 @@ class Or {
    * `hideUntilLine`/`lineGroups` follow `data.prefixEndVertex`.
    */
   async loadFromSegments(t, Q) {
-    this.currentLines = [], this.setGeometryEmpty();
+    this.currentLines = [], this.setGeometryEmpty(), this.rotary = t.rotary;
     const { state: B, bounds: e } = Bi({
       data: t,
       options: this.options,
@@ -3737,7 +3744,7 @@ class Or {
     this.machineBedGroup && (this.scene.remove(this.machineBedGroup), Oi(this.machineBedGroup), this.machineBedGroup = null), t && (this.machineBedGroup = t, this.scene.add(t));
   }
   setGeometryEmpty() {
-    this.setSim3dHandle(null), VA(this.toolpathRoot, this.toolpathStreams), this.toolpathStreams = [], this.segmentsToolpath && (ei(this.toolpathRoot, this.segmentsToolpath), this.segmentsToolpath = null), this.toolpathCutBucketCount = 1, this.linePositions = null, this.currentBounds = null, this.emitBoundsChanged(), this.refreshBoundingBox();
+    this.rotary = void 0, this.setToolpathRotationA(this.toolpathRotationA), this.setSim3dHandle(null), VA(this.toolpathRoot, this.toolpathStreams), this.toolpathStreams = [], this.segmentsToolpath && (ei(this.toolpathRoot, this.segmentsToolpath), this.segmentsToolpath = null), this.toolpathCutBucketCount = 1, this.linePositions = null, this.currentBounds = null, this.emitBoundsChanged(), this.refreshBoundingBox();
   }
   setToolpathGeometry(t) {
     this.setGeometryEmpty(), this.toolpathCutBucketCount = Math.max(1, Math.floor(t.cutBucketCount));

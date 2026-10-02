@@ -130,6 +130,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   private segmentsToolpath: SegmentsToolpathState | null = null;
   private toolpathCutBucketCount = 1;
   private toolpathRotationA = 0;
+  private rotary: WorkerSegmentsData["rotary"];
 
   // Last position handed to setBitPosition. Used as the default pick plane in
   // screenToWorld so a click lands on the plane the bit is currently sitting on.
@@ -351,9 +352,19 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   setToolpathRotationA(aDegrees: number): void {
-    const next = Number(aDegrees) || 0;
+    const next = Number.isFinite(aDegrees) ? aDegrees : 0;
     this.toolpathRotationA = next;
-    this.toolpathRoot.rotation.x = THREE.MathUtils.degToRad(next);
+    const angle = THREE.MathUtils.degToRad(next);
+    const aroundY = this.rotary?.axis === "Y";
+    const z = Number.isFinite(this.rotary?.centerlineZ) ? this.rotary!.centerlineZ : 0;
+    this.toolpathRoot.rotation.set(aroundY ? 0 : angle, aroundY ? angle : 0, 0);
+    // Worker vertices are in work coordinates at A=0. Rotate about (0,0,z):
+    // T(center) * R(A) * T(-center), without touching the uploaded buffers.
+    this.toolpathRoot.position.set(
+      aroundY ? -z * Math.sin(angle) : 0,
+      aroundY ? 0 : z * Math.sin(angle),
+      z * (1 - Math.cos(angle)),
+    );
   }
 
   setCallbacks(callbacks: GCodeViewerCallbacks): void {
@@ -785,6 +796,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     // Free the previous toolpath before adopting the new one, so the two are
     // never resident together.
     this.setGeometryEmpty();
+    this.rotary = data.rotary;
     const { state, bounds } = createSegmentsToolpath({
       data,
       options: this.options,
@@ -1243,6 +1255,8 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private setGeometryEmpty(): void {
+    this.rotary = undefined;
+    this.setToolpathRotationA(this.toolpathRotationA);
     this.setSim3dHandle(null);
     disposeToolpathStreams(this.toolpathRoot as unknown as THREE.Scene, this.toolpathStreams);
     this.toolpathStreams = [];
