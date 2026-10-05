@@ -1,5 +1,5 @@
 import * as n from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-Dkc7IGrQ.js";
+import { a as w, G as C } from "./GCodeSVGRenderer-CgIjcokY.js";
 const R = n.forwardRef(
   function(c, m) {
     const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), t = n.useRef(null);

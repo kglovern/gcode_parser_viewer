@@ -32,6 +32,12 @@ export declare class GCodeSVGRenderer {
     private pinchLastMid;
     private rafPending;
     private overlayRafPending;
+    private gestureActive;
+    private gestureRect;
+    private gestureRafPending;
+    private wheelEndTimer;
+    private committedViewBox;
+    private committedViewBoxAttr;
     private rapidVerts;
     private cutVerts;
     private bounds;
@@ -75,12 +81,18 @@ export declare class GCodeSVGRenderer {
     private project;
     private rebuildAndRender;
     private rebuildToolpaths;
+    private styleToolpaths;
     private renderOverlays;
     private simplifyTolerance;
     private scheduleDraw;
     private scheduleOverlayDraw;
     private fitView;
     private applyViewBox;
+    private beginGesture;
+    private endGesture;
+    private scheduleGesturePreview;
+    private applyGesturePreview;
+    private elementRect;
     private applyOptions;
     private renderBbox;
     private renderOriginMarker;
@@ -91,5 +103,6 @@ export declare class GCodeSVGRenderer {
     private onPointerUp;
     private onContextMenu;
     private bindEvents;
+    private pixelsPerUnit;
     private svgPoint;
 }

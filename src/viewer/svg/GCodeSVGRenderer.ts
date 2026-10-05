@@ -8,6 +8,8 @@ type Pt2 = { x: number; y: number };
 
 const DEFAULT_ROT_X = 0;
 const DEFAULT_ROT_Y = 0;
+// A wheel zoom is committed once no wheel event has arrived for this long.
+const WHEEL_END_MS = 150;
 
 // stride 6 = 3D segments [x1,y1,z1,x2,y2,z2]; stride 4 = 2D top-down segments [x1,y1,x2,y2]
 type SegmentGroup = { color: string; opacity: number; verts: Float32Array; stride: 4 | 6 };
@@ -52,6 +54,20 @@ export class GCodeSVGRenderer {
   // trigger — or get starved by — a full toolpath rebuild.
   private overlayRafPending = false;
 
+  // Pan/zoom gestures. Changing the viewBox re-rasterises every path on the
+  // CPU, which is too slow per pointermove on large files on mobile. During
+  // a gesture the live viewBox is previewed as a CSS transform of the already
+  // rasterised SVG (composited on the GPU) and only committed when it ends.
+  private gestureActive = false;
+  // Untransformed element rect from gesture start; getBoundingClientRect
+  // would include the preview transform.
+  private gestureRect: DOMRect | null = null;
+  private gestureRafPending = false;
+  private wheelEndTimer: ReturnType<typeof setTimeout> | null = null;
+  // The viewBox currently in the attribute, and its serialised form.
+  private committedViewBox: ViewBox | null = null;
+  private committedViewBoxAttr = "";
+
   // Geometry
   private rapidVerts: Float32Array = new Float32Array(0);
   private cutVerts: Float32Array = new Float32Array(0);
@@ -63,7 +79,9 @@ export class GCodeSVGRenderer {
     this.options = { ...defaultGCodeSVGOptions, ...options };
 
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none;";
+    // will-change keeps the SVG on its own compositor layer so gesture
+    // previews (see applyGesturePreview) scale the existing raster.
+    this.svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none;transform-origin:0 0;will-change:transform;";
     this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
@@ -250,20 +268,38 @@ export class GCodeSVGRenderer {
   }
 
   resetView(): void {
+    const rotated = this.rotX !== DEFAULT_ROT_X || this.rotY !== DEFAULT_ROT_Y;
     this.rotX = DEFAULT_ROT_X;
     this.rotY = DEFAULT_ROT_Y;
     this.updateTrig();
     this.fitView();
-    this.rebuildAndRender();
+    // The path data only depends on the projection, so an unrotated view just
+    // needs the new viewBox.
+    if (rotated) this.rebuildAndRender();
+    else this.renderOverlays();
   }
 
+  // Cheap unless the projection changes: colours and stroke width are
+  // attributes, so only a projection change re-serialises the path data.
+  // Consumers often pass a fresh options object on every render, so unchanged
+  // values must cost nothing.
   setOptions(opts: Partial<GCodeSVGOptions>): void {
-    this.options = { ...this.options, ...opts };
+    const prev = this.options;
+    const next = { ...prev, ...opts };
+    const keys = Object.keys(opts) as (keyof GCodeSVGOptions)[];
+    if (!keys.some(k => next[k] !== prev[k])) return;
+    this.options = next;
     this.applyOptions();
-    this.rebuildAndRender();
+    if (next.projectionMode !== prev.projectionMode) {
+      this.rebuildAndRender();
+    } else {
+      this.styleToolpaths();
+      this.renderOverlays();
+    }
   }
 
   setProjectionMode(mode: 'perspective' | 'isometric' | 'top'): void {
+    if (mode === this.options.projectionMode) return;
     this.options = { ...this.options, projectionMode: mode };
     this.rebuildAndRender();
   }
@@ -286,6 +322,8 @@ export class GCodeSVGRenderer {
   }
 
   dispose(): void {
+    if (this.wheelEndTimer !== null) clearTimeout(this.wheelEndTimer);
+    this.gestureActive = false;
     this.svg.removeEventListener("wheel", this.onWheel);
     this.svg.removeEventListener("pointerdown", this.onPointerDown);
     this.svg.removeEventListener("pointermove", this.onPointerMove);
@@ -339,7 +377,6 @@ export class GCodeSVGRenderer {
   // never for bit-position/crosshair updates (use scheduleOverlayDraw instead).
   private rebuildToolpaths(draft = false): void {
     const fmt = draft ? fDraft : f;
-    const sw = String(this.options.strokeWidth);
     // Screen-space simplification tolerance: merge consecutive projected points
     // closer than a fraction of the model extent. Sub-pixel at typical view
     // sizes (no visible loss) but it caps drawn segment density so large files
@@ -356,19 +393,30 @@ export class GCodeSVGRenderer {
     }
 
     for (let i = 0; i < this.segmentGroups.length; i++) {
-      const { color, opacity, verts, stride } = this.segmentGroups[i];
-      const el = this.pathEls[i];
-      el.setAttribute("stroke", color);
-      el.setAttribute("stroke-opacity", String(opacity));
-      el.setAttribute("stroke-width", sw);
-      el.setAttribute("stroke-linecap", "round");
-      el.setAttribute("stroke-linejoin", "round");
-      el.setAttribute(
+      const { verts, stride } = this.segmentGroups[i];
+      this.pathEls[i].setAttribute(
         "d",
         stride === 4
           ? verticesToPath2D(verts, fmt, tol)
           : verticesToPath(verts, this.project, fmt, tol)
       );
+    }
+    this.styleToolpaths();
+  }
+
+  // Butt caps and bevel joins: round ones make stroking very long paths
+  // noticeably slower on mobile, and the difference isn't visible at
+  // toolpath widths.
+  private styleToolpaths(): void {
+    const sw = String(this.options.strokeWidth);
+    for (let i = 0; i < this.pathEls.length; i++) {
+      const { color, opacity } = this.segmentGroups[i];
+      const el = this.pathEls[i];
+      el.setAttribute("stroke", color);
+      el.setAttribute("stroke-opacity", String(opacity));
+      el.setAttribute("stroke-width", sw);
+      el.setAttribute("stroke-linecap", "butt");
+      el.setAttribute("stroke-linejoin", "bevel");
     }
   }
 
@@ -462,8 +510,69 @@ export class GCodeSVGRenderer {
   }
 
   private applyViewBox(): void {
+    if (this.gestureActive) {
+      this.scheduleGesturePreview();
+      return;
+    }
+    this.svg.style.transform = "";
     const { x, y, w, h } = this.viewBox;
-    this.svg.setAttribute("viewBox", `${f(x)} ${f(y)} ${f(w)} ${f(h)}`);
+    this.committedViewBox = { ...this.viewBox };
+    const attr = `${f(x)} ${f(y)} ${f(w)} ${f(h)}`;
+    // Rewriting an identical viewBox would still invalidate the paths.
+    if (attr === this.committedViewBoxAttr) return;
+    this.committedViewBoxAttr = attr;
+    this.svg.setAttribute("viewBox", attr);
+  }
+
+  private beginGesture(): void {
+    if (this.gestureActive) return;
+    if (!this.committedViewBox) this.applyViewBox();
+    this.gestureRect = this.svg.getBoundingClientRect();
+    this.gestureActive = true;
+  }
+
+  private endGesture(): void {
+    if (!this.gestureActive) return;
+    this.gestureActive = false;
+    this.gestureRect = null;
+    if (this.wheelEndTimer !== null) {
+      clearTimeout(this.wheelEndTimer);
+      this.wheelEndTimer = null;
+    }
+    // Overlay sizes (origin, crosshair) depend on the zoom, so redraw them
+    // along with the commit.
+    this.renderOverlays();
+  }
+
+  private scheduleGesturePreview(): void {
+    if (this.gestureRafPending) return;
+    this.gestureRafPending = true;
+    requestAnimationFrame(() => {
+      this.gestureRafPending = false;
+      if (this.gestureActive) this.applyGesturePreview();
+    });
+  }
+
+  // Map the committed view onto the live one with translate + uniform scale.
+  // Gestures keep the viewBox aspect ratio, and with preserveAspectRatio
+  // "xMidYMid meet" the viewBox centre sits at the element centre, scaled
+  // by k, so a world point P lands at rc + (P - centre) * k:
+  //   committed: rc + (P - cc) * k        live: rc + (P - cl) * k * s
+  //   live = t + s * committed  =>  t = rc * (1 - s) + s * k * (cc - cl)
+  private applyGesturePreview(): void {
+    const c = this.committedViewBox;
+    const rect = this.gestureRect;
+    if (!c || !rect || rect.width === 0 || rect.height === 0) return;
+    const l = this.viewBox;
+    const s = c.w / l.w;
+    const k = Math.min(rect.width / c.w, rect.height / c.h);
+    const tx = (rect.width / 2) * (1 - s) + s * k * (c.x + c.w / 2 - (l.x + l.w / 2));
+    const ty = (rect.height / 2) * (1 - s) + s * k * (c.y + c.h / 2 - (l.y + l.h / 2));
+    this.svg.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+  }
+
+  private elementRect(): DOMRect {
+    return this.gestureRect ?? this.svg.getBoundingClientRect();
   }
 
   private applyOptions(): void {
@@ -597,6 +706,7 @@ export class GCodeSVGRenderer {
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
+    this.beginGesture();
     const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
     const pt = this.svgPoint(e.clientX, e.clientY);
     const { x, y, w, h } = this.viewBox;
@@ -607,12 +717,15 @@ export class GCodeSVGRenderer {
       h: h * factor,
     };
     this.applyViewBox();
+    if (this.wheelEndTimer !== null) clearTimeout(this.wheelEndTimer);
+    this.wheelEndTimer = setTimeout(() => this.endGesture(), WHEEL_END_MS);
   };
 
   private onPointerDown = (e: PointerEvent): void => {
     this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.svg.setPointerCapture(e.pointerId);
     e.preventDefault();
+    this.beginGesture();
 
     if (this.activePointers.size === 1) {
       this.dragMode = 'pan';
@@ -648,13 +761,13 @@ export class GCodeSVGRenderer {
         };
       }
 
-      const rect = this.svg.getBoundingClientRect();
+      const scale = this.pixelsPerUnit();
       const dmx = mid.x - this.pinchLastMid.x;
       const dmy = mid.y - this.pinchLastMid.y;
       this.viewBox = {
         ...this.viewBox,
-        x: this.viewBox.x - (dmx / rect.width) * this.viewBox.w,
-        y: this.viewBox.y - (dmy / rect.height) * this.viewBox.h,
+        x: this.viewBox.x - dmx / scale,
+        y: this.viewBox.y - dmy / scale,
       };
 
       this.pinchLastDist = dist;
@@ -668,7 +781,7 @@ export class GCodeSVGRenderer {
     const dy = e.clientY - prev.y;
 
     if (this.dragMode === 'orbit') {
-      const rect = this.svg.getBoundingClientRect();
+      const rect = this.elementRect();
       const sensitivity = Math.PI / Math.min(rect.width, rect.height);
       this.rotY += dx * sensitivity;
       this.rotX += dy * sensitivity;
@@ -677,11 +790,11 @@ export class GCodeSVGRenderer {
       this.fitView();
       this.scheduleDraw();
     } else {
-      const rect = this.svg.getBoundingClientRect();
+      const scale = this.pixelsPerUnit();
       this.viewBox = {
         ...this.viewBox,
-        x: this.viewBox.x - (dx / rect.width) * this.viewBox.w,
-        y: this.viewBox.y - (dy / rect.height) * this.viewBox.h,
+        x: this.viewBox.x - dx / scale,
+        y: this.viewBox.y - dy / scale,
       };
       this.applyViewBox();
     }
@@ -700,6 +813,7 @@ export class GCodeSVGRenderer {
     } else if (this.activePointers.size === 0) {
       this.dragMode = 'none';
       this.svg.style.cursor = 'grab';
+      this.endGesture();
     }
   };
 
@@ -716,12 +830,20 @@ export class GCodeSVGRenderer {
     this.svg.addEventListener("contextmenu", this.onContextMenu);
   }
 
+  // With preserveAspectRatio "xMidYMid meet" the viewBox is scaled uniformly
+  // to fit and centred, so one scale factor covers both axes.
+  private pixelsPerUnit(): number {
+    const rect = this.elementRect();
+    return Math.min(rect.width / this.viewBox.w, rect.height / this.viewBox.h) || 1;
+  }
+
   private svgPoint(clientX: number, clientY: number): Pt2 {
-    const rect = this.svg.getBoundingClientRect();
+    const rect = this.elementRect();
     const { x, y, w, h } = this.viewBox;
+    const scale = this.pixelsPerUnit();
     return {
-      x: x + ((clientX - rect.left) / rect.width) * w,
-      y: y + ((clientY - rect.top) / rect.height) * h,
+      x: x + w / 2 + (clientX - rect.left - rect.width / 2) / scale,
+      y: y + h / 2 + (clientY - rect.top - rect.height / 2) / scale,
     };
   }
 }
