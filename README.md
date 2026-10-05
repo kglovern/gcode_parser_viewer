@@ -446,9 +446,25 @@ viewer.screenToWorld(event.clientX, event.clientY, { planeZ: 0 });
 // Show geometry only from lineIndex onward
 viewer.hideUntilLine(lineIndex, "grey");  // grey out processed lines
 viewer.hideUntilLine(lineIndex, "hide");  // hide processed lines
+viewer.setPlannedRange(fromLine, toLine);  // colour lines sent but not yet cut (theme.colors.planned)
 viewer.showAll();
 viewer.resetColors();
+
+// While a job runs (loadFromSegments toolpaths): grey up to wherever the last
+// setBitPosition() point is on the toolpath — part-way along a segment if need
+// be — and colour the rest of the sent lines as planned.
+viewer.setBitPosition(workPosition);
+const { located, line } = viewer.trackRunProgress({
+  minLine: startLine,        // first line of the run (start from line), default 0
+  plannedLine: sent - 1,     // last line sent to the controller
+  fallbackLine: estimate,    // optional: line-based edge while the bit is off the path
+  mode: "grey",
+});
 ```
+
+`trackRunProgress` only searches between the current processed boundary and the end of `plannedLine`, so it never jumps back, and never ahead of what has been sent. When the bit is off the toolpath (approach moves, tool changes), the boundary holds, then follows `fallbackLine` after `fallbackAfterMisses` calls (default 8). `resetColors()` and a new load start it over.
+
+On segments toolpaths the planned span also shows run order: it is `theme.colors.planned` at the bit and fades toward the toolpath's own colour by the last planned line (`progress.plannedFade`, default 0.85). With `progress.plannedPulse: true` a pulse sweeps along it from the bit, which shows direction where paths overlap or double back. Text and worker-data loads draw the planned span in flat `planned` colour.
 
 ##### Bit marker
 

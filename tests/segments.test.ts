@@ -6,9 +6,12 @@ import {
   createSegmentsToolpath,
   disposeSegmentsToolpath,
   resetSegmentsColors,
+  setSegmentsCursorVertex,
   setSegmentsLineGroupVisible,
   setSegmentsPlannedEnd,
+  setSegmentsPlannedEndVertex,
   setSegmentsProgress,
+  setSegmentsTime,
   showAllSegmentsLineGroups,
 } from "../src/viewer/toolpath/segments";
 import { defaultGCodeViewerOptions } from "../src/viewer/types";
@@ -107,8 +110,8 @@ describe("segments shader injection", () => {
     const rapid = state.chunks[0].rapidLine.material as THREE.LineBasicMaterial;
     expect(cut.defines).toEqual({});
     expect(rapid.defines).toEqual({ SEG_PASS_RAPID: "" });
-    expect(cut.customProgramCacheKey()).toBe("gviewer-segments-v1-cut");
-    expect(rapid.customProgramCacheKey()).toBe("gviewer-segments-v1-rapid");
+    expect(cut.customProgramCacheKey()).toBe("gviewer-segments-v3-cut");
+    expect(rapid.customProgramCacheKey()).toBe("gviewer-segments-v3-rapid");
     expect(compile(rapid).vertexShader).toContain("#ifdef SEG_PASS_RAPID");
   });
 
@@ -124,24 +127,37 @@ describe("segments shader injection", () => {
 
     expect(shader.vertexShader).toContain("attribute float aSegAttr;");
     expect(shader.vertexShader).toContain("float( gl_VertexID )");
-    expect(shader.fragmentShader).toContain("vec4 diffuseColor = vSegColor;");
+    expect(shader.fragmentShader).toContain("vec4 diffuseColor = vec4( segRgb, vSegColor.a );");
     expect(shader.fragmentShader).not.toContain("vec4( diffuse, opacity )");
     expect(Object.keys(shader.uniforms)).toEqual(
       expect.arrayContaining([
         "uSegSlotColors",
         "uSegCursor",
+        "uSegCursorHides",
         "uSegPlannedEnd",
+        "uSegPlannedFrom",
+        "uSegPlannedSpan",
+        "uSegPlannedFade",
+        "uSegPulse",
+        "uSegTime",
         "uSegPlannedColor",
         "uSegHidden",
         "uSegMaxPower",
       ])
     );
-    expect(shader.vertexShader).toContain("uniform float uSegPlannedEnd;");
-    expect(shader.vertexShader).toContain(
-      "} else if ( segVertex < uSegPlannedEnd ) {\n  segColor = uSegPlannedColor;"
+    // Progress boundaries are compared per fragment, along each segment.
+    expect(shader.vertexShader).toContain("vSegPos = segVertex + mod( segVertex, 2.0 );");
+    expect(shader.fragmentShader).toContain("uniform float uSegPlannedEnd;");
+    expect(shader.fragmentShader).toContain("if ( vSegPos < uSegCursor ) {");
+    expect(shader.fragmentShader).toContain("if ( uSegCursorHides > 0.5 ) discard;");
+    expect(shader.fragmentShader).toContain("} else if ( vSegPos < uSegPlannedEnd ) {");
+    // Planned span: gradient from the bit, pulses sweeping in run order.
+    expect(shader.fragmentShader).toContain(
+      "segRgb = mix( uSegPlannedColor, vSegColor.rgb, segK * uSegPlannedFade );"
     );
+    expect(shader.fragmentShader).toContain("float segPhase = fract( segK * 2.0 - uSegTime / 1.5 );");
     expect(material.defines).toEqual({ SEG_USE_POWER: "" });
-    expect(material.customProgramCacheKey()).toBe("gviewer-segments-v1-cut-power");
+    expect(material.customProgramCacheKey()).toBe("gviewer-segments-v3-cut-power");
   });
 });
 
@@ -169,6 +185,60 @@ describe("segments progress", () => {
       [4, 2],
       [0, 4],
     ]);
+  });
+
+  it("hides part of a segment by discarding below a fractional cursor", () => {
+    const { state } = load(twoChunkData());
+    setSegmentsCursorVertex(state, 7.5, "hide"); // 3/4 along segment 3 (chunk 1's first)
+    expect(state.chunks.map((c) => [c.geometry.drawRange.start, c.geometry.drawRange.count])).toEqual([
+      [6, 0],
+      [0, 4],
+    ]);
+    expect(state.chunks.map((c) => c.uniforms.uSegCursor.value)).toEqual([6, 1.5]);
+    expect(state.chunks.map((c) => c.uniforms.uSegCursorHides.value)).toEqual([1, 1]);
+
+    setSegmentsCursorVertex(state, 7.5, "grey");
+    expect(state.chunks.map((c) => [c.geometry.drawRange.start, c.geometry.drawRange.count])).toEqual([
+      [0, 6],
+      [0, 4],
+    ]);
+    expect(state.chunks.map((c) => c.uniforms.uSegCursorHides.value)).toEqual([0, 0]);
+  });
+
+  it("ends the planned span at a vertex position", () => {
+    const { state } = load(twoChunkData());
+    setSegmentsPlannedEndVertex(state, 8);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedEnd.value)).toEqual([6, 2]);
+  });
+
+  it("runs the planned gradient from the cursor, in each chunk's local units", () => {
+    const { state } = load(twoChunkData());
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedFrom.value)).toEqual([0, -6]);
+
+    setSegmentsCursorVertex(state, 3, "grey");
+    setSegmentsPlannedEndVertex(state, 9);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedFrom.value)).toEqual([3, -3]);
+    expect(state.shared.uSegPlannedSpan.value).toBe(6);
+
+    // By line: through line 1 processed, through line 4 planned.
+    setSegmentsProgress(state, 1, "grey");
+    setSegmentsPlannedEnd(state, 4);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedFrom.value)).toEqual([4, -2]);
+    expect(state.shared.uSegPlannedSpan.value).toBe(4);
+
+    // Nothing planned: the span never drops below one vertex.
+    setSegmentsPlannedEnd(state, 0);
+    expect(state.shared.uSegPlannedSpan.value).toBe(1);
+
+    resetSegmentsColors(state);
+    expect(state.cursorVertex).toBe(0);
+    expect(state.chunks.map((c) => c.uniforms.uSegPlannedFrom.value)).toEqual([0, -6]);
+  });
+
+  it("wraps the pulse clock every minute", () => {
+    const { state } = load(twoChunkData());
+    setSegmentsTime(state, 61_500);
+    expect(state.shared.uSegTime.value).toBeCloseTo(1.5);
   });
 
   it("colours the planned span through a line by moving each chunk's uSegPlannedEnd", () => {
@@ -244,6 +314,18 @@ describe("applySegmentsTheme", () => {
     applySegmentsTheme(state, options);
     expect(state.shared.uSegRapidColor.value.equals(new THREE.Color("#123456"))).toBe(true);
     expect(state.shared.uSegRapidOpacity.value).toBeCloseTo(0.6);
+  });
+
+  it("takes the planned fade and pulse from the progress options", () => {
+    const { state } = load(twoChunkData());
+    expect(state.shared.uSegPlannedFade.value).toBeCloseTo(0.85);
+    expect(state.shared.uSegPulse.value).toBe(0);
+    applySegmentsTheme(state, {
+      ...defaultGCodeViewerOptions,
+      progress: { mode: "grey", plannedFade: 0.4, plannedPulse: true },
+    });
+    expect(state.shared.uSegPlannedFade.value).toBeCloseTo(0.4);
+    expect(state.shared.uSegPulse.value).toBeGreaterThan(0);
   });
 
   it("colours uSegPlannedColor from the theme's planned colour, falling back to processed then cutting", () => {

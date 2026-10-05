@@ -21,13 +21,23 @@ import {
   disposeSegmentsToolpath,
   resetSegmentsColors,
   setSegmentsLineGroupVisible,
+  setSegmentsCursorVertex,
   setSegmentsPlannedEnd,
+  setSegmentsPlannedEndVertex,
   setSegmentsProgress,
+  setSegmentsTime,
   setSegmentsVisible,
   showAllSegments,
   showAllSegmentsLineGroups,
   type SegmentsToolpathState,
 } from "./toolpath/segments";
+import {
+  advanceRunProgress,
+  createRunProgressState,
+  defaultLocateOptions,
+  segmentsLineForVertex,
+  type RunProgressState,
+} from "./toolpath/locate";
 import {
   defaultGCodeViewerOptions,
   GCodeViewerBitType,
@@ -38,6 +48,8 @@ import {
   GCodeViewerCreateArgs,
   GCodeViewerHandle,
   GCodeViewerBitPosition,
+  GCodeViewerRunProgress,
+  GCodeViewerRunProgressArgs,
   GCodeViewerOptions,
 } from "./types";
 import type { GCodeViewerProgressEventNoId } from "./types";
@@ -130,6 +142,8 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   private toolpathStreams: ToolpathStreamState[] = [];
   private segmentsToolpath: SegmentsToolpathState | null = null;
+  // Bit-located processed boundary for trackRunProgress; reset with the colours.
+  private runProgress: RunProgressState = createRunProgressState();
   private toolpathCutBucketCount = 1;
   private toolpathRotationA = 0;
   private rotary: WorkerSegmentsData["rotary"];
@@ -398,8 +412,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   /**
-   * Colour the span of lines acked by the controller but not yet physically
-   * cut with `theme.colors.planned`. `fromLine` is accepted for API clarity
+   * Colour the span of lines sent to the controller but not yet physically
+   * cut with `theme.colors.planned`, by line. `trackRunProgress` does this
+   * from the bit position instead. `fromLine` is accepted for API clarity
    * but not used directly — the lower bound always tracks each stream's/
    * chunk's current processed cursor (set by `hideUntilLine`), so the two
    * cursors can never drift apart. Call `hideUntilLine` first in the same
@@ -417,6 +432,36 @@ export class GCodeViewer implements GCodeViewerHandle {
         index < 0 ? 0 : stream.prefixEndVertex[Math.min(index, stream.prefixEndVertex.length - 1)];
       applyStreamPlannedCursor({ stream, nextPlannedEndVertex: cursor, options: this.options });
     }
+  }
+
+  trackRunProgress(args: GCodeViewerRunProgressArgs): GCodeViewerRunProgress {
+    const mode = args.mode ?? this.options.progress.mode;
+    const plannedLine = Math.floor(args.plannedLine);
+    const fallbackLine = args.fallbackLine === undefined ? undefined : Math.floor(args.fallbackLine);
+    const state = this.segmentsToolpath;
+    if (!state) {
+      const line = fallbackLine ?? -1;
+      this.hideUntilLine(line, mode);
+      this.setPlannedRange(line + 1, plannedLine);
+      return { located: false, line: Math.max(0, line) };
+    }
+
+    // The bit is in work coordinates; the toolpath root may be turned by the
+    // A axis (rotary), so bring the bit into the toolpath's own frame.
+    this.toolpathRoot.updateMatrix();
+    const point = new THREE.Vector3(this.lastBitPosition.x, this.lastBitPosition.y, this.lastBitPosition.z).applyMatrix4(
+      this.toolpathRoot.matrix.clone().invert()
+    );
+    const result = advanceRunProgress(state, this.runProgress, point, {
+      minLine: Math.max(0, Math.floor(args.minLine ?? 0)),
+      plannedLine,
+      fallbackLine,
+      fallbackAfterMisses: args.fallbackAfterMisses ?? 8,
+      locate: { ...defaultLocateOptions, tolerance: args.tolerance ?? defaultLocateOptions.tolerance },
+    });
+    setSegmentsCursorVertex(state, result.cursorVertex, mode);
+    setSegmentsPlannedEndVertex(state, result.plannedEndVertex);
+    return { located: result.located, line: segmentsLineForVertex(state, result.cursorVertex) };
   }
 
   seekToLine(lineIndex: number, mode?: "hide" | "grey"): void {
@@ -485,6 +530,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   resetColors(): void {
+    this.runProgress = createRunProgressState();
     if (this.segmentsToolpath) {
       resetSegmentsColors(this.segmentsToolpath);
     }
@@ -947,6 +993,13 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.refreshToolpathColors();
     }
 
+    const plannedStyleChanged =
+      previous.progress.plannedFade !== this.options.progress.plannedFade ||
+      previous.progress.plannedPulse !== this.options.progress.plannedPulse;
+    if (plannedStyleChanged && this.segmentsToolpath) {
+      applySegmentsTheme(this.segmentsToolpath, this.options);
+    }
+
     const bitChanged =
       previous.bit.enabled !== this.options.bit.enabled ||
       previous.bit.type !== this.options.bit.type ||
@@ -1133,6 +1186,9 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.updateCameraFocusTransition();
       this.updateViewCubeRotation();
       this.bitMarker?.update(now);
+      if (this.segmentsToolpath) {
+        setSegmentsTime(this.segmentsToolpath, now);
+      }
       this.renderer.render(this.scene, this.camera);
     };
     tick();
@@ -1294,6 +1350,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       disposeSegmentsToolpath(this.toolpathRoot, this.segmentsToolpath);
       this.segmentsToolpath = null;
     }
+    this.runProgress = createRunProgressState();
     this.toolpathCutBucketCount = 1;
     this.linePositions = null;
     this.currentBounds = null;

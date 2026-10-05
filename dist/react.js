@@ -1,6 +1,6 @@
 import * as n from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-7rizm8H7.js";
-const g = n.forwardRef(
+import { a as w, G as C } from "./GCodeSVGRenderer-Dkc7IGrQ.js";
+const R = n.forwardRef(
   function(c, m) {
     const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), t = n.useRef(null);
     return n.useEffect(() => {
@@ -72,6 +72,9 @@ const g = n.forwardRef(
           setPlannedRange(r, o) {
             e().setPlannedRange(r, o);
           },
+          trackRunProgress(r) {
+            return e().trackRunProgress(r);
+          },
           seekToLine(r, o) {
             e().seekToLine(r, o);
           },
@@ -128,7 +131,7 @@ const g = n.forwardRef(
       [a]
     ), n.createElement("div", { ref: i, className: f, style: u });
   }
-), R = n.forwardRef(
+), V = n.forwardRef(
   function(c, m) {
     const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
     return n.useEffect(() => {
@@ -171,6 +174,6 @@ const g = n.forwardRef(
   }
 );
 export {
-  R as GCodeSVGVisualizer,
-  g as GCodeVisualizer
+  V as GCodeSVGVisualizer,
+  R as GCodeVisualizer
 };

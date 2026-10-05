@@ -32,6 +32,29 @@ export type GCodeViewerBitPosition = {
     z: number;
     a?: number;
 };
+export type GCodeViewerRunProgressArgs = {
+    /** First line of the run (start from line); 0 for a whole-file run. */
+    minLine?: number;
+    /** Index of the last line sent to the controller; the planned span ends here. */
+    plannedLine: number;
+    /**
+     * Line-based processed edge (e.g. an estimate), used after the bit has been
+     * off the toolpath for `fallbackAfterMisses` consecutive calls, or always
+     * when the toolpath can't be searched.
+     */
+    fallbackLine?: number;
+    /** Consecutive misses before `fallbackLine` applies. Default 8 (~2 s of 250 ms reports). */
+    fallbackAfterMisses?: number;
+    /** Distance (toolpath units) the bit may be from a short segment and still be on it. Default 0.5. */
+    tolerance?: number;
+    mode?: "hide" | "grey";
+};
+export type GCodeViewerRunProgress = {
+    /** Whether the bit was found on the toolpath this call. */
+    located: boolean;
+    /** Line the processed boundary is in. */
+    line: number;
+};
 export type GCodeViewerSim3dOptions = {
     toolDiameter: number;
     resolution: number;
@@ -57,6 +80,17 @@ export type GCodeViewerOptions = {
     };
     progress: {
         mode: "hide" | "grey";
+        /**
+         * Planned span (segments toolpaths): how far its colour fades from
+         * `theme.colors.planned` at the bit toward the toolpath's own colour at
+         * the last planned line, 0..1, so later moves read as later. Default 0.85.
+         */
+        plannedFade?: number;
+        /**
+         * Sweep a pulse along the planned span in execution order, so the order
+         * can be followed where paths overlap or double back. Default false.
+         */
+        plannedPulse?: boolean;
     };
     grid: {
         sizeX: number;
@@ -217,6 +251,16 @@ export type GCodeViewerHandle = {
      * every tick where that holds, it is not a special case to skip.
      */
     setPlannedRange(fromLine: number, toLine: number): void;
+    /**
+     * Run progress from the bit's position: find the last `setBitPosition`
+     * point on the toolpath between the current processed boundary and the end
+     * of `plannedLine`, grey (or hide) everything before it — part-way along a
+     * segment if that is where the bit is — and colour the rest of the planned
+     * lines with `theme.colors.planned`. The processed boundary only moves
+     * forward until `resetColors()` or a new load. Toolpaths loaded with
+     * `loadFromSegments` only; other loads fall back to `fallbackLine`.
+     */
+    trackRunProgress(args: GCodeViewerRunProgressArgs): GCodeViewerRunProgress;
     seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
     showAll(): void;
     resetColors(): void;

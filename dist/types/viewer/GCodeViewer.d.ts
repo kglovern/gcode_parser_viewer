@@ -1,5 +1,5 @@
 import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
-import { GCodeViewerCameraProjection, GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerOptions } from "./types";
+import { GCodeViewerCameraProjection, GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerRunProgress, GCodeViewerRunProgressArgs, GCodeViewerOptions } from "./types";
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
     private readonly container;
@@ -28,6 +28,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private preLaserBitType;
     private toolpathStreams;
     private segmentsToolpath;
+    private runProgress;
     private toolpathCutBucketCount;
     private toolpathRotationA;
     private rotary;
@@ -60,14 +61,16 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     setCallbacks(callbacks: GCodeViewerCallbacks): void;
     hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
     /**
-     * Colour the span of lines acked by the controller but not yet physically
-     * cut with `theme.colors.planned`. `fromLine` is accepted for API clarity
+     * Colour the span of lines sent to the controller but not yet physically
+     * cut with `theme.colors.planned`, by line. `trackRunProgress` does this
+     * from the bit position instead. `fromLine` is accepted for API clarity
      * but not used directly — the lower bound always tracks each stream's/
      * chunk's current processed cursor (set by `hideUntilLine`), so the two
      * cursors can never drift apart. Call `hideUntilLine` first in the same
      * tick. Pass `toLine < fromLine` to clear the planned range.
      */
     setPlannedRange(_fromLine: number, toLine: number): void;
+    trackRunProgress(args: GCodeViewerRunProgressArgs): GCodeViewerRunProgress;
     seekToLine(lineIndex: number, mode?: "hide" | "grey"): void;
     showAll(): void;
     /**

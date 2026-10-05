@@ -15,7 +15,9 @@ import { plannedRgb, processedRgb } from "./streams";
  * buffers. Colour comes from a per-vertex byte (rapid bit + palette slot) and,
  * for laser files, a per-vertex power value; progress greying and line-group
  * hiding are uniforms compared against `gl_VertexID`, so neither rewrites or
- * re-uploads any vertex data.
+ * re-uploads any vertex data. The processed and planned boundaries are
+ * compared per fragment against a position interpolated along each segment,
+ * so either can fall part-way along one (see locate.ts).
  *
  * Each chunk is drawn in two passes over the same geometry: cuts, then rapids
  * (renderOrder). Drawn in file order in one pass, an early rapid would write
@@ -38,12 +40,29 @@ type SharedUniforms = {
   uSegRapidOpacity: Uniform<number>;
   uSegCutOpacity: Uniform<number>;
   uSegMaxPower: Uniform<number>;
+  /** Length of the planned span in vertex positions (at least 1). */
+  uSegPlannedSpan: Uniform<number>;
+  /** How far the far end of the planned span fades toward the toolpath colour. */
+  uSegPlannedFade: Uniform<number>;
+  /** Strength of the pulse swept along the planned span; 0 turns it off. */
+  uSegPulse: Uniform<number>;
+  /** Seconds, wrapping every minute; drives the pulse. */
+  uSegTime: Uniform<number>;
 };
 
 type ChunkUniforms = {
+  /** Processed boundary, chunk-local vertex position; may be fractional. */
   uSegCursor: Uniform<number>;
-  /** Vertex index through the acked-but-not-cut ("planned") boundary; exclusive. */
+  /** 1 to discard the processed part ("hide" progress) rather than grey it. */
+  uSegCursorHides: Uniform<number>;
+  /** End of the planned (sent but not yet cut) span, chunk-local; exclusive. */
   uSegPlannedEnd: Uniform<number>;
+  /**
+   * Start of the planned span, chunk-local: negative for chunks after it.
+   * Chunk-local rather than global so the gradient keeps its precision far
+   * into big files.
+   */
+  uSegPlannedFrom: Uniform<number>;
   uSegHiddenCount: Uniform<number>;
   uSegHidden: Uniform<THREE.Vector2[]>;
 };
@@ -69,6 +88,8 @@ export type SegmentsToolpathState = {
   /** Vertex range [start, end) of each load-time line group. */
   lineGroupRanges: readonly (readonly [number, number])[];
   hiddenGroups: Set<number>;
+  /** Processed boundary, global vertex position; where the planned span starts. */
+  cursorVertex: number;
 };
 
 const VERTEX_DECLARATIONS = /* glsl */ `
@@ -78,17 +99,14 @@ attribute float aSegPower;
 #endif
 uniform vec3 uSegSlotColors[ ${SEGMENT_PALETTE_SLOTS} ];
 uniform vec3 uSegRapidColor;
-uniform vec3 uSegProcessedColor;
-uniform vec3 uSegPlannedColor;
 uniform float uSegRapidOpacity;
 uniform float uSegCutOpacity;
 uniform float uSegMaxPower;
-uniform float uSegCursor;
-uniform float uSegPlannedEnd;
 uniform int uSegHiddenCount;
 uniform vec2 uSegHidden[ ${SEGMENT_MAX_HIDDEN_RANGES} ];
 varying vec4 vSegColor;
 varying float vSegHidden;
+varying float vSegPos;
 `;
 
 const VERTEX_BODY = /* glsl */ `
@@ -108,11 +126,9 @@ if ( !segRapid ) {
   }
 }
 #endif
-if ( segVertex < uSegCursor ) {
-  segColor = uSegProcessedColor;
-} else if ( segVertex < uSegPlannedEnd ) {
-  segColor = uSegPlannedColor;
-}
+// 2k at a segment's first vertex, 2k + 2 at its second: interpolates to
+// 2k + 2t along it, the position the progress boundaries are given in.
+vSegPos = segVertex + mod( segVertex, 2.0 );
 for ( int i = 0; i < ${SEGMENT_MAX_HIDDEN_RANGES}; i++ ) {
   if ( i >= uSegHiddenCount ) break;
   if ( segVertex >= uSegHidden[ i ].x && segVertex < uSegHidden[ i ].y ) {
@@ -129,10 +145,45 @@ if ( segRapid ) gl_Position = vec4( 2.0, 2.0, 2.0, 1.0 );
 #endif
 `;
 
+/** Pulses on the planned span at once, and the seconds each takes to sweep it. */
+const SEGMENT_PULSES_PER_SPAN = 2;
+const SEGMENT_PULSE_PERIOD_S = 1.5;
+/** How far the planned span dims between pulses when `progress.plannedPulse` is on. */
+const SEGMENT_PULSE_STRENGTH = 0.55;
+
 const FRAGMENT_DECLARATIONS = /* glsl */ `
+uniform vec3 uSegProcessedColor;
+uniform vec3 uSegPlannedColor;
+uniform float uSegCursor;
+uniform float uSegCursorHides;
+uniform float uSegPlannedEnd;
+uniform float uSegPlannedFrom;
+uniform float uSegPlannedSpan;
+uniform float uSegPlannedFade;
+uniform float uSegPulse;
+uniform float uSegTime;
 varying vec4 vSegColor;
 varying float vSegHidden;
+varying float vSegPos;
 `;
+
+const FRAGMENT_BODY = /* glsl */ `if ( vSegHidden > 0.5 ) discard;
+	vec3 segRgb = vSegColor.rgb;
+	if ( vSegPos < uSegCursor ) {
+		if ( uSegCursorHides > 0.5 ) discard;
+		segRgb = uSegProcessedColor;
+	} else if ( vSegPos < uSegPlannedEnd ) {
+		// 0 at the bit, 1 at the end of the last planned line: later moves fade
+		// toward their own colour.
+		float segK = clamp( ( vSegPos - uSegPlannedFrom ) / uSegPlannedSpan, 0.0, 1.0 );
+		segRgb = mix( uSegPlannedColor, vSegColor.rgb, segK * uSegPlannedFade );
+		// Comets sweeping toward the end in run order: full brightness at the
+		// head, a tail back toward the bit, the span dimmed between them.
+		// Dimming rather than whitening, since the span starts out yellow.
+		float segPhase = fract( segK * ${SEGMENT_PULSES_PER_SPAN.toFixed(1)} - uSegTime / ${SEGMENT_PULSE_PERIOD_S.toFixed(1)} );
+		segRgb *= 1.0 - uSegPulse * ( 1.0 - smoothstep( 0.6, 1.0, segPhase ) );
+	}
+	vec4 diffuseColor = vec4( segRgb, vSegColor.a );`;
 
 const FRAGMENT_DIFFUSE = "vec4 diffuseColor = vec4( diffuse, opacity );";
 
@@ -161,10 +212,10 @@ function createSegmentsMaterial(
       .replace("#include <fog_vertex>", `#include <fog_vertex>\n${VERTEX_BODY}`);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${FRAGMENT_DECLARATIONS}`)
-      .replace(FRAGMENT_DIFFUSE, "if ( vSegHidden > 0.5 ) discard;\n\tvec4 diffuseColor = vSegColor;");
+      .replace(FRAGMENT_DIFFUSE, FRAGMENT_BODY);
   };
   // Every chunk compiles to one program per pass; only uniform values differ.
-  const cacheKey = `gviewer-segments-v1-${pass}${usePower ? "-power" : ""}`;
+  const cacheKey = `gviewer-segments-v3-${pass}${usePower ? "-power" : ""}`;
   material.customProgramCacheKey = () => cacheKey;
   return material;
 }
@@ -199,6 +250,16 @@ export function applySegmentsTheme(
   shared.uSegPlannedColor.value.setRGB(planned.r, planned.g, planned.b);
   shared.uSegRapidOpacity.value = clamp01(options.render.theme.rapidOpacity ?? 0.3);
   shared.uSegCutOpacity.value = clamp01(options.render.theme.opacity);
+  shared.uSegPlannedFade.value = clamp01(options.progress.plannedFade ?? 0.85);
+  shared.uSegPulse.value = options.progress.plannedPulse ? SEGMENT_PULSE_STRENGTH : 0;
+}
+
+/**
+ * Advance the planned-span pulse to `nowMs`. Wraps every minute, which the
+ * pulse period divides, so the sweep is seamless and the value stays small.
+ */
+export function setSegmentsTime(state: Pick<SegmentsToolpathState, "shared">, nowMs: number): void {
+  state.shared.uSegTime.value = (nowMs % 60000) / 1000;
 }
 
 function lineGroupVertexRanges(
@@ -239,6 +300,10 @@ export function createSegmentsToolpath(args: {
     uSegCutOpacity: { value: 1 },
     // Fractional S (e.g. $30=1 lasers) is valid, so no floor of 1 here.
     uSegMaxPower: { value: (data.maxPower ?? 0) > 0 ? data.maxPower! : 1 },
+    uSegPlannedSpan: { value: 1 },
+    uSegPlannedFade: { value: 0.85 },
+    uSegPulse: { value: 0 },
+    uSegTime: { value: 0 },
   };
   const paletteHex = hasToolchanges && data.paletteHex ? data.paletteHex : null;
   applySegmentsTheme({ shared, paletteHex }, options);
@@ -264,7 +329,9 @@ export function createSegmentsToolpath(args: {
 
     const uniforms: ChunkUniforms = {
       uSegCursor: { value: 0 },
+      uSegCursorHides: { value: 0 },
       uSegPlannedEnd: { value: 0 },
+      uSegPlannedFrom: { value: 0 - base }, // cursor 0, chunk-local
       uSegHiddenCount: { value: 0 },
       uSegHidden: {
         value: Array.from({ length: SEGMENT_MAX_HIDDEN_RANGES }, () => new THREE.Vector2()),
@@ -291,6 +358,7 @@ export function createSegmentsToolpath(args: {
     paletteHex,
     lineGroupRanges: lineGroupVertexRanges(prefixEndVertex, args.lineGroups),
     hiddenGroups: new Set(),
+    cursorVertex: 0,
   };
   return { state, bounds };
 }
@@ -324,29 +392,54 @@ export function setSegmentsProgress(
   lineIndex: number,
   mode: "hide" | "grey"
 ): void {
-  const cursor = segmentsCursorForLine(state, lineIndex);
+  setSegmentsCursorVertex(state, segmentsCursorForLine(state, lineIndex), mode);
+}
+
+/**
+ * Progress up to vertex position `vertex`, which may fall part-way along a
+ * segment (`2k + 2t`). "hide" skips whole segments with the draw range and
+ * discards the processed part of the segment the boundary falls in.
+ */
+export function setSegmentsCursorVertex(
+  state: SegmentsToolpathState,
+  vertex: number,
+  mode: "hide" | "grey"
+): void {
+  state.cursorVertex = Math.max(0, Math.min(state.totalVertices, vertex));
   for (const chunk of state.chunks) {
-    const local = Math.max(0, Math.min(chunk.count, cursor - chunk.base));
+    const local = Math.max(0, Math.min(chunk.count, vertex - chunk.base));
+    chunk.uniforms.uSegCursor.value = local;
     if (mode === "grey") {
+      chunk.uniforms.uSegCursorHides.value = 0;
       chunk.geometry.setDrawRange(0, chunk.count);
-      chunk.uniforms.uSegCursor.value = local;
     } else {
-      chunk.geometry.setDrawRange(local, chunk.count - local);
+      chunk.uniforms.uSegCursorHides.value = 1;
+      const start = Math.floor(local / 2) * 2;
+      chunk.geometry.setDrawRange(start, chunk.count - start);
     }
   }
 }
 
 /**
- * Colour vertices through line `toLine` as "planned" (acked, not yet cut),
+ * Colour vertices through line `toLine` as "planned" (sent, not yet cut),
  * wherever they fall beyond the chunk's current processed cursor — the
- * shader's `else if` ordering (see VERTEX_BODY) means the processed cursor
+ * shader's `else if` ordering (see FRAGMENT_BODY) means the processed cursor
  * always wins on overlap, so this never needs to know the lower bound
  * itself. Pass a line before the processed cursor (or < 0) to clear it.
  */
 export function setSegmentsPlannedEnd(state: SegmentsToolpathState, toLine: number): void {
-  const cursor = toLine < 0 ? 0 : segmentsCursorForLine(state, toLine);
+  setSegmentsPlannedEndVertex(state, toLine < 0 ? 0 : segmentsCursorForLine(state, toLine));
+}
+
+/**
+ * `setSegmentsPlannedEnd` by vertex position. The planned gradient runs from
+ * the processed cursor to here, so set the cursor first.
+ */
+export function setSegmentsPlannedEndVertex(state: SegmentsToolpathState, vertex: number): void {
+  state.shared.uSegPlannedSpan.value = Math.max(1, vertex - state.cursorVertex);
   for (const chunk of state.chunks) {
-    chunk.uniforms.uSegPlannedEnd.value = Math.max(0, Math.min(chunk.count, cursor - chunk.base));
+    chunk.uniforms.uSegPlannedEnd.value = Math.max(0, Math.min(chunk.count, vertex - chunk.base));
+    chunk.uniforms.uSegPlannedFrom.value = state.cursorVertex - chunk.base;
   }
 }
 
@@ -359,9 +452,13 @@ export function showAllSegments(state: SegmentsToolpathState): void {
 
 /** Clear progress greying and planned colouring. */
 export function resetSegmentsColors(state: SegmentsToolpathState): void {
+  state.cursorVertex = 0;
+  state.shared.uSegPlannedSpan.value = 1;
   for (const chunk of state.chunks) {
     chunk.uniforms.uSegCursor.value = 0;
+    chunk.uniforms.uSegCursorHides.value = 0;
     chunk.uniforms.uSegPlannedEnd.value = 0;
+    chunk.uniforms.uSegPlannedFrom.value = state.cursorVertex - chunk.base;
   }
 }
 

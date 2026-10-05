@@ -4,6 +4,7 @@ import type {
   GCodeViewerCallbacks,
   GCodeViewerHandle,
   GCodeViewerOptions,
+  GCodeViewerRunProgressArgs,
 } from "../viewer/types";
 
 export type GCodeVisualizerProps = {
@@ -97,6 +98,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           },
           setPlannedRange(fromLine: number, toLine: number) {
             getViewer().setPlannedRange(fromLine, toLine);
+          },
+          trackRunProgress(args: GCodeViewerRunProgressArgs) {
+            return getViewer().trackRunProgress(args);
           },
           seekToLine(lineIndex: number, mode?: "hide" | "grey") {
             getViewer().seekToLine(lineIndex, mode);
