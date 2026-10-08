@@ -1,4 +1,6 @@
 import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
+import type { PrecomputedSegmentGroup, PrecomputedSegmentMeta } from "./toolpath/precomputed";
+export type { PrecomputedSegmentGroup, PrecomputedSegmentMeta } from "./toolpath/precomputed";
 export type GridUnits = "mm" | "in";
 export type GCodeViewerTheme = {
     background: string;
@@ -61,7 +63,15 @@ export type GCodeViewerSim3dOptions = {
     showToolpath: boolean;
     erosionPasses: number;
 };
+/**
+ * `"pendant"`: a locked top-down orthographic view for touch screens. It forces
+ * `camera.lockTopDown`, orthographic projection, no view cube, no grid or
+ * axes, a screen-sized crosshair bit and the origin marker. The machine bed is
+ * left to the host. Pair it with `loadFromPrecomputedGroups` and 2D data.
+ */
+export type GCodeViewerViewMode = "standard" | "pendant";
 export type GCodeViewerOptions = {
+    viewMode?: GCodeViewerViewMode;
     units: GridUnits;
     mode: {
         laser: boolean;
@@ -77,6 +87,11 @@ export type GCodeViewerOptions = {
         colorSource: "cutting" | "rapid" | "custom";
         color: string;
         spinRpm: number;
+        /**
+         * Treat `size` as CSS pixels and keep the marker that size on screen at
+         * any zoom. Default false (`size` is in world units).
+         */
+        screenSpace?: boolean;
     };
     progress: {
         mode: "hide" | "grey";
@@ -107,6 +122,19 @@ export type GCodeViewerOptions = {
                 y: number;
             };
         } | null;
+        /** Draw the grid, its labels and the axes. Default true. */
+        visible?: boolean;
+    };
+    /** The HTML view cube in the container corner. Default visible. */
+    viewCube?: {
+        visible: boolean;
+    };
+    /** Filled dot at the toolpath origin (0,0,0), a constant size on screen. Default hidden. */
+    originMarker?: {
+        visible: boolean;
+        color: string;
+        /** Diameter in CSS pixels. */
+        sizePx: number;
     };
     boundingBox: {
         visible: boolean;
@@ -162,6 +190,12 @@ export type GCodeViewerOptions = {
             y: number;
             z: number;
         };
+        /**
+         * Pin the camera looking straight down (+Y up on screen): rotation off,
+         * one-finger/left-drag pans, view snaps ignored, and focus/reset fit the
+         * model top-down. Default false.
+         */
+        lockTopDown?: boolean;
     };
 };
 export declare const defaultGCodeViewerTheme: GCodeViewerTheme;
@@ -272,6 +306,12 @@ export type GCodeViewerHandle = {
     loadFromLines(lines: readonly string[]): Promise<void>;
     loadFromWorkerData(data: WorkerGeometryData): Promise<void>;
     loadFromSegments(data: WorkerSegmentsData, options?: LoadWorkerDataOptions): Promise<void>;
+    /**
+     * Load draw-ready colour groups, e.g. a worker's Z-deduped 2D output. Each
+     * group keeps its own colour and opacity; theme toolpath colours, progress
+     * greying, planned lines and `trackRunProgress` do not apply to it.
+     */
+    loadFromPrecomputedGroups(groups: readonly PrecomputedSegmentGroup[], meta?: PrecomputedSegmentMeta): void;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;

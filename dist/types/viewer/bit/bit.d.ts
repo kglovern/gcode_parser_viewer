@@ -10,5 +10,10 @@ export type BitMarker = {
         immediate?: boolean;
     }): void;
     setSpinning(spinning: boolean): void;
+    /**
+     * World units per CSS pixel at the current zoom. With `bit.screenSpace` the
+     * marker rescales to stay `bit.size` pixels across; otherwise a no-op.
+     */
+    setPixelScale(worldUnitsPerPixel: number): void;
 };
 export declare function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker;

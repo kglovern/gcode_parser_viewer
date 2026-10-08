@@ -32,6 +32,13 @@ import {
   type SegmentsToolpathState,
 } from "./toolpath/segments";
 import {
+  createPrecomputedToolpath,
+  disposePrecomputedToolpath,
+  type PrecomputedSegmentGroup,
+  type PrecomputedSegmentMeta,
+  type PrecomputedToolpathState,
+} from "./toolpath/precomputed";
+import {
   advanceRunProgress,
   createRunProgressState,
   defaultLocateOptions,
@@ -74,8 +81,10 @@ import {
   orthoDepthRange,
   orthoFrustumFor,
   perspectiveDepthRange,
+  topDownFitHeight,
   VerticalInvertOrbitControls,
   viewDirection,
+  worldUnitsPerPixel,
   type GCodeViewerCameraLike,
 } from "./camera/camera";
 import {
@@ -138,10 +147,12 @@ export class GCodeViewer implements GCodeViewerHandle {
   private boundingBoxGroup: THREE.Group | null = null;
   private machineBedGroup: THREE.Group | null = null;
   private bitMarker: BitMarker | null = null;
+  private originMarker: THREE.Mesh | null = null;
   private preLaserBitType: GCodeViewerBitType = "drill";
 
   private toolpathStreams: ToolpathStreamState[] = [];
   private segmentsToolpath: SegmentsToolpathState | null = null;
+  private precomputedToolpath: PrecomputedToolpathState | null = null;
   // Bit-located processed boundary for trackRunProgress; reset with the colours.
   private runProgress: RunProgressState = createRunProgressState();
   private toolpathCutBucketCount = 1;
@@ -285,6 +296,37 @@ export class GCodeViewer implements GCodeViewerHandle {
 
     this.viewCubeCorrection = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(90));
 
+    this.refreshViewCube();
+
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.resize());
+      this.resizeObserver.observe(this.container);
+    } else {
+      this.onWindowResize = () => this.resize();
+      window.addEventListener("resize", this.onWindowResize);
+    }
+
+    this.renderGridAndAxes();
+    this.refreshGridLabels();
+    this.refreshBoundingBox();
+    this.refreshMachineBed();
+    this.ensureBitMarker();
+    this.refreshOriginMarker();
+    this.resize();
+    this.applyTopDownLock();
+    this.startAnimationLoop();
+  }
+
+  private refreshViewCube(): void {
+    const visible = this.options.viewCube?.visible ?? true;
+    if (!visible) {
+      this.viewCube?.dispose();
+      this.viewCube = null;
+      return;
+    }
+    if (this.viewCube) {
+      return;
+    }
     this.viewCube = new ViewCube({
       container: this.container,
       onSelectView: (view) => {
@@ -304,22 +346,43 @@ export class GCodeViewer implements GCodeViewerHandle {
         this.startSnapToView(view, center, Math.max(1e-6, distance), 400, reframe);
       },
     });
+  }
 
-    if (typeof ResizeObserver !== "undefined") {
-      this.resizeObserver = new ResizeObserver(() => this.resize());
-      this.resizeObserver.observe(this.container);
-    } else {
-      this.onWindowResize = () => this.resize();
-      window.addEventListener("resize", this.onWindowResize);
+  private isTopDownLocked(): boolean {
+    return Boolean(this.options.camera.lockTopDown);
+  }
+
+  /**
+   * Apply or release `camera.lockTopDown`. Locking points the camera straight
+   * down over the current target and maps one-finger and left-button drags to
+   * pan, since there is nothing left to rotate.
+   */
+  private applyTopDownLock(): void {
+    if (!this.isTopDownLocked()) {
+      this.controls.enableRotate = true;
+      this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+      this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+      return;
     }
+    this.controls.enableRotate = false;
+    this.controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+    this.controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    const target = this.controls.target.clone();
+    const distance = Math.max(1, this.camera.position.distanceTo(target));
+    this.placeTopDown(target, distance);
+  }
 
-    this.renderGridAndAxes();
-    this.refreshGridLabels();
-    this.refreshBoundingBox();
-    this.refreshMachineBed();
-    this.ensureBitMarker();
-    this.resize();
-    this.startAnimationLoop();
+  // Straight down over `target`. The hair of -Y keeps OrbitControls off its
+  // pole singularity so screen-up is deterministically +Y.
+  private placeTopDown(target: THREE.Vector3, distance: number): void {
+    if (this.cameraFocusTransition) {
+      this.controls.enableDamping = this.cameraFocusTransition.dampingEnabled;
+      this.cameraFocusTransition = null;
+    }
+    this.controls.target.copy(target);
+    this.camera.position.set(target.x, target.y - distance * 1e-4, target.z + distance);
+    this.applyCameraDepthRange(distance);
+    this.controls.update();
   }
 
   setBitPosition(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void {
@@ -565,6 +628,9 @@ export class GCodeViewer implements GCodeViewerHandle {
    * visible. Use focusToModel() to reframe in either projection.
    */
   snapCameraToView(view: GCodeViewerCameraView, options: { durationMs?: number; distance?: number } = {}): void {
+    if (this.isTopDownLocked()) {
+      return;
+    }
     const durationMs = Math.max(0, Math.floor(options.durationMs ?? 240));
     const target = this.controls.target.clone();
     const currentDistance = this.camera.position.distanceTo(target);
@@ -581,7 +647,7 @@ export class GCodeViewer implements GCodeViewerHandle {
    * orientation, so this is a UX lock, not a correctness requirement.
    */
   setRotateEnabled(enabled: boolean): void {
-    this.controls.enableRotate = enabled;
+    this.controls.enableRotate = enabled && !this.isTopDownLocked();
   }
 
   /**
@@ -885,6 +951,19 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setToolpathRotationA(this.toolpathRotationA);
   }
 
+  loadFromPrecomputedGroups(
+    groups: readonly PrecomputedSegmentGroup[],
+    meta?: PrecomputedSegmentMeta
+  ): void {
+    this.currentLines = [];
+    this.setGeometryEmpty();
+    const { state, bounds } = createPrecomputedToolpath({ groups, meta, parent: this.toolpathRoot });
+    this.precomputedToolpath = state;
+    this.currentBounds = bounds ? bounds.clone() : null;
+    this.emitBoundsChanged();
+    this.refreshBoundingBox();
+  }
+
   unload(): void {
     this.currentLines = [];
     this.setGeometryEmpty();
@@ -921,6 +1000,19 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (previous.camera.orbit.enableDamping !== this.options.camera.orbit.enableDamping) {
       this.controls.enableDamping = this.options.camera.orbit.enableDamping;
     }
+    if (Boolean(previous.camera.lockTopDown) !== this.isTopDownLocked()) {
+      this.applyTopDownLock();
+    }
+    if ((previous.viewCube?.visible ?? true) !== (this.options.viewCube?.visible ?? true)) {
+      this.refreshViewCube();
+    }
+    if (
+      previous.originMarker?.visible !== this.options.originMarker?.visible ||
+      previous.originMarker?.color !== this.options.originMarker?.color ||
+      previous.originMarker?.sizePx !== this.options.originMarker?.sizePx
+    ) {
+      this.refreshOriginMarker();
+    }
 
     const gridBoundsChanged =
       previous.grid.bounds?.min.x !== this.options.grid.bounds?.min.x ||
@@ -928,7 +1020,10 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.grid.bounds?.max.x !== this.options.grid.bounds?.max.x ||
       previous.grid.bounds?.max.y !== this.options.grid.bounds?.max.y;
 
+    const gridVisibleChanged = (previous.grid.visible ?? true) !== (this.options.grid.visible ?? true);
+
     const gridLayoutChanged =
+      gridVisibleChanged ||
       previous.units !== this.options.units ||
       previous.grid.sizeX !== this.options.grid.sizeX ||
       previous.grid.sizeY !== this.options.grid.sizeY ||
@@ -947,6 +1042,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
 
     const gridLabelsChanged =
+      gridVisibleChanged ||
       previous.grid.labels !== this.options.grid.labels ||
       previous.units !== this.options.units ||
       previous.grid.sizeX !== this.options.grid.sizeX ||
@@ -1095,10 +1191,21 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (!this.currentBounds) {
       return;
     }
+    if (this.isTopDownLocked()) {
+      this.startTopDownFocus(this.currentBounds);
+      return;
+    }
     this.startCameraFocus(this.currentBounds);
   }
 
   resetCamera(): void {
+    if (this.isTopDownLocked()) {
+      const { x, y, z } = this.options.camera.initialPosition;
+      this.orthographicCamera.zoom = 1;
+      this.orthographicCamera.updateProjectionMatrix();
+      this.placeTopDown(new THREE.Vector3(0, 0, 0), Math.max(1, Math.hypot(x, y, z)));
+      return;
+    }
     this.cameraFocusTransition = null;
     this.controls.enableDamping = this.options.camera.orbit.enableDamping;
     this.controls.target.set(0, 0, 0);
@@ -1154,6 +1261,8 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setBoundingBoxGroup(null);
     this.setMachineBedGroup(null);
     this.setBitMarker(null);
+    this.options = { ...this.options, originMarker: undefined };
+    this.refreshOriginMarker();
 
     this.controls.dispose();
     this.renderer.dispose();
@@ -1186,12 +1295,56 @@ export class GCodeViewer implements GCodeViewerHandle {
       this.updateCameraFocusTransition();
       this.updateViewCubeRotation();
       this.bitMarker?.update(now);
+      this.updateScreenSpaceMarkers();
       if (this.segmentsToolpath) {
         setSegmentsTime(this.segmentsToolpath, now);
       }
       this.renderer.render(this.scene, this.camera);
     };
     tick();
+  }
+
+  /** World units per CSS pixel at the orbit target, for constant-size markers. */
+  private currentWorldUnitsPerPixel(): number {
+    const framedHeight = this.isPerspectiveActive()
+      ? frustumHeightAtDistance(this.camera.position.distanceTo(this.controls.target), this.options.camera.fov)
+      : this.orthoFramedHeight();
+    return worldUnitsPerPixel(framedHeight, this.container.clientHeight);
+  }
+
+  private updateScreenSpaceMarkers(): void {
+    if (!this.bitMarker && !this.originMarker) {
+      return;
+    }
+    const perPixel = this.currentWorldUnitsPerPixel();
+    this.bitMarker?.setPixelScale(perPixel);
+    if (this.originMarker) {
+      const sizePx = this.options.originMarker?.sizePx ?? 9;
+      this.originMarker.scale.setScalar((sizePx / 2) * perPixel);
+    }
+  }
+
+  private refreshOriginMarker(): void {
+    if (this.originMarker) {
+      this.scene.remove(this.originMarker);
+      this.originMarker.geometry.dispose();
+      (this.originMarker.material as THREE.Material).dispose();
+      this.originMarker = null;
+    }
+    const marker = this.options.originMarker;
+    if (!marker?.visible) {
+      return;
+    }
+    // Unit radius, scaled each frame to sizePx. Drawn over the toolpath but
+    // under the bit, so the bit stays readable when it sits on zero.
+    const mesh = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 24),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(marker.color), depthTest: false, depthWrite: false })
+    );
+    mesh.name = "gviewer:origin-marker";
+    mesh.renderOrder = 999;
+    this.originMarker = mesh;
+    this.scene.add(mesh);
   }
 
   private ensureBitMarker(): void {
@@ -1220,6 +1373,11 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private renderGridAndAxes(): void {
+    if (!(this.options.grid.visible ?? true)) {
+      this.setGridGroup(null);
+      this.setAxesGroup(null);
+      return;
+    }
     const { sizeXMm, sizeYMm, axisDepthMm, bounds } = this.worldSizes();
     this.setGridGroup(
       createUnitGrid({
@@ -1242,7 +1400,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private refreshGridLabels(): void {
-    if (!this.options.grid.labels) {
+    if (!this.options.grid.labels || !(this.options.grid.visible ?? true)) {
       this.setGridLabelsGroup(null);
       return;
     }
@@ -1349,6 +1507,10 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (this.segmentsToolpath) {
       disposeSegmentsToolpath(this.toolpathRoot, this.segmentsToolpath);
       this.segmentsToolpath = null;
+    }
+    if (this.precomputedToolpath) {
+      disposePrecomputedToolpath(this.toolpathRoot, this.precomputedToolpath);
+      this.precomputedToolpath = null;
     }
     this.runProgress = createRunProgressState();
     this.toolpathCutBucketCount = 1;
@@ -1555,6 +1717,9 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (this.segmentsToolpath) {
       setSegmentsVisible(this.segmentsToolpath, visible);
     }
+    if (this.precomputedToolpath) {
+      this.precomputedToolpath.group.visible = visible;
+    }
   }
 
   private async buildAndApplySim3d(mySequence: number): Promise<void> {
@@ -1591,6 +1756,22 @@ export class GCodeViewer implements GCodeViewerHandle {
     const slab = createMaterialSlab(data.slabBounds, resolution);
     updateSlabTopSurface(slab, initialHeightmap);
     this.setSim3dHandle({ data, slab, currentLine: 0 });
+  }
+
+  // Top-down framing: centre on the model and fit its X/Y extent to the
+  // viewport. Under ortho the zoom does the framing; under perspective the
+  // standoff does.
+  private startTopDownFocus(bounds: THREE.Box3): void {
+    const center = new THREE.Vector3();
+    bounds.getCenter(center);
+    const size = new THREE.Vector3();
+    bounds.getSize(size);
+    const height = topDownFitHeight(size, this.viewportAspect());
+    const distance = Math.max(1, distanceForFrustumHeight(height, this.options.camera.fov) + size.z);
+    const toPosition = new THREE.Vector3(center.x, center.y - distance * 1e-4, center.z + distance);
+    this.applyCameraDepthRange(Math.max(size.x, size.y, size.z, distance, 1));
+    const toZoom = this.isPerspectiveActive() ? undefined : this.orthoZoomForHeight(height);
+    this.startCameraLerp(center, toPosition, this.options.camera.focusDurationMs, "easeInOutCubic", toZoom);
   }
 
   private startCameraFocus(bounds: THREE.Box3): void {
@@ -1676,12 +1857,12 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions {
+export function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions {
   if (!next) {
-    return { ...base };
+    return applyViewMode({ ...base });
   }
   const mergedTheme = mergeTheme(base.render.theme, next.render?.theme);
-  return {
+  return applyViewMode({
     ...base,
     ...next,
     mode: { ...base.mode, ...next.mode },
@@ -1689,6 +1870,8 @@ function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions
     bit: { ...base.bit, ...next.bit },
     progress: { ...base.progress, ...next.progress },
     grid: { ...base.grid, ...next.grid },
+    viewCube: mergeOptional(base.viewCube, next.viewCube),
+    originMarker: mergeOptional(base.originMarker, next.originMarker),
     boundingBox: { ...base.boundingBox, ...next.boundingBox },
     machineBed: { ...base.machineBed, ...next.machineBed },
     geometry: {
@@ -1707,6 +1890,40 @@ function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions
       orbit: { ...base.camera.orbit, ...next.camera?.orbit },
       initialPosition: { ...base.camera.initialPosition, ...next.camera?.initialPosition },
     },
+  });
+}
+
+function mergeOptional<T extends object>(base: T | undefined, next: T | undefined): T | undefined {
+  if (!next) {
+    return base;
+  }
+  return { ...base, ...next } as T;
+}
+
+/**
+ * Pendant mode is a preset, not a separate renderer. It re-pins the options it
+ * depends on at every merge, so a later partial update can't half-unlock it.
+ */
+export function applyViewMode(options: NormalizedOptions): NormalizedOptions {
+  if (options.viewMode !== "pendant") {
+    return options;
+  }
+  return {
+    ...options,
+    bit: {
+      ...options.bit,
+      type: options.bit.type === "laser" ? "laser" : "crosshair",
+      screenSpace: true,
+    },
+    grid: { ...options.grid, visible: false },
+    viewCube: { visible: false },
+    originMarker: {
+      color: "#ffffff",
+      sizePx: 9,
+      ...options.originMarker,
+      visible: true,
+    },
+    camera: { ...options.camera, projection: "orthographic", lockTopDown: true },
   };
 }
 

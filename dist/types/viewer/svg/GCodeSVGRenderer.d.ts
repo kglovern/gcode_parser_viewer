@@ -1,4 +1,5 @@
 import type { WorkerGeometryData, WorkerSegmentsData } from "../../types";
+import type { PrecomputedSegmentGroup, PrecomputedSegmentMeta } from "../toolpath/precomputed";
 import { GCodeSVGOptions } from "./types";
 export declare class GCodeSVGRenderer {
     private svg;
@@ -55,16 +56,7 @@ export declare class GCodeSVGRenderer {
      */
     loadFromSegments(data: WorkerSegmentsData): void;
     private adoptWorkerGroups;
-    loadFromPrecomputedGroups(groups: {
-        hexColor: string;
-        opacity: number;
-        positionsBuffer: ArrayBuffer;
-        positionsLen: number;
-        stride?: 4 | 6;
-    }[], meta?: {
-        minZ?: number;
-        maxZ?: number;
-    }): void;
+    loadFromPrecomputedGroups(groups: readonly PrecomputedSegmentGroup[], meta?: PrecomputedSegmentMeta): void;
     private syncSegmentGroupsFromLines;
     resetView(): void;
     setOptions(opts: Partial<GCodeSVGOptions>): void;

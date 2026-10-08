@@ -1,5 +1,7 @@
 import type { LoadWorkerDataOptions, WorkerGeometryData, WorkerSegmentsData } from "../types";
+import { type PrecomputedSegmentGroup, type PrecomputedSegmentMeta } from "./toolpath/precomputed";
 import { GCodeViewerCameraProjection, GCodeViewerCameraView, GCodeViewerBounds, GCodeViewerCallbacks, GCodeViewerCreateArgs, GCodeViewerHandle, GCodeViewerBitPosition, GCodeViewerRunProgress, GCodeViewerRunProgressArgs, GCodeViewerOptions } from "./types";
+type NormalizedOptions = GCodeViewerOptions;
 export declare class GCodeViewer implements GCodeViewerHandle {
     readonly id: string;
     private readonly container;
@@ -25,9 +27,11 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private boundingBoxGroup;
     private machineBedGroup;
     private bitMarker;
+    private originMarker;
     private preLaserBitType;
     private toolpathStreams;
     private segmentsToolpath;
+    private precomputedToolpath;
     private runProgress;
     private toolpathCutBucketCount;
     private toolpathRotationA;
@@ -43,6 +47,15 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private cameraFollowInterrupted;
     private cameraFollowOffset;
     constructor(args: GCodeViewerCreateArgs);
+    private refreshViewCube;
+    private isTopDownLocked;
+    /**
+     * Apply or release `camera.lockTopDown`. Locking points the camera straight
+     * down over the current target and maps one-finger and left-button drags to
+     * pan, since there is nothing left to rotate.
+     */
+    private applyTopDownLock;
+    private placeTopDown;
     setBitPosition(position: GCodeViewerBitPosition, options?: {
         immediate?: boolean;
     }): void;
@@ -192,6 +205,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
      * `hideUntilLine`/`lineGroups` follow `data.prefixEndVertex`.
      */
     loadFromSegments(data: WorkerSegmentsData, options?: LoadWorkerDataOptions): Promise<void>;
+    loadFromPrecomputedGroups(groups: readonly PrecomputedSegmentGroup[], meta?: PrecomputedSegmentMeta): void;
     unload(): void;
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;
@@ -203,6 +217,10 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private emitProgress;
     private emitBoundsChanged;
     private startAnimationLoop;
+    /** World units per CSS pixel at the orbit target, for constant-size markers. */
+    private currentWorldUnitsPerPixel;
+    private updateScreenSpaceMarkers;
+    private refreshOriginMarker;
     private ensureBitMarker;
     private worldSizes;
     private renderGridAndAxes;
@@ -225,7 +243,15 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private setSim3dHandle;
     private setToolpathStreamsVisible;
     private buildAndApplySim3d;
+    private startTopDownFocus;
     private startCameraFocus;
     private updateCameraFocusTransition;
     private updateViewCubeRotation;
 }
+export declare function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions;
+/**
+ * Pendant mode is a preset, not a separate renderer. It re-pins the options it
+ * depends on at every merge, so a later partial update can't half-unlock it.
+ */
+export declare function applyViewMode(options: NormalizedOptions): NormalizedOptions;
+export {};

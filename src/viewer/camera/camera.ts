@@ -178,6 +178,28 @@ export function fitDistanceForBounds(
   return distanceForFrustumHeight(halfMax * 2, fovDeg) * margin + size.z;
 }
 
+/**
+ * Vertical world extent a straight-down camera must frame so a model of the
+ * given X/Y size fits the viewport on both axes, with `margin` around it. The
+ * width only binds when the model is wider than the viewport's aspect.
+ */
+export function topDownFitHeight(
+  size: { x: number; y: number },
+  aspect: number,
+  margin = 1.1
+): number {
+  const safeAspect = Math.max(1e-6, aspect);
+  return Math.max(size.y, size.x / safeAspect, 1) * margin;
+}
+
+/**
+ * World units covered by one CSS pixel, for drawing markers at a constant
+ * on-screen size. `framedHeight` is the vertical world extent in view.
+ */
+export function worldUnitsPerPixel(framedHeight: number, viewportHeightPx: number): number {
+  return Math.max(1e-9, framedHeight) / Math.max(1, viewportHeightPx);
+}
+
 /** Symmetric orthographic frustum framing `height` world units vertically. */
 export function orthoFrustumFor(
   height: number,

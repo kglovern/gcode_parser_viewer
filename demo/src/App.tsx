@@ -4,6 +4,8 @@ import { gCodeViewerThemePresets, type GCodeViewerThemePresetName } from "@src/v
 import type { GCodeViewerHandle, GCodeViewerOptions, GCodeViewerCallbacks } from "@src/viewer/types";
 import { GCodeVirtualizer } from "@src/virtualizer";
 import "@src/viewer/viewcube.css";
+import { PendantView, type PendantBed, type PendantViewHandle } from "./PendantView";
+import type { PendantData } from "./pendantData";
 import "./App.css";
 
 function deepMerge<T extends Record<string, unknown>>(base: T, patch: Partial<T>): T {
@@ -29,6 +31,8 @@ function deepMerge<T extends Record<string, unknown>>(base: T, patch: Partial<T>
 
 type Options = Partial<GCodeViewerOptions>;
 
+type ViewKind = "3d" | "svg" | "pendant";
+
 type ProgressState =
   | { state: "hidden" }
   | { state: "indeterminate"; label: string }
@@ -39,7 +43,36 @@ export default function App() {
   const svgRef = useRef<GCodeSVGRendererHandle>(null);
   const gcodeTextRef = useRef<string>("");
   const linePositionsRef = useRef<Float32Array | null>(null);
-  const [svgMode, setSvgMode] = useState(false);
+  const pendantRef = useRef<PendantViewHandle>(null);
+  const [view, setView] = useState<ViewKind>("3d");
+  const svgMode = view === "svg";
+  const [gcodeText, setGcodeText] = useState("");
+  const [pendantData, setPendantData] = useState<PendantData | null>(null);
+  const [pendantBed, setPendantBed] = useState<PendantBed>({
+    visible: true,
+    width: 800,
+    depth: 800,
+    offsetX: -100,
+    offsetY: -100,
+  });
+  const [crosshairPx, setCrosshairPx] = useState(26);
+
+  // There is no machine in the demo, so stand a bed in around each new
+  // toolpath (with a margin) where it will be in view. The fields stay editable.
+  const handlePendantData = useCallback((data: PendantData | null) => {
+    setPendantData(data);
+    const b = data?.bounds;
+    if (!b) return;
+    const margin = Math.max(10, Math.round(Math.max(b.maxX - b.minX, b.maxY - b.minY) * 0.15));
+    setPendantBed((prev) => ({
+      ...prev,
+      offsetX: Math.floor(b.minX - margin),
+      offsetY: Math.floor(b.minY - margin),
+      width: Math.ceil(b.maxX - b.minX + margin * 2),
+      depth: Math.ceil(b.maxY - b.minY + margin * 2),
+    }));
+  }, []);
+  const [originPx, setOriginPx] = useState(9);
   const [svgProjection, setSvgProjection] = useState<'isometric' | 'perspective'>('isometric');
   const [options, setOptions] = useState<Options>({
     render: { antialias: true, theme: gCodeViewerThemePresets["dark"] },
@@ -142,6 +175,7 @@ export default function App() {
       const lines = text.split(/\r?\n/);
       linePositionsRef.current = buildLinePositions(lines);
       svgRef.current?.loadFromText(text);
+      setGcodeText(text);
     };
     reader.readAsText(file);
 
@@ -150,13 +184,22 @@ export default function App() {
     });
   }
 
-  function handleToggleSvgMode() {
-    setSvgMode((prev) => {
-      const next = !prev;
-      if (!next) setTimeout(() => ref.current?.resize(), 0);
-      return next;
-    });
+  function handleView(next: ViewKind) {
+    setView(next);
+    if (next === "3d") setTimeout(() => ref.current?.resize(), 0);
   }
+
+  function patchBed(patch: Partial<PendantBed>) {
+    setPendantBed((prev) => ({ ...prev, ...patch }));
+  }
+
+  // The pendant crosshair follows the sim line, standing in for the DRO.
+  const pendantBit = useMemo(() => {
+    const pos = linePositionsRef.current;
+    if (!pos || pos.length === 0) return null;
+    const i = Math.min(currentLine, pos.length / 3 - 1);
+    return { x: pos[i * 3], y: pos[i * 3 + 1], z: pos[i * 3 + 2] };
+  }, [currentLine, gcodeText]);
 
   function handleSvgProjectionToggle() {
     const next = svgProjection === 'isometric' ? 'perspective' : 'isometric';
@@ -220,9 +263,18 @@ export default function App() {
 
       <section>
         <label className="section-label">View</label>
-        <button className="reset-btn" onClick={handleToggleSvgMode}>
-          {svgMode ? "Switch to 3D View" : "Switch to SVG View"}
-        </button>
+        <div className="view-switch" role="group" aria-label="Renderer">
+          {(["3d", "svg", "pendant"] as const).map((kind) => (
+            <button
+              key={kind}
+              className={`view-switch__btn${view === kind ? " active" : ""}`}
+              aria-pressed={view === kind}
+              onClick={() => handleView(kind)}
+            >
+              {kind === "3d" ? "3D" : kind === "svg" ? "SVG" : "Pendant"}
+            </button>
+          ))}
+        </div>
         {svgMode && (
           <>
             <button className="reset-btn" onClick={handleSvgProjectionToggle}>
@@ -240,7 +292,112 @@ export default function App() {
             <div className="svg-hint">Drag to pan · Scroll to zoom</div>
           </>
         )}
+        {view === "pendant" && (
+          <>
+            <button className="reset-btn" onClick={() => pendantRef.current?.fit()}>
+              Fit to Toolpath
+            </button>
+            <div className="svg-hint">
+              Locked top-down WebGL fed Z-deduped 2D segments. Drag or one finger pans; scroll or pinch zooms.
+              The crosshair follows the Sim Line.
+            </div>
+            {pendantData && (
+              <div className="pendant-stats">
+                <div>
+                  Segments {pendantData.stats.kept.toLocaleString()} of{" "}
+                  {pendantData.stats.rawSegments.toLocaleString()}
+                </div>
+                <div>
+                  Dropped {pendantData.stats.duplicates.toLocaleString()} repeats,{" "}
+                  {pendantData.stats.degenerate.toLocaleString()} Z-only
+                </div>
+                <div>
+                  Z {pendantData.meta.minZ.toFixed(2)} to {pendantData.meta.maxZ.toFixed(2)}, built in{" "}
+                  {pendantData.stats.buildMs.toFixed(0)} ms
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </section>
+
+      {view === "pendant" && (
+        <section>
+          <label className="section-label">Pendant</label>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={pendantBed.visible}
+              onChange={(e) => patchBed({ visible: e.target.checked })}
+            />
+            Machine bed
+          </label>
+          {pendantBed.visible && (
+            <>
+              <label className="number-label">
+                Bed width (mm)
+                <input
+                  type="number"
+                  min={50}
+                  step={50}
+                  value={pendantBed.width}
+                  onChange={(e) => patchBed({ width: Number(e.target.value) || 0 })}
+                />
+              </label>
+              <label className="number-label">
+                Bed depth (mm)
+                <input
+                  type="number"
+                  min={50}
+                  step={50}
+                  value={pendantBed.depth}
+                  onChange={(e) => patchBed({ depth: Number(e.target.value) || 0 })}
+                />
+              </label>
+              <label className="number-label">
+                Bed corner X (work)
+                <input
+                  type="number"
+                  step={10}
+                  value={pendantBed.offsetX}
+                  onChange={(e) => patchBed({ offsetX: Number(e.target.value) || 0 })}
+                />
+              </label>
+              <label className="number-label">
+                Bed corner Y (work)
+                <input
+                  type="number"
+                  step={10}
+                  value={pendantBed.offsetY}
+                  onChange={(e) => patchBed({ offsetY: Number(e.target.value) || 0 })}
+                />
+              </label>
+            </>
+          )}
+          <label className="number-label">
+            Crosshair (px)
+            <input
+              type="number"
+              min={8}
+              max={80}
+              step={2}
+              value={crosshairPx}
+              onChange={(e) => setCrosshairPx(Number(e.target.value) || 26)}
+            />
+          </label>
+          <label className="number-label">
+            Origin dot (px)
+            <input
+              type="number"
+              min={3}
+              max={30}
+              step={1}
+              value={originPx}
+              onChange={(e) => setOriginPx(Number(e.target.value) || 9)}
+            />
+          </label>
+        </section>
+      )}
 
       <section>
         <label className="section-label">Camera</label>
@@ -414,7 +571,7 @@ export default function App() {
             <option value="laser">laser</option>
             <option value="circle">circle</option>
             <option value="triangle">triangle</option>
-            <option value="crosshair">crosshair (SVG)</option>
+            <option value="crosshair">crosshair</option>
           </select>
         </label>
       </section>
@@ -491,13 +648,25 @@ export default function App() {
   return (
     <div className="app-layout">
       <div className="viewer-area">
-        <div style={{ width: "100%", height: "100%", display: svgMode ? "none" : "block" }}>
+        <div style={{ width: "100%", height: "100%", display: view === "3d" ? "block" : "none" }}>
           <GCodeVisualizer id="demo" ref={ref} options={options} callbacks={callbacks} style={{ width: "100%", height: "100%" }} />
         </div>
         <div style={{ width: "100%", height: "100%", display: svgMode ? "block" : "none" }}>
           <GCodeSVGVisualizer id="demo-svg" ref={svgRef} options={{ projectionMode: svgProjection }} />
         </div>
-        {!svgMode && loadProgress.state !== "hidden" && (
+        <div style={{ width: "100%", height: "100%", display: view === "pendant" ? "block" : "none" }}>
+          <PendantView
+            ref={pendantRef}
+            text={gcodeText}
+            bit={pendantBit}
+            bed={pendantBed}
+            crosshairPx={crosshairPx}
+            originPx={originPx}
+            theme={gCodeViewerThemePresets[selectedTheme]}
+            onData={handlePendantData}
+          />
+        </div>
+        {view === "3d" && loadProgress.state !== "hidden" && (
           <div className="load-overlay">
             <div className="load-bar-wrap">
               <div className="load-label">{loadProgress.label}</div>

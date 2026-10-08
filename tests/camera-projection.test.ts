@@ -8,6 +8,8 @@ import {
   orthoDepthRange,
   orthoFrustumFor,
   perspectiveDepthRange,
+  topDownFitHeight,
+  worldUnitsPerPixel,
 } from "../src/viewer/camera/camera";
 
 describe("frustum height <-> distance", () => {
@@ -149,5 +151,31 @@ describe("intersectRayWithZPlane", () => {
     const origin = new THREE.Vector3(3, 4, 10);
     intersectRayWithZPlane(origin, down, 2, false);
     expect(origin.toArray()).toEqual([3, 4, 10]);
+  });
+});
+
+describe("topDownFitHeight", () => {
+  it("fits by height when the model is taller than the viewport aspect", () => {
+    expect(topDownFitHeight({ x: 100, y: 200 }, 1, 1)).toBe(200);
+  });
+
+  it("fits by width when the model is wider than the viewport aspect", () => {
+    // 400 wide in a 2:1 viewport needs 200 of vertical extent.
+    expect(topDownFitHeight({ x: 400, y: 50 }, 2, 1)).toBe(200);
+  });
+
+  it("applies the margin and never collapses below 1", () => {
+    expect(topDownFitHeight({ x: 100, y: 100 }, 1, 1.1)).toBeCloseTo(110);
+    expect(topDownFitHeight({ x: 0, y: 0 }, 1, 1)).toBe(1);
+  });
+});
+
+describe("worldUnitsPerPixel", () => {
+  it("divides the framed height by the viewport height", () => {
+    expect(worldUnitsPerPixel(300, 600)).toBeCloseTo(0.5);
+  });
+
+  it("guards a zero-height viewport", () => {
+    expect(Number.isFinite(worldUnitsPerPixel(300, 0))).toBe(true);
   });
 });

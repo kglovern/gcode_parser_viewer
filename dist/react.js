@@ -1,27 +1,27 @@
 import * as n from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-CgIjcokY.js";
+import { a as w, G as C } from "./GCodeSVGRenderer-PP1WOsnI.js";
 const R = n.forwardRef(
   function(c, m) {
-    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), t = n.useRef(null);
+    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), o = n.useRef(null);
     return n.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
       const d = new w({ id: a, container: e, options: s, callbacks: l });
-      return t.current = d, () => {
-        t.current = null, d.dispose();
+      return o.current = d, () => {
+        o.current = null, d.dispose();
       };
     }, [a]), n.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setOptions(s ?? {});
+      (e = o.current) == null || e.setOptions(s ?? {});
     }, [s]), n.useEffect(() => {
       var e;
-      (e = t.current) == null || e.setCallbacks(l ?? {});
+      (e = o.current) == null || e.setCallbacks(l ?? {});
     }, [l]), n.useImperativeHandle(
       m,
       () => {
         const e = () => {
-          const r = t.current;
+          const r = o.current;
           if (!r)
             throw new Error("GCodeViewer is not ready.");
           return r;
@@ -33,8 +33,8 @@ const R = n.forwardRef(
           setCallbacks(r) {
             e().setCallbacks(r);
           },
-          snapCameraToView(r, o) {
-            e().snapCameraToView(r, o);
+          snapCameraToView(r, t) {
+            e().snapCameraToView(r, t);
           },
           setCameraProjection(r) {
             e().setCameraProjection(r);
@@ -48,14 +48,14 @@ const R = n.forwardRef(
           setCameraFollowEnabled(r) {
             e().setCameraFollowEnabled(r);
           },
-          screenToWorld(r, o, p) {
-            return e().screenToWorld(r, o, p);
+          screenToWorld(r, t, p) {
+            return e().screenToWorld(r, t, p);
           },
-          worldToScreen(r, o, p) {
-            return e().worldToScreen(r, o, p);
+          worldToScreen(r, t, p) {
+            return e().worldToScreen(r, t, p);
           },
-          setBitPosition(r, o) {
-            e().setBitPosition(r, o);
+          setBitPosition(r, t) {
+            e().setBitPosition(r, t);
           },
           setBitVisible(r) {
             e().setBitVisible(r);
@@ -66,17 +66,17 @@ const R = n.forwardRef(
           setToolpathRotationA(r) {
             e().setToolpathRotationA(r);
           },
-          hideUntilLine(r, o) {
-            e().hideUntilLine(r, o);
+          hideUntilLine(r, t) {
+            e().hideUntilLine(r, t);
           },
-          setPlannedRange(r, o) {
-            e().setPlannedRange(r, o);
+          setPlannedRange(r, t) {
+            e().setPlannedRange(r, t);
           },
           trackRunProgress(r) {
             return e().trackRunProgress(r);
           },
-          seekToLine(r, o) {
-            e().seekToLine(r, o);
+          seekToLine(r, t) {
+            e().seekToLine(r, t);
           },
           showAll() {
             e().showAll();
@@ -84,8 +84,8 @@ const R = n.forwardRef(
           resetColors() {
             e().resetColors();
           },
-          loadFromUrl(r, o) {
-            return e().loadFromUrl(r, o);
+          loadFromUrl(r, t) {
+            return e().loadFromUrl(r, t);
           },
           loadFromFile(r) {
             return e().loadFromFile(r);
@@ -99,8 +99,11 @@ const R = n.forwardRef(
           loadFromWorkerData(r) {
             return e().loadFromWorkerData(r);
           },
-          loadFromSegments(r, o) {
-            return e().loadFromSegments(r, o);
+          loadFromSegments(r, t) {
+            return e().loadFromSegments(r, t);
+          },
+          loadFromPrecomputedGroups(r, t) {
+            e().loadFromPrecomputedGroups(r, t);
           },
           unload() {
             e().unload();
@@ -135,36 +138,36 @@ const R = n.forwardRef(
   function(c, m) {
     const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
     return n.useEffect(() => {
-      const t = u.current;
-      if (!t) return;
-      const e = new C(t, s);
+      const o = u.current;
+      if (!o) return;
+      const e = new C(o, s);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
     }, []), n.useEffect(() => {
-      var t;
-      s && ((t = i.current) == null || t.setOptions(s));
+      var o;
+      s && ((o = i.current) == null || o.setOptions(s));
     }, [s]), n.useImperativeHandle(m, () => {
-      const t = () => {
+      const o = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
         return e;
       };
       return {
-        loadFromLines: (e) => t().loadFromLines(e),
-        loadFromFile: (e) => t().loadFromFile(e),
-        loadFromText: (e) => t().loadFromText(e),
-        loadFromWorkerData: (e) => t().loadFromWorkerData(e),
-        loadFromSegments: (e) => t().loadFromSegments(e),
-        loadFromPrecomputedGroups: (e, d) => t().loadFromPrecomputedGroups(e, d),
-        clear: () => t().clear(),
-        resetView: () => t().resetView(),
-        setOptions: (e) => t().setOptions(e),
-        setProjectionMode: (e) => t().setProjectionMode(e),
-        setBitPosition: (e) => t().setBitPosition(e),
-        setBitVisible: (e) => t().setBitVisible(e),
-        getSVGElement: () => t().getSVGElement(),
-        dispose: () => t().dispose()
+        loadFromLines: (e) => o().loadFromLines(e),
+        loadFromFile: (e) => o().loadFromFile(e),
+        loadFromText: (e) => o().loadFromText(e),
+        loadFromWorkerData: (e) => o().loadFromWorkerData(e),
+        loadFromSegments: (e) => o().loadFromSegments(e),
+        loadFromPrecomputedGroups: (e, d) => o().loadFromPrecomputedGroups(e, d),
+        clear: () => o().clear(),
+        resetView: () => o().resetView(),
+        setOptions: (e) => o().setOptions(e),
+        setProjectionMode: (e) => o().setProjectionMode(e),
+        setBitPosition: (e) => o().setBitPosition(e),
+        setBitVisible: (e) => o().setBitVisible(e),
+        getSVGElement: () => o().getSVGElement(),
+        dispose: () => o().dispose()
       };
     }, []), n.createElement("div", {
       ref: u,

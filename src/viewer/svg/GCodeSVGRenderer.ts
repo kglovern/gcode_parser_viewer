@@ -1,5 +1,6 @@
 import { buildMovementVerticesFromLines, buildSegmentsSegmentGroups, buildWorkerSegmentGroups } from "../../geometry";
 import type { WorkerGeometryData, WorkerSegmentsData } from "../../types";
+import type { PrecomputedSegmentGroup, PrecomputedSegmentMeta } from "../toolpath/precomputed";
 import { GCodeSVGOptions, defaultGCodeSVGOptions } from "./types";
 
 type ViewBox = { x: number; y: number; w: number; h: number };
@@ -223,8 +224,8 @@ export class GCodeSVGRenderer {
   }
 
   loadFromPrecomputedGroups(
-    groups: { hexColor: string; opacity: number; positionsBuffer: ArrayBuffer; positionsLen: number; stride?: 4 | 6 }[],
-    meta?: { minZ?: number; maxZ?: number }
+    groups: readonly PrecomputedSegmentGroup[],
+    meta?: PrecomputedSegmentMeta
   ): void {
     this.workerMode = true;
     this.rapidVerts = new Float32Array(0);

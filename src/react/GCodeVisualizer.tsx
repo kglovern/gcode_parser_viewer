@@ -129,6 +129,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           loadFromSegments(data, options) {
             return getViewer().loadFromSegments(data, options);
           },
+          loadFromPrecomputedGroups(groups, meta) {
+            getViewer().loadFromPrecomputedGroups(groups, meta);
+          },
           unload() {
             getViewer().unload();
           },

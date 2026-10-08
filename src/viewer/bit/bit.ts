@@ -12,6 +12,11 @@ export type BitMarker = {
   setOptions(options: GCodeViewerOptions): void;
   setTarget(position: GCodeViewerBitPosition, options?: { immediate?: boolean }): void;
   setSpinning(spinning: boolean): void;
+  /**
+   * World units per CSS pixel at the current zoom. With `bit.screenSpace` the
+   * marker rescales to stay `bit.size` pixels across; otherwise a no-op.
+   */
+  setPixelScale(worldUnitsPerPixel: number): void;
 };
 
 const SPIN_RAMP_SECONDS = 0.3;
@@ -45,6 +50,25 @@ function createTriangleGeometry(size: number): THREE.BufferGeometry {
   const geometry = new THREE.ConeGeometry(radius, height, 3, 1, false);
   geometry.rotateX(-Math.PI / 2);
   geometry.translate(0, 0, height / 2);
+  return geometry;
+}
+
+// Four flat arms around an open centre, lying in the XY plane at the tip, so
+// the toolpath under the bit stays visible. `size` is the full span.
+function createCrosshairGeometry(size: number): THREE.BufferGeometry {
+  const half = Math.max(0.001, size) / 2;
+  const gap = half * 0.3;
+  const t = half * 0.09;
+  const positions: number[] = [];
+  const quad = (x0: number, y0: number, x1: number, y1: number) => {
+    positions.push(x0, y0, 0, x1, y0, 0, x1, y1, 0, x0, y0, 0, x1, y1, 0, x0, y1, 0);
+  };
+  quad(gap, -t, half, t);
+  quad(-half, -t, -gap, t);
+  quad(-t, gap, t, half);
+  quad(-t, -half, t, -gap);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   return geometry;
 }
 
@@ -197,8 +221,18 @@ function createLaserObject(size: number, opacity: number): THREE.Group {
   return group;
 }
 
+// The drill and laser models keep world sizing; screenSpace only applies to
+// the flat position markers.
+function usesScreenSpace(options: GCodeViewerOptions): boolean {
+  return Boolean(options.bit.screenSpace) && options.bit.type !== "drill" && options.bit.type !== "laser";
+}
+
 function createBitGeometry(options: GCodeViewerOptions): THREE.BufferGeometry {
-  const size = Math.max(0.001, options.bit.size);
+  // Screen-space markers are built at unit size and scaled per frame.
+  const size = usesScreenSpace(options) ? 1 : Math.max(0.001, options.bit.size);
+  if (options.bit.type === "crosshair") {
+    return createCrosshairGeometry(size);
+  }
   if (options.bit.type === "triangle") {
     return createTriangleGeometry(size);
   }
@@ -321,7 +355,8 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
     const prevSize = currentOptions.bit.size;
 
     const typeChanged = nextType !== prevType;
-    const sizeChanged = nextSize !== prevSize;
+    const sizeChanged =
+      nextSize !== prevSize || Boolean(nextOptions.bit.screenSpace) !== Boolean(currentOptions.bit.screenSpace);
 
     const nextOpacity = clamp01(nextOptions.bit.opacity);
 
@@ -417,6 +452,12 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
           onComplete: () => tweenToStop?.pause(),
         });
       }
+    },
+    setPixelScale: (worldUnitsPerPixel) => {
+      const scale = usesScreenSpace(currentOptions)
+        ? Math.max(0.001, currentOptions.bit.size) * worldUnitsPerPixel
+        : 1;
+      root.scale.setScalar(scale);
     },
     update: (nowMs) => {
       if (!tween) return;

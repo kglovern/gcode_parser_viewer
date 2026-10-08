@@ -280,6 +280,47 @@ section:last-child {
   line-height: 1.4;
 }
 
+/* ── Renderer switch (3D / SVG / Pendant) ───────────────── */
+
+.view-switch {
+  display: flex;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-switch__btn {
+  flex: 1;
+  background: #1f2937;
+  border: none;
+  border-left: 1px solid #4b5563;
+  color: #d1d5db;
+  padding: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.view-switch__btn:first-child {
+  border-left: none;
+}
+
+.view-switch__btn:hover:not(.active) {
+  background: #374151;
+}
+
+.view-switch__btn.active {
+  background: #3e85c7;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pendant-stats {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── FAB panel toggle (hidden on desktop) ───────────────── */
 
 .panel-toggle {
