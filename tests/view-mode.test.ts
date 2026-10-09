@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyViewMode, mergeOptions } from "../src/viewer/GCodeViewer";
+import { applyViewMode, markerVisibility, mergeOptions } from "../src/viewer/GCodeViewer";
 import { defaultGCodeViewerOptions } from "../src/viewer/types";
 
 describe("pendant view mode", () => {
@@ -51,5 +51,21 @@ describe("pendant view mode", () => {
       bit: { ...defaultGCodeViewerOptions.bit, type: "laser" },
     });
     expect(options.bit.type).toBe("laser");
+  });
+
+  it("hides the pendant crosshair and origin marker until a toolpath is loaded", () => {
+    const base = { viewMode: "pendant" as const, bitEnabled: true, bitRequested: true };
+    expect(markerVisibility({ ...base, hasToolpath: false })).toEqual({ bit: false, origin: false });
+    expect(markerVisibility({ ...base, hasToolpath: true })).toEqual({ bit: true, origin: true });
+    expect(markerVisibility({ ...base, hasToolpath: true, bitRequested: false })).toEqual({
+      bit: false,
+      origin: true,
+    });
+  });
+
+  it("keeps the standard bit independent of the toolpath", () => {
+    const base = { viewMode: "standard" as const, bitEnabled: true, hasToolpath: false };
+    expect(markerVisibility({ ...base, bitRequested: true }).bit).toBe(true);
+    expect(markerVisibility({ ...base, bitRequested: false }).bit).toBe(false);
   });
 });

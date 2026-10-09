@@ -148,6 +148,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   private machineBedGroup: THREE.Group | null = null;
   private bitMarker: BitMarker | null = null;
   private originMarker: THREE.Mesh | null = null;
+  // Last setBitVisible() value. Kept so option updates and marker re-creation
+  // don't silently show a bit the host hid.
+  private bitVisibleRequested = true;
   private preLaserBitType: GCodeViewerBitType = "drill";
 
   private toolpathStreams: ToolpathStreamState[] = [];
@@ -421,8 +424,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   setBitVisible(visible: boolean): void {
+    this.bitVisibleRequested = Boolean(visible);
     this.ensureBitMarker();
-    this.bitMarker?.setVisible(visible);
+    this.syncMarkerVisibility();
   }
 
   setBitSpinning(spinning: boolean): void {
@@ -949,6 +953,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.emitBoundsChanged();
     this.refreshBoundingBox();
     this.setToolpathRotationA(this.toolpathRotationA);
+    this.syncMarkerVisibility();
   }
 
   loadFromPrecomputedGroups(
@@ -962,6 +967,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = bounds ? bounds.clone() : null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.syncMarkerVisibility();
   }
 
   unload(): void {
@@ -1107,6 +1113,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     if (bitChanged) {
       this.ensureBitMarker();
       this.bitMarker?.setOptions(this.options);
+      this.syncMarkerVisibility();
     }
 
     if (previous.mode.laser !== this.options.mode.laser) {
@@ -1122,6 +1129,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       }
       this.ensureBitMarker();
       this.bitMarker?.setOptions(this.options);
+      this.syncMarkerVisibility();
       // When geometry was loaded from worker data, currentLines is empty and
       // renderScene() would wipe the canvas. Skip it — the host app will call
       // loadFromWorkerData again (via worker re-parse) to apply the new options.
@@ -1345,6 +1353,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     mesh.renderOrder = 999;
     this.originMarker = mesh;
     this.scene.add(mesh);
+    this.syncMarkerVisibility();
   }
 
   private ensureBitMarker(): void {
@@ -1353,6 +1362,25 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
     this.bitMarker = createBitMarker(this.options);
     this.scene.add(this.bitMarker.object);
+    this.syncMarkerVisibility();
+  }
+
+  private hasToolpath(): boolean {
+    return this.toolpathStreams.length > 0 || this.segmentsToolpath !== null || this.precomputedToolpath !== null;
+  }
+
+  /** Re-applies bit and origin marker visibility after anything that affects it. */
+  private syncMarkerVisibility(): void {
+    const visibility = markerVisibility({
+      viewMode: this.options.viewMode,
+      hasToolpath: this.hasToolpath(),
+      bitEnabled: this.options.bit.enabled,
+      bitRequested: this.bitVisibleRequested,
+    });
+    this.bitMarker?.setVisible(visibility.bit);
+    if (this.originMarker) {
+      this.originMarker.visible = visibility.origin;
+    }
   }
 
   private worldSizes(): {
@@ -1518,6 +1546,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.syncMarkerVisibility();
   }
 
   private setToolpathGeometry(args: {
@@ -1565,6 +1594,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.emitBoundsChanged();
     this.refreshBoundingBox();
     this.setToolpathRotationA(this.toolpathRotationA);
+    this.syncMarkerVisibility();
   }
 
   private refreshToolpathColors(): void {
@@ -1898,6 +1928,23 @@ function mergeOptional<T extends object>(base: T | undefined, next: T | undefine
     return base;
   }
   return { ...base, ...next } as T;
+}
+
+/**
+ * The origin marker shows toolpath zero, so it only appears with a toolpath. In
+ * pendant mode the bit hides with it too; elsewhere the bit stays independent.
+ */
+export function markerVisibility(args: {
+  viewMode: NormalizedOptions["viewMode"];
+  hasToolpath: boolean;
+  bitEnabled: boolean;
+  bitRequested: boolean;
+}): { bit: boolean; origin: boolean } {
+  const pendant = args.viewMode === "pendant";
+  return {
+    bit: Boolean(args.bitEnabled) && args.bitRequested && (!pendant || args.hasToolpath),
+    origin: args.hasToolpath,
+  };
 }
 
 /**

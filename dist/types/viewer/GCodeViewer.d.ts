@@ -28,6 +28,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private machineBedGroup;
     private bitMarker;
     private originMarker;
+    private bitVisibleRequested;
     private preLaserBitType;
     private toolpathStreams;
     private segmentsToolpath;
@@ -222,6 +223,9 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private updateScreenSpaceMarkers;
     private refreshOriginMarker;
     private ensureBitMarker;
+    private hasToolpath;
+    /** Re-applies bit and origin marker visibility after anything that affects it. */
+    private syncMarkerVisibility;
     private worldSizes;
     private renderGridAndAxes;
     private refreshGridLabels;
@@ -249,6 +253,19 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private updateViewCubeRotation;
 }
 export declare function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions;
+/**
+ * The origin marker shows toolpath zero, so it only appears with a toolpath. In
+ * pendant mode the bit hides with it too; elsewhere the bit stays independent.
+ */
+export declare function markerVisibility(args: {
+    viewMode: NormalizedOptions["viewMode"];
+    hasToolpath: boolean;
+    bitEnabled: boolean;
+    bitRequested: boolean;
+}): {
+    bit: boolean;
+    origin: boolean;
+};
 /**
  * Pendant mode is a preset, not a separate renderer. It re-pins the options it
  * depends on at every merge, so a later partial update can't half-unlock it.
