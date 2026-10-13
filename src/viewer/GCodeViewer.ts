@@ -655,6 +655,17 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   /**
+   * Suspend pan/zoom, e.g. while a tap-to-jog gesture is armed so a touch
+   * drag on the canvas isn't interpreted as a pan. Unlike rotate, pan/zoom
+   * stay enabled under top-down lock (a single-finger drag is remapped to
+   * pan there), so this is the only way to quiesce them.
+   */
+  setPanZoomEnabled(enabled: boolean): void {
+    this.controls.enablePan = enabled;
+    this.controls.enableZoom = enabled;
+  }
+
+  /**
    * Convert a viewport pixel (clientX/clientY, e.g. from a PointerEvent) into a
    * point on a horizontal toolpath plane, in the scene's coordinate space.
    *
@@ -1204,6 +1215,23 @@ export class GCodeViewer implements GCodeViewerHandle {
       return;
     }
     this.startCameraFocus(this.currentBounds);
+  }
+
+  focusToMachineBed(): void {
+    const { visible, min, max } = this.options.machineBed;
+    if (!visible || !min || !max) {
+      this.focusToModel();
+      return;
+    }
+    const bounds = new THREE.Box3(
+      new THREE.Vector3(min.x, min.y, 0),
+      new THREE.Vector3(max.x, max.y, 0)
+    );
+    if (this.isTopDownLocked()) {
+      this.startTopDownFocus(bounds);
+      return;
+    }
+    this.startCameraFocus(bounds);
   }
 
   resetCamera(): void {

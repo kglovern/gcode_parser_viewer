@@ -59,13 +59,13 @@
     "three": "^0.168.0"
   },
   "peerDependenciesMeta": {
-    "three": {
-      "optional": true
-    },
     "react": {
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "three": {
       "optional": true
     }
   },

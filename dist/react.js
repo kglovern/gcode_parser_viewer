@@ -1,17 +1,17 @@
 import * as n from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-Brtwu_VN.js";
+import { a as w, G as C } from "./GCodeSVGRenderer-DN08fUBD.js";
 const R = n.forwardRef(
   function(c, m) {
-    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), o = n.useRef(null);
+    const { id: i, options: s, callbacks: l, className: f, style: u } = c, a = n.useRef(null), o = n.useRef(null);
     return n.useEffect(() => {
-      const e = i.current;
+      const e = a.current;
       if (!e)
         return;
-      const d = new w({ id: a, container: e, options: s, callbacks: l });
+      const d = new w({ id: i, container: e, options: s, callbacks: l });
       return o.current = d, () => {
         o.current = null, d.dispose();
       };
-    }, [a]), n.useEffect(() => {
+    }, [i]), n.useEffect(() => {
       var e;
       (e = o.current) == null || e.setOptions(s ?? {});
     }, [s]), n.useEffect(() => {
@@ -28,7 +28,7 @@ const R = n.forwardRef(
         };
         return {
           get id() {
-            return a;
+            return i;
           },
           setCallbacks(r) {
             e().setCallbacks(r);
@@ -44,6 +44,9 @@ const R = n.forwardRef(
           },
           setRotateEnabled(r) {
             e().setRotateEnabled(r);
+          },
+          setPanZoomEnabled(r) {
+            e().setPanZoomEnabled(r);
           },
           setCameraFollowEnabled(r) {
             e().setCameraFollowEnabled(r);
@@ -120,6 +123,9 @@ const R = n.forwardRef(
           focusToModel() {
             e().focusToModel();
           },
+          focusToMachineBed() {
+            e().focusToMachineBed();
+          },
           resetCamera() {
             e().resetCamera();
           },
@@ -131,25 +137,25 @@ const R = n.forwardRef(
           }
         };
       },
-      [a]
-    ), n.createElement("div", { ref: i, className: f, style: u });
+      [i]
+    ), n.createElement("div", { ref: a, className: f, style: u });
   }
 ), V = n.forwardRef(
   function(c, m) {
-    const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
+    const { id: i, options: s, className: l, style: f } = c, u = n.useRef(null), a = n.useRef(null);
     return n.useEffect(() => {
       const o = u.current;
       if (!o) return;
       const e = new C(o, s);
-      return i.current = e, () => {
-        i.current = null, e.dispose();
+      return a.current = e, () => {
+        a.current = null, e.dispose();
       };
     }, []), n.useEffect(() => {
       var o;
-      s && ((o = i.current) == null || o.setOptions(s));
+      s && ((o = a.current) == null || o.setOptions(s));
     }, [s]), n.useImperativeHandle(m, () => {
       const o = () => {
-        const e = i.current;
+        const e = a.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
         return e;
       };

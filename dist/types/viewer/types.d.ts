@@ -254,6 +254,7 @@ export type GCodeViewerHandle = {
     setCameraProjection(projection: GCodeViewerCameraProjection): void;
     getCameraProjection(): GCodeViewerCameraProjection;
     setRotateEnabled(enabled: boolean): void;
+    setPanZoomEnabled(enabled: boolean): void;
     setCameraFollowEnabled(enabled: boolean): void;
     screenToWorld(clientX: number, clientY: number, options?: {
         planeZ?: number;
@@ -317,6 +318,7 @@ export type GCodeViewerHandle = {
     getOptions(): Readonly<GCodeViewerOptions>;
     resize(): void;
     focusToModel(): void;
+    focusToMachineBed(): void;
     resetCamera(): void;
     getBounds(): GCodeViewerBounds | null;
     dispose(): void;

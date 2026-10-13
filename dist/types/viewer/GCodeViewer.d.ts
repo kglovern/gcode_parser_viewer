@@ -130,6 +130,13 @@ export declare class GCodeViewer implements GCodeViewerHandle {
      */
     setRotateEnabled(enabled: boolean): void;
     /**
+     * Suspend pan/zoom, e.g. while a tap-to-jog gesture is armed so a touch
+     * drag on the canvas isn't interpreted as a pan. Unlike rotate, pan/zoom
+     * stay enabled under top-down lock (a single-finger drag is remapped to
+     * pan there), so this is the only way to quiesce them.
+     */
+    setPanZoomEnabled(enabled: boolean): void;
+    /**
      * Convert a viewport pixel (clientX/clientY, e.g. from a PointerEvent) into a
      * point on a horizontal toolpath plane, in the scene's coordinate space.
      *
@@ -212,6 +219,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     getOptions(): Readonly<GCodeViewerOptions>;
     resize(): void;
     focusToModel(): void;
+    focusToMachineBed(): void;
     resetCamera(): void;
     getBounds(): GCodeViewerBounds | null;
     dispose(): void;

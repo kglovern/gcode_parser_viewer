@@ -72,6 +72,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           setRotateEnabled(enabled: boolean) {
             getViewer().setRotateEnabled(enabled);
           },
+          setPanZoomEnabled(enabled: boolean) {
+            getViewer().setPanZoomEnabled(enabled);
+          },
           setCameraFollowEnabled(enabled: boolean) {
             getViewer().setCameraFollowEnabled(enabled);
           },
@@ -146,6 +149,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           },
           focusToModel() {
             getViewer().focusToModel();
+          },
+          focusToMachineBed() {
+            getViewer().focusToMachineBed();
           },
           resetCamera() {
             getViewer().resetCamera();
