@@ -4273,7 +4273,11 @@ class oP {
     t.getCenter(e);
     const Q = new E.Vector3();
     t.getSize(Q);
-    const B = or(Q, this.viewportAspect()), i = Math.max(1, hQ(B, this.options.camera.fov) + Q.z), r = new E.Vector3(e.x, e.y - i * 1e-4, e.z + i);
+    const B = or(
+      Q,
+      this.viewportAspect(),
+      this.options.camera.topDownFitMargin
+    ), i = Math.max(1, hQ(B, this.options.camera.fov) + Q.z), r = new E.Vector3(e.x, e.y - i * 1e-4, e.z + i);
     this.applyCameraDepthRange(Math.max(Q.x, Q.y, Q.z, i, 1));
     const s = this.isPerspectiveActive() ? void 0 : this.orthoZoomForHeight(B);
     this.startCameraLerp(e, r, this.options.camera.focusDurationMs, "easeInOutCubic", s);

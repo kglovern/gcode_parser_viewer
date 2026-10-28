@@ -196,6 +196,11 @@ export type GCodeViewerOptions = {
          * model top-down. Default false.
          */
         lockTopDown?: boolean;
+        /**
+         * How much larger than the model (or machine bed) a top-down focus frames,
+         * e.g. 1.1 leaves a 5% margin each side. Default 1.1.
+         */
+        topDownFitMargin?: number;
     };
 };
 export declare const defaultGCodeViewerTheme: GCodeViewerTheme;
