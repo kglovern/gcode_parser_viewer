@@ -1824,7 +1824,11 @@ export class GCodeViewer implements GCodeViewerHandle {
     bounds.getCenter(center);
     const size = new THREE.Vector3();
     bounds.getSize(size);
-    const height = topDownFitHeight(size, this.viewportAspect());
+    const height = topDownFitHeight(
+      size,
+      this.viewportAspect(),
+      this.options.camera.topDownFitMargin
+    );
     const distance = Math.max(1, distanceForFrustumHeight(height, this.options.camera.fov) + size.z);
     const toPosition = new THREE.Vector3(center.x, center.y - distance * 1e-4, center.z + distance);
     this.applyCameraDepthRange(Math.max(size.x, size.y, size.z, distance, 1));
