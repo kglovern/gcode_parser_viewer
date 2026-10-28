@@ -53,28 +53,23 @@ describe("pendant view mode", () => {
     expect(options.bit.type).toBe("laser");
   });
 
-  it("hides the pendant crosshair and origin marker until a toolpath is loaded", () => {
-    const base = { viewMode: "pendant" as const, bitEnabled: true, bitRequested: true };
-    expect(markerVisibility({ ...base, hasToolpath: false })).toEqual({ bit: false, origin: false });
-    expect(markerVisibility({ ...base, hasToolpath: true })).toEqual({ bit: true, origin: true });
-    expect(markerVisibility({ ...base, hasToolpath: true, bitRequested: false })).toEqual({
-      bit: false,
-      origin: true,
-    });
+  it("hides the origin marker until a toolpath is loaded", () => {
+    const base = { bitEnabled: true, bitRequested: true };
+    expect(markerVisibility({ ...base, hasToolpath: false }).origin).toBe(false);
+    expect(markerVisibility({ ...base, hasToolpath: true }).origin).toBe(true);
   });
 
-  it("shows a requested origin marker without a toolpath, bit still hidden", () => {
-    const base = { viewMode: "pendant" as const, bitEnabled: true, bitRequested: true };
-    expect(markerVisibility({ ...base, hasToolpath: false, originRequested: true })).toEqual({
-      bit: false,
-      origin: true,
-    });
+  it("shows a requested origin marker without a toolpath", () => {
+    const base = { bitEnabled: true, bitRequested: true };
+    expect(markerVisibility({ ...base, hasToolpath: false, originRequested: true }).origin).toBe(true);
     expect(markerVisibility({ ...base, hasToolpath: true, originRequested: false }).origin).toBe(true);
   });
 
-  it("keeps the standard bit independent of the toolpath", () => {
-    const base = { viewMode: "standard" as const, bitEnabled: true, hasToolpath: false };
-    expect(markerVisibility({ ...base, bitRequested: true }).bit).toBe(true);
-    expect(markerVisibility({ ...base, bitRequested: false }).bit).toBe(false);
+  it("drives the bit from bit.enabled and setBitVisible alone, toolpath or not", () => {
+    for (const hasToolpath of [false, true]) {
+      expect(markerVisibility({ hasToolpath, bitEnabled: true, bitRequested: true }).bit).toBe(true);
+      expect(markerVisibility({ hasToolpath, bitEnabled: true, bitRequested: false }).bit).toBe(false);
+      expect(markerVisibility({ hasToolpath, bitEnabled: false, bitRequested: true }).bit).toBe(false);
+    }
   });
 });

@@ -266,11 +266,11 @@ export declare function mergeOptions(base: NormalizedOptions, next?: Partial<GCo
 /**
  * The origin marker shows toolpath zero, so by default it only appears with a
  * toolpath; a host can ask for it regardless (setOriginVisible) to show where
- * zero sits before a file is loaded. In pendant mode the bit hides without a
- * toolpath; elsewhere the bit stays independent.
+ * zero sits before a file is loaded. The bit follows bit.enabled and
+ * setBitVisible() alone, toolpath or not - hosts hide it themselves when
+ * there's no live position to show (e.g. no machine connected).
  */
 export declare function markerVisibility(args: {
-    viewMode: NormalizedOptions["viewMode"];
     hasToolpath: boolean;
     bitEnabled: boolean;
     bitRequested: boolean;

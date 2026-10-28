@@ -4032,7 +4032,6 @@ class oP {
   syncMarkerVisibility() {
     var e;
     const t = tP({
-      viewMode: this.options.viewMode,
       hasToolpath: this.hasToolpath(),
       bitEnabled: this.options.bit.enabled,
       bitRequested: this.bitVisibleRequested,
@@ -4366,9 +4365,8 @@ function KB(A, t) {
   return t ? { ...A, ...t } : A;
 }
 function tP(A) {
-  const t = A.viewMode === "pendant";
   return {
-    bit: !!A.bitEnabled && A.bitRequested && (!t || A.hasToolpath),
+    bit: !!A.bitEnabled && A.bitRequested,
     origin: A.hasToolpath || !!A.originRequested
   };
 }
