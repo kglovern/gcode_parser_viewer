@@ -3436,7 +3436,7 @@ function Ws(A) {
 const qs = 25.4, _s = 500, $s = 300;
 class oP {
   constructor(t) {
-    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.machineBedGroup = null, this.bitMarker = null, this.originMarker = null, this.bitVisibleRequested = !0, this.preLaserBitType = "drill", this.toolpathStreams = [], this.segmentsToolpath = null, this.precomputedToolpath = null, this.runProgress = Ze(), this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.cameraFollowRequested = !1, this.cameraFollowInterrupted = !1, this.cameraFollowOffset = null, this.id = t.id, this.container = t.container, this.callbacks = t.callbacks ?? {}, this.options = XB(YA, t.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), sr(this.container), this.renderer = new E.WebGLRenderer({
+    this.viewCube = null, this.resizeObserver = null, this.onWindowResize = null, this.animationFrameId = null, this.gridGroup = null, this.axesGroup = null, this.gridLabelsGroup = null, this.boundingBoxGroup = null, this.machineBedGroup = null, this.bitMarker = null, this.originMarker = null, this.bitVisibleRequested = !0, this.originVisibleRequested = !1, this.preLaserBitType = "drill", this.toolpathStreams = [], this.segmentsToolpath = null, this.precomputedToolpath = null, this.runProgress = Ze(), this.toolpathCutBucketCount = 1, this.toolpathRotationA = 0, this.lastBitPosition = { x: 0, y: 0, z: 0, a: 0 }, this.sim3dHandle = null, this.currentLines = [], this.linePositions = null, this.renderSequence = 0, this.currentBounds = null, this.cameraFocusTransition = null, this.cameraFollowRequested = !1, this.cameraFollowInterrupted = !1, this.cameraFollowOffset = null, this.id = t.id, this.container = t.container, this.callbacks = t.callbacks ?? {}, this.options = XB(YA, t.options), this.canvas = document.createElement("canvas"), this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.style.display = "block", this.container.appendChild(this.canvas), sr(this.container), this.renderer = new E.WebGLRenderer({
       canvas: this.canvas,
       antialias: this.options.render.antialias
     }), this.renderer.setPixelRatio(window.devicePixelRatio), this.renderer.setClearColor(this.options.render.theme.background, 1), this.scene = new E.Scene(), this.scene.add(new E.AmbientLight(16777215, 0.8));
@@ -3531,6 +3531,9 @@ class oP {
   }
   setBitVisible(t) {
     this.bitVisibleRequested = !!t, this.ensureBitMarker(), this.syncMarkerVisibility();
+  }
+  setOriginVisible(t) {
+    this.originVisibleRequested = !!t, this.syncMarkerVisibility();
   }
   setBitSpinning(t) {
     var e;
@@ -4032,7 +4035,8 @@ class oP {
       viewMode: this.options.viewMode,
       hasToolpath: this.hasToolpath(),
       bitEnabled: this.options.bit.enabled,
-      bitRequested: this.bitVisibleRequested
+      bitRequested: this.bitVisibleRequested,
+      originRequested: this.originVisibleRequested
     });
     (e = this.bitMarker) == null || e.setVisible(t.bit), this.originMarker && (this.originMarker.visible = t.origin);
   }
@@ -4365,7 +4369,7 @@ function tP(A) {
   const t = A.viewMode === "pendant";
   return {
     bit: !!A.bitEnabled && A.bitRequested && (!t || A.hasToolpath),
-    origin: A.hasToolpath
+    origin: A.hasToolpath || !!A.originRequested
   };
 }
 function ZB(A) {

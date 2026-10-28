@@ -90,6 +90,9 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           setBitVisible(visible: boolean) {
             getViewer().setBitVisible(visible);
           },
+          setOriginVisible(visible: boolean) {
+            getViewer().setOriginVisible(visible);
+          },
           setBitSpinning(spinning: boolean) {
             getViewer().setBitSpinning(spinning);
           },

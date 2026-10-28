@@ -29,6 +29,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private bitMarker;
     private originMarker;
     private bitVisibleRequested;
+    private originVisibleRequested;
     private preLaserBitType;
     private toolpathStreams;
     private segmentsToolpath;
@@ -70,6 +71,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
      */
     setCameraFollowEnabled(enabled: boolean): void;
     setBitVisible(visible: boolean): void;
+    setOriginVisible(visible: boolean): void;
     setBitSpinning(spinning: boolean): void;
     setToolpathRotationA(aDegrees: number): void;
     setCallbacks(callbacks: GCodeViewerCallbacks): void;
@@ -262,14 +264,17 @@ export declare class GCodeViewer implements GCodeViewerHandle {
 }
 export declare function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewerOptions>): NormalizedOptions;
 /**
- * The origin marker shows toolpath zero, so it only appears with a toolpath. In
- * pendant mode the bit hides with it too; elsewhere the bit stays independent.
+ * The origin marker shows toolpath zero, so by default it only appears with a
+ * toolpath; a host can ask for it regardless (setOriginVisible) to show where
+ * zero sits before a file is loaded. In pendant mode the bit hides without a
+ * toolpath; elsewhere the bit stays independent.
  */
 export declare function markerVisibility(args: {
     viewMode: NormalizedOptions["viewMode"];
     hasToolpath: boolean;
     bitEnabled: boolean;
     bitRequested: boolean;
+    originRequested?: boolean;
 }): {
     bit: boolean;
     origin: boolean;

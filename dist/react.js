@@ -1,17 +1,17 @@
 import * as n from "react";
-import { a as w, G as C } from "./GCodeSVGRenderer-CYulQLuz.js";
-const R = n.forwardRef(
+import { a as w, G as g } from "./GCodeSVGRenderer-4Jiz7fLV.js";
+const V = n.forwardRef(
   function(c, m) {
-    const { id: i, options: s, callbacks: l, className: f, style: u } = c, a = n.useRef(null), o = n.useRef(null);
+    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), o = n.useRef(null);
     return n.useEffect(() => {
-      const e = a.current;
+      const e = i.current;
       if (!e)
         return;
-      const d = new w({ id: i, container: e, options: s, callbacks: l });
+      const d = new w({ id: a, container: e, options: s, callbacks: l });
       return o.current = d, () => {
         o.current = null, d.dispose();
       };
-    }, [i]), n.useEffect(() => {
+    }, [a]), n.useEffect(() => {
       var e;
       (e = o.current) == null || e.setOptions(s ?? {});
     }, [s]), n.useEffect(() => {
@@ -28,7 +28,7 @@ const R = n.forwardRef(
         };
         return {
           get id() {
-            return i;
+            return a;
           },
           setCallbacks(r) {
             e().setCallbacks(r);
@@ -62,6 +62,9 @@ const R = n.forwardRef(
           },
           setBitVisible(r) {
             e().setBitVisible(r);
+          },
+          setOriginVisible(r) {
+            e().setOriginVisible(r);
           },
           setBitSpinning(r) {
             e().setBitSpinning(r);
@@ -137,25 +140,25 @@ const R = n.forwardRef(
           }
         };
       },
-      [i]
-    ), n.createElement("div", { ref: a, className: f, style: u });
+      [a]
+    ), n.createElement("div", { ref: i, className: f, style: u });
   }
-), V = n.forwardRef(
+), R = n.forwardRef(
   function(c, m) {
-    const { id: i, options: s, className: l, style: f } = c, u = n.useRef(null), a = n.useRef(null);
+    const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
     return n.useEffect(() => {
       const o = u.current;
       if (!o) return;
-      const e = new C(o, s);
-      return a.current = e, () => {
-        a.current = null, e.dispose();
+      const e = new g(o, s);
+      return i.current = e, () => {
+        i.current = null, e.dispose();
       };
     }, []), n.useEffect(() => {
       var o;
-      s && ((o = a.current) == null || o.setOptions(s));
+      s && ((o = i.current) == null || o.setOptions(s));
     }, [s]), n.useImperativeHandle(m, () => {
       const o = () => {
-        const e = a.current;
+        const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
         return e;
       };
@@ -183,6 +186,6 @@ const R = n.forwardRef(
   }
 );
 export {
-  V as GCodeSVGVisualizer,
-  R as GCodeVisualizer
+  R as GCodeSVGVisualizer,
+  V as GCodeVisualizer
 };

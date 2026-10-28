@@ -63,6 +63,15 @@ describe("pendant view mode", () => {
     });
   });
 
+  it("shows a requested origin marker without a toolpath, bit still hidden", () => {
+    const base = { viewMode: "pendant" as const, bitEnabled: true, bitRequested: true };
+    expect(markerVisibility({ ...base, hasToolpath: false, originRequested: true })).toEqual({
+      bit: false,
+      origin: true,
+    });
+    expect(markerVisibility({ ...base, hasToolpath: true, originRequested: false }).origin).toBe(true);
+  });
+
   it("keeps the standard bit independent of the toolpath", () => {
     const base = { viewMode: "standard" as const, bitEnabled: true, hasToolpath: false };
     expect(markerVisibility({ ...base, bitRequested: true }).bit).toBe(true);

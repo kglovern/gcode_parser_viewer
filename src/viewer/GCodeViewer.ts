@@ -151,6 +151,9 @@ export class GCodeViewer implements GCodeViewerHandle {
   // Last setBitVisible() value. Kept so option updates and marker re-creation
   // don't silently show a bit the host hid.
   private bitVisibleRequested = true;
+  // Last setOriginVisible() value: the host wants the origin marker shown even
+  // with no toolpath loaded (it always shows with one).
+  private originVisibleRequested = false;
   private preLaserBitType: GCodeViewerBitType = "drill";
 
   private toolpathStreams: ToolpathStreamState[] = [];
@@ -426,6 +429,11 @@ export class GCodeViewer implements GCodeViewerHandle {
   setBitVisible(visible: boolean): void {
     this.bitVisibleRequested = Boolean(visible);
     this.ensureBitMarker();
+    this.syncMarkerVisibility();
+  }
+
+  setOriginVisible(visible: boolean): void {
+    this.originVisibleRequested = Boolean(visible);
     this.syncMarkerVisibility();
   }
 
@@ -1404,6 +1412,7 @@ export class GCodeViewer implements GCodeViewerHandle {
       hasToolpath: this.hasToolpath(),
       bitEnabled: this.options.bit.enabled,
       bitRequested: this.bitVisibleRequested,
+      originRequested: this.originVisibleRequested,
     });
     this.bitMarker?.setVisible(visibility.bit);
     if (this.originMarker) {
@@ -1963,19 +1972,22 @@ function mergeOptional<T extends object>(base: T | undefined, next: T | undefine
 }
 
 /**
- * The origin marker shows toolpath zero, so it only appears with a toolpath. In
- * pendant mode the bit hides with it too; elsewhere the bit stays independent.
+ * The origin marker shows toolpath zero, so by default it only appears with a
+ * toolpath; a host can ask for it regardless (setOriginVisible) to show where
+ * zero sits before a file is loaded. In pendant mode the bit hides without a
+ * toolpath; elsewhere the bit stays independent.
  */
 export function markerVisibility(args: {
   viewMode: NormalizedOptions["viewMode"];
   hasToolpath: boolean;
   bitEnabled: boolean;
   bitRequested: boolean;
+  originRequested?: boolean;
 }): { bit: boolean; origin: boolean } {
   const pendant = args.viewMode === "pendant";
   return {
     bit: Boolean(args.bitEnabled) && args.bitRequested && (!pendant || args.hasToolpath),
-    origin: args.hasToolpath,
+    origin: args.hasToolpath || Boolean(args.originRequested),
   };
 }
 

@@ -276,6 +276,11 @@ export type GCodeViewerHandle = {
         immediate?: boolean;
     }): void;
     setBitVisible(visible: boolean): void;
+    /**
+     * Shows the origin marker (if enabled in options) even with no toolpath
+     * loaded. With a toolpath it always shows. Default false.
+     */
+    setOriginVisible(visible: boolean): void;
     setBitSpinning(spinning: boolean): void;
     setToolpathRotationA(aDegrees: number): void;
     hideUntilLine(lineIndex: number, mode?: "hide" | "grey"): void;
