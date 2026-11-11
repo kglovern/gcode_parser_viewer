@@ -21,6 +21,11 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private resizeObserver;
     private onWindowResize;
     private animationFrameId;
+    private paused;
+    private hiddenByLayout;
+    private contextLost;
+    private readonly onContextLost;
+    private readonly onContextRestored;
     private gridGroup;
     private axesGroup;
     private gridLabelsGroup;
@@ -224,9 +229,19 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     focusToMachineBed(): void;
     resetCamera(): void;
     getBounds(): GCodeViewerBounds | null;
+    /**
+     * Stop rendering, e.g. while the host is hidden. State updates (options, bit
+     * position, run progress) still apply and show on the next frame after
+     * resume().
+     */
+    pause(): void;
+    resume(): void;
+    isPaused(): boolean;
     dispose(): void;
     private emitProgress;
     private emitBoundsChanged;
+    private syncAnimationLoop;
+    private stopAnimationLoop;
     private startAnimationLoop;
     /** World units per CSS pixel at the orbit target, for constant-size markers. */
     private currentWorldUnitsPerPixel;

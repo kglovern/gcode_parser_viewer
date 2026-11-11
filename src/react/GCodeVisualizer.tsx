@@ -150,6 +150,15 @@ export const GCodeVisualizer = React.forwardRef<GCodeViewerHandle, GCodeVisualiz
           resize() {
             getViewer().resize();
           },
+          pause() {
+            getViewer().pause();
+          },
+          resume() {
+            getViewer().resume();
+          },
+          isPaused() {
+            return getViewer().isPaused();
+          },
           focusToModel() {
             getViewer().focusToModel();
           },

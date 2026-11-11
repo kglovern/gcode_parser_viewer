@@ -140,6 +140,20 @@ export class GCodeViewer implements GCodeViewerHandle {
   private resizeObserver: ResizeObserver | null = null;
   private onWindowResize: (() => void) | null = null;
   private animationFrameId: number | null = null;
+  // Set by pause() so a hidden host can stop the render loop; cleared by resume()
+  private paused = false;
+  // Host measured 0x0 (display:none); the loop restarts when it has a size again
+  private hiddenByLayout = false;
+  private contextLost = false;
+  private readonly onContextLost = () => {
+    this.contextLost = true;
+    this.stopAnimationLoop();
+  };
+  private readonly onContextRestored = () => {
+    this.contextLost = false;
+    this.resize();
+    this.syncAnimationLoop();
+  };
 
   private gridGroup: THREE.Group | null = null;
   private axesGroup: THREE.Group | null = null;
@@ -231,6 +245,10 @@ export class GCodeViewer implements GCodeViewerHandle {
       canvas: this.canvas,
       antialias: this.options.render.antialias,
     });
+    // three's own listeners preventDefault() the loss so the context can be
+    // restored; these only stop and restart our render loop around it
+    this.canvas.addEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(this.options.render.theme.background, 1);
 
@@ -320,7 +338,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.refreshOriginMarker();
     this.resize();
     this.applyTopDownLock();
-    this.startAnimationLoop();
+    this.syncAnimationLoop();
   }
 
   private refreshViewCube(): void {
@@ -1193,14 +1211,19 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   resize(): void {
     const rect = this.container.getBoundingClientRect();
-    const width = Math.max(
-      1,
-      Math.floor(rect.width || this.container.clientWidth || window.innerWidth)
-    );
-    const height = Math.max(
-      1,
-      Math.floor(rect.height || this.container.clientHeight || window.innerHeight)
-    );
+    const width = Math.floor(rect.width || this.container.clientWidth);
+    const height = Math.floor(rect.height || this.container.clientHeight);
+    // A display:none host measures 0x0. Keep the current drawing buffer rather
+    // than reallocating one at window size; the ResizeObserver fires again
+    // once the host is shown.
+    const hidden = width < 1 || height < 1;
+    if (hidden !== this.hiddenByLayout) {
+      this.hiddenByLayout = hidden;
+      this.syncAnimationLoop();
+    }
+    if (hidden) {
+      return;
+    }
     this.renderer.setSize(width, height, false);
 
     // Both cameras are re-fitted, not just the active one, so a projection swap
@@ -1283,12 +1306,34 @@ export class GCodeViewer implements GCodeViewerHandle {
     };
   }
 
+  /**
+   * Stop rendering, e.g. while the host is hidden. State updates (options, bit
+   * position, run progress) still apply and show on the next frame after
+   * resume().
+   */
+  pause(): void {
+    this.paused = true;
+    this.stopAnimationLoop();
+  }
+
+  resume(): void {
+    if (!this.paused) {
+      return;
+    }
+    this.paused = false;
+    this.resize();
+    this.syncAnimationLoop();
+  }
+
+  isPaused(): boolean {
+    return this.paused;
+  }
+
   dispose(): void {
     this.renderSequence += 1;
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
+    this.stopAnimationLoop();
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -1310,6 +1355,9 @@ export class GCodeViewer implements GCodeViewerHandle {
 
     this.controls.dispose();
     this.renderer.dispose();
+    // Release the GL context now instead of at GC; WebViews cap live contexts
+    // and drop the oldest (usually the main viewer) when it's exceeded
+    this.renderer.forceContextLoss();
     this.viewCube?.dispose();
     this.viewCube = null;
     this.container.removeChild(this.canvas);
@@ -1323,7 +1371,25 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.callbacks.onBoundsChanged?.({ id: this.id, bounds: this.getBounds() });
   }
 
+  // Run the loop only while unpaused, laid out, and holding a GL context
+  private syncAnimationLoop(): void {
+    const shouldRun = !this.paused && !this.hiddenByLayout && !this.contextLost;
+    if (!shouldRun) {
+      this.stopAnimationLoop();
+    } else if (this.animationFrameId === null) {
+      this.startAnimationLoop();
+    }
+  }
+
+  private stopAnimationLoop(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
   private startAnimationLoop(): void {
+    this.stopAnimationLoop();
     const tick = () => {
       this.animationFrameId = requestAnimationFrame(tick);
       const now = performance.now();

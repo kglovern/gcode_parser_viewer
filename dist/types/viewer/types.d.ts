@@ -327,6 +327,11 @@ export type GCodeViewerHandle = {
     setOptions(next: Partial<GCodeViewerOptions>): void;
     getOptions(): Readonly<GCodeViewerOptions>;
     resize(): void;
+    /** Stop the render loop, e.g. while the host element is hidden. */
+    pause(): void;
+    /** Restart the render loop after pause(), re-measuring the host first. */
+    resume(): void;
+    isPaused(): boolean;
     focusToModel(): void;
     focusToMachineBed(): void;
     resetCamera(): void;

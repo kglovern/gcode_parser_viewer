@@ -1,23 +1,23 @@
-import * as n from "react";
-import { a as w, G as g } from "./GCodeSVGRenderer-riaoW7q-.js";
-const V = n.forwardRef(
+import * as s from "react";
+import { a as w, G as g } from "./GCodeSVGRenderer-D51P_1tO.js";
+const V = s.forwardRef(
   function(c, m) {
-    const { id: a, options: s, callbacks: l, className: f, style: u } = c, i = n.useRef(null), o = n.useRef(null);
-    return n.useEffect(() => {
+    const { id: a, options: n, callbacks: l, className: f, style: u } = c, i = s.useRef(null), o = s.useRef(null);
+    return s.useEffect(() => {
       const e = i.current;
       if (!e)
         return;
-      const d = new w({ id: a, container: e, options: s, callbacks: l });
+      const d = new w({ id: a, container: e, options: n, callbacks: l });
       return o.current = d, () => {
         o.current = null, d.dispose();
       };
-    }, [a]), n.useEffect(() => {
+    }, [a]), s.useEffect(() => {
       var e;
-      (e = o.current) == null || e.setOptions(s ?? {});
-    }, [s]), n.useEffect(() => {
+      (e = o.current) == null || e.setOptions(n ?? {});
+    }, [n]), s.useEffect(() => {
       var e;
       (e = o.current) == null || e.setCallbacks(l ?? {});
-    }, [l]), n.useImperativeHandle(
+    }, [l]), s.useImperativeHandle(
       m,
       () => {
         const e = () => {
@@ -123,6 +123,15 @@ const V = n.forwardRef(
           resize() {
             e().resize();
           },
+          pause() {
+            e().pause();
+          },
+          resume() {
+            e().resume();
+          },
+          isPaused() {
+            return e().isPaused();
+          },
           focusToModel() {
             e().focusToModel();
           },
@@ -141,22 +150,22 @@ const V = n.forwardRef(
         };
       },
       [a]
-    ), n.createElement("div", { ref: i, className: f, style: u });
+    ), s.createElement("div", { ref: i, className: f, style: u });
   }
-), R = n.forwardRef(
+), P = s.forwardRef(
   function(c, m) {
-    const { id: a, options: s, className: l, style: f } = c, u = n.useRef(null), i = n.useRef(null);
-    return n.useEffect(() => {
+    const { id: a, options: n, className: l, style: f } = c, u = s.useRef(null), i = s.useRef(null);
+    return s.useEffect(() => {
       const o = u.current;
       if (!o) return;
-      const e = new g(o, s);
+      const e = new g(o, n);
       return i.current = e, () => {
         i.current = null, e.dispose();
       };
-    }, []), n.useEffect(() => {
+    }, []), s.useEffect(() => {
       var o;
-      s && ((o = i.current) == null || o.setOptions(s));
-    }, [s]), n.useImperativeHandle(m, () => {
+      n && ((o = i.current) == null || o.setOptions(n));
+    }, [n]), s.useImperativeHandle(m, () => {
       const o = () => {
         const e = i.current;
         if (!e) throw new Error("GCodeSVGRenderer is not ready.");
@@ -178,7 +187,7 @@ const V = n.forwardRef(
         getSVGElement: () => o().getSVGElement(),
         dispose: () => o().dispose()
       };
-    }, []), n.createElement("div", {
+    }, []), s.createElement("div", {
       ref: u,
       className: l,
       style: { width: "100%", height: "100%", ...f }
@@ -186,6 +195,6 @@ const V = n.forwardRef(
   }
 );
 export {
-  R as GCodeSVGVisualizer,
+  P as GCodeSVGVisualizer,
   V as GCodeVisualizer
 };
