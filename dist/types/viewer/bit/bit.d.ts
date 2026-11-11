@@ -3,6 +3,8 @@ import type { GCodeViewerBitPosition, GCodeViewerOptions } from "../types";
 export type BitMarker = {
     object: THREE.Object3D;
     update(nowMs: number): void;
+    /** A position tween or spin is running, so frames are still changing. */
+    isAnimating(): boolean;
     dispose(): void;
     setVisible(visible: boolean): void;
     setOptions(options: GCodeViewerOptions): void;

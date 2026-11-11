@@ -157,6 +157,17 @@ export type GCodeViewerOptions = {
   render: {
     antialias: boolean;
     theme: GCodeViewerTheme;
+    /**
+     * Draw only when something changes or an animation is running, instead of
+     * every frame. Saves power and main-thread time on hosts whose scene is
+     * mostly static (e.g. a pendant). Defaults to false.
+     */
+    onDemand?: boolean;
+    /**
+     * With onDemand, caps frames driven only by animation (bit tween, spin,
+     * camera transitions). Changes still draw immediately. Unset = every frame.
+     */
+    maxAnimationFps?: number;
   };
   camera: {
     /**
@@ -225,7 +236,7 @@ export const defaultGCodeViewerOptions: GCodeViewerOptions = {
   boundingBox: { visible: false, labels: false },
   machineBed: { visible: false, min: null, max: null, keepout: null },
   geometry: { arcSegments: 30, batching: { progressEveryLines: 5000, yieldEveryLines: 50000 } },
-  render: { antialias: true, theme: defaultGCodeViewerTheme },
+  render: { antialias: true, theme: defaultGCodeViewerTheme, onDemand: false },
   camera: {
     projection: "perspective",
     fov: 45,

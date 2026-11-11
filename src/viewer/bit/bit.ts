@@ -7,6 +7,8 @@ import { DRILL_STL_BASE64 } from "./drill-stl-data";
 export type BitMarker = {
   object: THREE.Object3D;
   update(nowMs: number): void;
+  /** A position tween or spin is running, so frames are still changing. */
+  isAnimating(): boolean;
   dispose(): void;
   setVisible(visible: boolean): void;
   setOptions(options: GCodeViewerOptions): void;
@@ -459,6 +461,7 @@ export function createBitMarker(initialOptions: GCodeViewerOptions): BitMarker {
         : 1;
       root.scale.setScalar(scale);
     },
+    isAnimating: () => tween !== null || Boolean(spinTween?.isActive()) || Boolean(spinRampTween?.isActive()),
     update: (nowMs) => {
       if (!tween) return;
       const t = (nowMs - tween.startedAt) / tween.duration;

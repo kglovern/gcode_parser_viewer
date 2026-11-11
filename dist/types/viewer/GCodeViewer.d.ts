@@ -24,6 +24,9 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private paused;
     private hiddenByLayout;
     private contextLost;
+    private needsRender;
+    private lastDrawAt;
+    private plannedSpanActive;
     private readonly onContextLost;
     private readonly onContextRestored;
     private gridGroup;
@@ -54,6 +57,15 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private cameraFollowInterrupted;
     private cameraFollowOffset;
     constructor(args: GCodeViewerCreateArgs);
+    /**
+     * Public methods that change what's drawn redraw afterwards, so on-demand
+     * rendering can't miss one. Async loaders redraw again when they settle,
+     * since their geometry lands after the call returns.
+     */
+    private wrapInvalidatingMethods;
+    /** Mark the scene changed; in on-demand mode this schedules a frame. */
+    private invalidate;
+    private isOnDemand;
     private refreshViewCube;
     private isTopDownLocked;
     /**
@@ -243,6 +255,8 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private syncAnimationLoop;
     private stopAnimationLoop;
     private startAnimationLoop;
+    /** Frames are still changing without any further invalidate(). */
+    private isAnimating;
     /** World units per CSS pixel at the orbit target, for constant-size markers. */
     private currentWorldUnitsPerPixel;
     private updateScreenSpaceMarkers;

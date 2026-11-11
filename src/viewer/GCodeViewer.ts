@@ -96,6 +96,7 @@ import {
   disposeSpriteGroup,
 } from "./grid/grid";
 import { createBitMarker, type BitMarker } from "./bit/bit";
+import { nextFrameDecision } from "./render/frameScheduler";
 
 const MM_PER_INCH = 25.4;
 // "Follow tool" camera tween durations: a deliberate, noticeable ease when
@@ -145,6 +146,11 @@ export class GCodeViewer implements GCodeViewerHandle {
   // Host measured 0x0 (display:none); the loop restarts when it has a size again
   private hiddenByLayout = false;
   private contextLost = false;
+  // On-demand rendering: set by invalidate(), cleared when a frame is drawn
+  private needsRender = true;
+  private lastDrawAt = 0;
+  // A planned (sent, not yet cut) span is shown, so the pulse shader animates
+  private plannedSpanActive = false;
   private readonly onContextLost = () => {
     this.contextLost = true;
     this.stopAnimationLoop();
@@ -152,7 +158,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   private readonly onContextRestored = () => {
     this.contextLost = false;
     this.resize();
-    this.syncAnimationLoop();
+    this.invalidate();
   };
 
   private gridGroup: THREE.Group | null = null;
@@ -311,6 +317,8 @@ export class GCodeViewer implements GCodeViewerHandle {
     // handlers, never from the programmatic controls.update() calls
     // elsewhere in this file — a clean signal for "the user just grabbed the
     // camera," used to interrupt an active tool-follow session.
+    // User pan/zoom/rotate (and damping) report through "change"
+    this.controls.addEventListener("change", () => this.invalidate());
     this.controls.addEventListener("start", () => {
       if (this.cameraFollowRequested) {
         this.cameraFollowInterrupted = true;
@@ -338,7 +346,37 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.refreshOriginMarker();
     this.resize();
     this.applyTopDownLock();
+    this.wrapInvalidatingMethods();
     this.syncAnimationLoop();
+  }
+
+  /**
+   * Public methods that change what's drawn redraw afterwards, so on-demand
+   * rendering can't miss one. Async loaders redraw again when they settle,
+   * since their geometry lands after the call returns.
+   */
+  private wrapInvalidatingMethods(): void {
+    for (const name of INVALIDATING_METHODS) {
+      const original = this[name] as (...args: unknown[]) => unknown;
+      (this as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
+        const result = original.apply(this, args);
+        this.invalidate();
+        if (result instanceof Promise) {
+          result.finally(() => this.invalidate()).catch(() => {});
+        }
+        return result;
+      };
+    }
+  }
+
+  /** Mark the scene changed; in on-demand mode this schedules a frame. */
+  private invalidate(): void {
+    this.needsRender = true;
+    this.syncAnimationLoop();
+  }
+
+  private isOnDemand(): boolean {
+    return Boolean(this.options.render.onDemand);
   }
 
   private refreshViewCube(): void {
@@ -515,6 +553,7 @@ export class GCodeViewer implements GCodeViewerHandle {
    */
   setPlannedRange(_fromLine: number, toLine: number): void {
     const index = Math.floor(toLine);
+    this.plannedSpanActive = index >= 0;
 
     if (this.segmentsToolpath) {
       setSegmentsPlannedEnd(this.segmentsToolpath, index);
@@ -554,6 +593,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     });
     setSegmentsCursorVertex(state, result.cursorVertex, mode);
     setSegmentsPlannedEndVertex(state, result.plannedEndVertex);
+    this.plannedSpanActive = result.plannedEndVertex > result.cursorVertex;
     return { located: result.located, line: segmentsLineForVertex(state, result.cursorVertex) };
   }
 
@@ -624,6 +664,7 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   resetColors(): void {
     this.runProgress = createRunProgressState();
+    this.plannedSpanActive = false;
     if (this.segmentsToolpath) {
       resetSegmentsColors(this.segmentsToolpath);
     }
@@ -1009,6 +1050,7 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   unload(): void {
     this.currentLines = [];
+    this.plannedSpanActive = false;
     this.setGeometryEmpty();
     this.emitProgress({ state: "hidden" });
   }
@@ -1219,6 +1261,8 @@ export class GCodeViewer implements GCodeViewerHandle {
     const hidden = width < 1 || height < 1;
     if (hidden !== this.hiddenByLayout) {
       this.hiddenByLayout = hidden;
+      // Showing again needs a frame: setSize() below clears the canvas
+      this.needsRender = this.needsRender || !hidden;
       this.syncAnimationLoop();
     }
     if (hidden) {
@@ -1322,7 +1366,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
     this.paused = false;
     this.resize();
-    this.syncAnimationLoop();
+    this.invalidate();
   }
 
   isPaused(): boolean {
@@ -1373,9 +1417,15 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   // Run the loop only while unpaused, laid out, and holding a GL context
   private syncAnimationLoop(): void {
-    const shouldRun = !this.paused && !this.hiddenByLayout && !this.contextLost;
+    // On demand, an idle loop stays stopped until invalidate() or an animation
+    const hasWork = !this.isOnDemand() || this.needsRender;
+    const shouldRun = !this.paused && !this.hiddenByLayout && !this.contextLost && hasWork;
     if (!shouldRun) {
-      this.stopAnimationLoop();
+      // On demand with nothing new to draw, a running loop (mid-animation)
+      // winds itself down
+      if (this.paused || this.hiddenByLayout || this.contextLost) {
+        this.stopAnimationLoop();
+      }
     } else if (this.animationFrameId === null) {
       this.startAnimationLoop();
     }
@@ -1391,7 +1441,6 @@ export class GCodeViewer implements GCodeViewerHandle {
   private startAnimationLoop(): void {
     this.stopAnimationLoop();
     const tick = () => {
-      this.animationFrameId = requestAnimationFrame(tick);
       const now = performance.now();
       // controls.update() must run before updateCameraFocusTransition().
       // If the order were reversed, controls would recompute camera.position
@@ -1409,9 +1458,35 @@ export class GCodeViewer implements GCodeViewerHandle {
       if (this.segmentsToolpath) {
         setSegmentsTime(this.segmentsToolpath, now);
       }
-      this.renderer.render(this.scene, this.camera);
+
+      const decision = nextFrameDecision({
+        onDemand: this.isOnDemand(),
+        needsRender: this.needsRender,
+        animating: this.isAnimating(),
+        sinceLastDrawMs: now - this.lastDrawAt,
+        maxAnimationFps: this.options.render.maxAnimationFps,
+      });
+      if (decision.draw) {
+        this.renderer.render(this.scene, this.camera);
+        this.lastDrawAt = now;
+        this.needsRender = false;
+      }
+      // stopAnimationLoop() during this tick (dispose, pause) cleared the id
+      if (this.animationFrameId === null) {
+        return;
+      }
+      this.animationFrameId = decision.continue ? requestAnimationFrame(tick) : null;
     };
-    tick();
+    // Through rAF rather than a direct call so a burst of invalidations
+    // (several setters in a row) coalesces into one frame
+    this.animationFrameId = requestAnimationFrame(tick);
+  }
+
+  /** Frames are still changing without any further invalidate(). */
+  private isAnimating(): boolean {
+    const pulsing =
+      this.plannedSpanActive && Boolean(this.options.progress.plannedPulse) && this.segmentsToolpath !== null;
+    return this.cameraFocusTransition !== null || Boolean(this.bitMarker?.isAnimating()) || pulsing;
   }
 
   /** World units per CSS pixel at the orbit target, for constant-size markers. */
@@ -1985,6 +2060,39 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.viewCube.setActiveFace(face);
   }
 }
+
+// Public methods that change the drawn scene; see wrapInvalidatingMethods()
+const INVALIDATING_METHODS = [
+  "setBitPosition",
+  "setCameraFollowEnabled",
+  "setBitVisible",
+  "setOriginVisible",
+  "setBitSpinning",
+  "setToolpathRotationA",
+  "hideUntilLine",
+  "setPlannedRange",
+  "trackRunProgress",
+  "seekToLine",
+  "showAll",
+  "setLineGroupVisible",
+  "showAllLineGroups",
+  "resetColors",
+  "setCameraProjection",
+  "snapCameraToView",
+  "loadFromUrl",
+  "loadFromFile",
+  "loadFromText",
+  "loadFromLines",
+  "loadFromWorkerData",
+  "loadFromSegments",
+  "loadFromPrecomputedGroups",
+  "unload",
+  "setOptions",
+  "resize",
+  "focusToModel",
+  "focusToMachineBed",
+  "resetCamera",
+] as const satisfies readonly (keyof GCodeViewer)[];
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) {

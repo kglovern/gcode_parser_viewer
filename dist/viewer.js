@@ -1,4 +1,4 @@
-import { G as o, a as i, V as c, d as r, b as n } from "./GCodeSVGRenderer-D51P_1tO.js";
+import { G as o, a as i, V as c, d as r, b as n } from "./GCodeSVGRenderer-C2K26hAv.js";
 import { SEGMENT_ATTR_RAPID as t, SEGMENT_ATTR_SLOT_MASK as s } from "./gviewer.js";
 const e = {
   dark: {
