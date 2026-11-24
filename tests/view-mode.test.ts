@@ -44,6 +44,16 @@ describe("pendant view mode", () => {
     expect(merged.machineBed.visible).toBe(true);
   });
 
+  it("shows the toolpath grid in pendant mode unless the host opts out", () => {
+    expect(mergeOptions(defaultGCodeViewerOptions, { units: "in" }).toolpathGrid?.visible).toBeFalsy();
+    const pendant = mergeOptions(defaultGCodeViewerOptions, { viewMode: "pendant" });
+    expect(pendant.toolpathGrid?.visible).toBe(true);
+    const optedOut = mergeOptions(pendant, { toolpathGrid: { visible: false } });
+    expect(optedOut.toolpathGrid?.visible).toBe(false);
+    const sized = mergeOptions(optedOut, { toolpathGrid: { visible: true, labelSizePx: 16 } });
+    expect(sized.toolpathGrid).toEqual({ visible: true, labelSizePx: 16 });
+  });
+
   it("keeps a laser bit in laser mode", () => {
     const options = applyViewMode({
       ...defaultGCodeViewerOptions,

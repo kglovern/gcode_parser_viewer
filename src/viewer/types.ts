@@ -17,6 +17,8 @@ export type GCodeViewerTheme = {
     /** Acked by the controller but not yet physically cut. Falls back to `processed`, then `cutting`. */
     planned?: string;
     boundingBox: string;
+    /** Pendant toolpath grid/ruler. Falls back to `boundingBox`. */
+    toolpathGrid?: string;
     machineBed: string;
     machineBedKeepout: string;
     grid: {
@@ -140,6 +142,16 @@ export type GCodeViewerOptions = {
   boundingBox: {
     visible: boolean;
     labels: boolean;
+  };
+  /**
+   * A labelled X/Y grid limited to the toolpath's extent (plus one step each
+   * side): 10 mm labels with 5 mm ticks, or 1 in labels with 0.5 in ticks,
+   * following `units`. On by default in pendant mode, hidden otherwise.
+   */
+  toolpathGrid?: {
+    visible: boolean;
+    /** Label height in CSS pixels. Default 13. */
+    labelSizePx?: number;
   };
   machineBed: {
     visible: boolean;

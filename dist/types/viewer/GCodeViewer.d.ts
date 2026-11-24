@@ -33,6 +33,7 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private axesGroup;
     private gridLabelsGroup;
     private boundingBoxGroup;
+    private toolpathGrid;
     private machineBedGroup;
     private bitMarker;
     private originMarker;
@@ -269,12 +270,14 @@ export declare class GCodeViewer implements GCodeViewerHandle {
     private renderGridAndAxes;
     private refreshGridLabels;
     private refreshBoundingBox;
+    private refreshToolpathGrid;
     private refreshMachineBed;
     private setBitMarker;
     private setGridGroup;
     private setAxesGroup;
     private setGridLabelsGroup;
     private setBoundingBoxGroup;
+    private setToolpathGrid;
     private setMachineBedGroup;
     private setGeometryEmpty;
     private setToolpathGeometry;

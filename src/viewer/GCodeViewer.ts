@@ -95,6 +95,12 @@ import {
   disposeLineSegmentsGroup,
   disposeSpriteGroup,
 } from "./grid/grid";
+import {
+  createToolpathGrid,
+  disposeToolpathGrid,
+  updateToolpathGridScale,
+  type ToolpathGrid,
+} from "./grid/toolpathGrid";
 import { createBitMarker, type BitMarker } from "./bit/bit";
 import { nextFrameDecision } from "./render/frameScheduler";
 
@@ -165,6 +171,7 @@ export class GCodeViewer implements GCodeViewerHandle {
   private axesGroup: THREE.Group | null = null;
   private gridLabelsGroup: THREE.Group | null = null;
   private boundingBoxGroup: THREE.Group | null = null;
+  private toolpathGrid: ToolpathGrid | null = null;
   private machineBedGroup: THREE.Group | null = null;
   private bitMarker: BitMarker | null = null;
   private originMarker: THREE.Mesh | null = null;
@@ -1030,6 +1037,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = bounds ? bounds.clone() : null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.refreshToolpathGrid();
     this.setToolpathRotationA(this.toolpathRotationA);
     this.syncMarkerVisibility();
   }
@@ -1045,6 +1053,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = bounds ? bounds.clone() : null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.refreshToolpathGrid();
     this.syncMarkerVisibility();
   }
 
@@ -1145,6 +1154,16 @@ export class GCodeViewer implements GCodeViewerHandle {
       previous.render.theme.colors.boundingBox !== this.options.render.theme.colors.boundingBox;
     if (bboxChanged) {
       this.refreshBoundingBox();
+    }
+
+    const toolpathGridChanged =
+      previous.toolpathGrid?.visible !== this.options.toolpathGrid?.visible ||
+      previous.toolpathGrid?.labelSizePx !== this.options.toolpathGrid?.labelSizePx ||
+      previous.units !== this.options.units ||
+      previous.render.theme.colors.toolpathGrid !== this.options.render.theme.colors.toolpathGrid ||
+      previous.render.theme.colors.boundingBox !== this.options.render.theme.colors.boundingBox;
+    if (toolpathGridChanged) {
+      this.refreshToolpathGrid();
     }
 
     const machineBedChanged =
@@ -1392,6 +1411,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setAxesGroup(null);
     this.setGridLabelsGroup(null);
     this.setBoundingBoxGroup(null);
+    this.setToolpathGrid(null);
     this.setMachineBedGroup(null);
     this.setBitMarker(null);
     this.options = { ...this.options, originMarker: undefined };
@@ -1498,10 +1518,13 @@ export class GCodeViewer implements GCodeViewerHandle {
   }
 
   private updateScreenSpaceMarkers(): void {
-    if (!this.bitMarker && !this.originMarker) {
+    if (!this.bitMarker && !this.originMarker && !this.toolpathGrid) {
       return;
     }
     const perPixel = this.currentWorldUnitsPerPixel();
+    if (this.toolpathGrid && perPixel > 0 && Number.isFinite(perPixel)) {
+      updateToolpathGridScale(this.toolpathGrid, perPixel, this.options.toolpathGrid?.labelSizePx ?? 13);
+    }
     this.bitMarker?.setPixelScale(perPixel);
     if (this.originMarker) {
       const sizePx = this.options.originMarker?.sizePx ?? 9;
@@ -1623,6 +1646,21 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.setBoundingBoxGroup(createBoundingBoxGroup(this.currentBounds, this.options));
   }
 
+  private refreshToolpathGrid(): void {
+    if (!this.options.toolpathGrid?.visible || !this.currentBounds || this.currentBounds.isEmpty()) {
+      this.setToolpathGrid(null);
+      return;
+    }
+    this.setToolpathGrid(
+      createToolpathGrid({
+        bounds: this.currentBounds,
+        units: this.options.units,
+        theme: this.options.render.theme,
+      })
+    );
+    this.invalidate();
+  }
+
   private refreshMachineBed(): void {
     const { visible, min, max, keepout } = this.options.machineBed;
     if (!visible || !min || !max) {
@@ -1691,6 +1729,18 @@ export class GCodeViewer implements GCodeViewerHandle {
     }
   }
 
+  private setToolpathGrid(grid: ToolpathGrid | null): void {
+    if (this.toolpathGrid) {
+      this.scene.remove(this.toolpathGrid.group);
+      disposeToolpathGrid(this.toolpathGrid);
+      this.toolpathGrid = null;
+    }
+    if (grid) {
+      this.toolpathGrid = grid;
+      this.scene.add(grid.group);
+    }
+  }
+
   private setMachineBedGroup(group: THREE.Group | null): void {
     if (this.machineBedGroup) {
       this.scene.remove(this.machineBedGroup);
@@ -1723,6 +1773,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.refreshToolpathGrid();
     this.syncMarkerVisibility();
   }
 
@@ -1770,6 +1821,7 @@ export class GCodeViewer implements GCodeViewerHandle {
     this.currentBounds = bounds ? bounds.clone() : null;
     this.emitBoundsChanged();
     this.refreshBoundingBox();
+    this.refreshToolpathGrid();
     this.setToolpathRotationA(this.toolpathRotationA);
     this.syncMarkerVisibility();
   }
@@ -2117,6 +2169,7 @@ export function mergeOptions(base: NormalizedOptions, next?: Partial<GCodeViewer
     viewCube: mergeOptional(base.viewCube, next.viewCube),
     originMarker: mergeOptional(base.originMarker, next.originMarker),
     boundingBox: { ...base.boundingBox, ...next.boundingBox },
+    toolpathGrid: mergeOptional(base.toolpathGrid, next.toolpathGrid),
     machineBed: { ...base.machineBed, ...next.machineBed },
     geometry: {
       ...base.geometry,
@@ -2179,6 +2232,8 @@ export function applyViewMode(options: NormalizedOptions): NormalizedOptions {
       screenSpace: true,
     },
     grid: { ...options.grid, visible: false },
+    // Only explicit host opt-out hides it; otherwise pendant shows it.
+    toolpathGrid: { ...options.toolpathGrid, visible: options.toolpathGrid?.visible ?? true },
     viewCube: { visible: false },
     originMarker: {
       color: "#ffffff",
