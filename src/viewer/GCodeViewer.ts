@@ -98,6 +98,7 @@ import {
 import {
   createToolpathGrid,
   disposeToolpathGrid,
+  toolpathGridFrame,
   updateToolpathGridScale,
   type ToolpathGrid,
 } from "./grid/toolpathGrid";
@@ -1305,6 +1306,19 @@ export class GCodeViewer implements GCodeViewerHandle {
       return;
     }
     if (this.isTopDownLocked()) {
+      if (this.toolpathGrid) {
+        // Frame the whole grid, labels included, not just the toolpath.
+        const { box, paddingPx } = toolpathGridFrame(
+          this.toolpathGrid,
+          this.options.toolpathGrid?.labelSizePx ?? 13
+        );
+        const bounds = new THREE.Box3(
+          new THREE.Vector3(box.minX, box.minY, this.currentBounds.min.z),
+          new THREE.Vector3(box.maxX, box.maxY, this.currentBounds.max.z)
+        );
+        this.startTopDownFocus(bounds, paddingPx);
+        return;
+      }
       this.startTopDownFocus(this.currentBounds);
       return;
     }
@@ -2019,17 +2033,31 @@ export class GCodeViewer implements GCodeViewerHandle {
 
   // Top-down framing: centre on the model and fit its X/Y extent to the
   // viewport. Under ortho the zoom does the framing; under perspective the
-  // standoff does.
-  private startTopDownFocus(bounds: THREE.Box3): void {
+  // standoff does. `paddingPx` reserves screen space per side for things drawn
+  // at a fixed pixel size (grid labels) outside the bounds.
+  private startTopDownFocus(
+    bounds: THREE.Box3,
+    paddingPx?: { left: number; right: number; top: number; bottom: number }
+  ): void {
     const center = new THREE.Vector3();
     bounds.getCenter(center);
     const size = new THREE.Vector3();
     bounds.getSize(size);
-    const height = topDownFitHeight(
-      size,
-      this.viewportAspect(),
-      this.options.camera.topDownFitMargin
-    );
+    const aspect = this.viewportAspect();
+    let height = topDownFitHeight(size, aspect, this.options.camera.topDownFitMargin);
+    if (paddingPx) {
+      const viewportPx = this.container.clientHeight || 1;
+      const margin = this.options.camera.topDownFitMargin ?? 1.1;
+      // Fraction of the viewport height left for the bounds once the pixel
+      // padding is taken out; clamped so a tiny viewport still frames something.
+      const freeY = Math.max(0.25, 1 - (paddingPx.top + paddingPx.bottom) / viewportPx);
+      const freeX = Math.max(0.25 * aspect, aspect - (paddingPx.left + paddingPx.right) / viewportPx);
+      height = Math.max((size.y * margin) / freeY, (size.x * margin) / freeX, height);
+      // Shift so the bounds sit centred in the space between the paddings.
+      const perPixel = height / viewportPx;
+      center.x -= ((paddingPx.left - paddingPx.right) / 2) * perPixel;
+      center.y -= ((paddingPx.bottom - paddingPx.top) / 2) * perPixel;
+    }
     const distance = Math.max(1, distanceForFrustumHeight(height, this.options.camera.fov) + size.z);
     const toPosition = new THREE.Vector3(center.x, center.y - distance * 1e-4, center.z + distance);
     this.applyCameraDepthRange(Math.max(size.x, size.y, size.z, distance, 1));

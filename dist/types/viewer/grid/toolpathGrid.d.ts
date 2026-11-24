@@ -32,8 +32,9 @@ export declare function toolpathGridSteps(units: GridUnits): {
     minor: number;
 };
 /**
- * The toolpath's X/Y extent snapped outward to the major step, plus one more
- * step each side, so there is always a labelled line beyond the toolpath.
+ * The toolpath's X/Y extent snapped outward to the nearest major line, so the
+ * grid starts at the toolpath rather than beyond it. A toolpath that spans no
+ * width on an axis still gets one step.
  */
 export declare function toolpathGridExtent(bounds: {
     min: {
@@ -63,4 +64,17 @@ export declare function createToolpathGrid(args: {
  * would be too crowded at the current zoom.
  */
 export declare function updateToolpathGridScale(grid: ToolpathGrid, worldPerPixel: number, labelSizePx: number): void;
+/**
+ * What a top-down fit must keep on screen to show the whole grid: the world
+ * box (extent plus ruler ticks) and the pixel-sized label overhang per side.
+ */
+export declare function toolpathGridFrame(grid: ToolpathGrid, labelSizePx: number): {
+    box: ToolpathGridExtent;
+    paddingPx: {
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+    };
+};
 export declare function disposeToolpathGrid(grid: ToolpathGrid): void;

@@ -17,6 +17,9 @@ const DECADE = 10;
 const MAJOR_TICK = 0.35;
 const MINOR_TICK = 0.18;
 
+/** Label gap from the ruler tick, in CSS pixels. */
+const LABEL_GAP_PX = 4;
+
 export type ToolpathGridExtent = { minX: number; maxX: number; minY: number; maxY: number };
 
 export type ToolpathGridLabel = {
@@ -48,21 +51,24 @@ export function toolpathGridSteps(units: GridUnits): { major: number; minor: num
 }
 
 /**
- * The toolpath's X/Y extent snapped outward to the major step, plus one more
- * step each side, so there is always a labelled line beyond the toolpath.
+ * The toolpath's X/Y extent snapped outward to the nearest major line, so the
+ * grid starts at the toolpath rather than beyond it. A toolpath that spans no
+ * width on an axis still gets one step.
  */
 export function toolpathGridExtent(
   bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
   majorStep: number
 ): ToolpathGridExtent {
-  const snapDown = (v: number) => (Math.floor(v / majorStep + EPSILON) - 1) * majorStep;
-  const snapUp = (v: number) => (Math.ceil(v / majorStep - EPSILON) + 1) * majorStep;
-  return {
-    minX: snapDown(bounds.min.x),
-    maxX: snapUp(bounds.max.x),
-    minY: snapDown(bounds.min.y),
-    maxY: snapUp(bounds.max.y),
+  const snapDown = (v: number) => Math.floor(v / majorStep + EPSILON) * majorStep;
+  const snapUp = (v: number) => Math.ceil(v / majorStep - EPSILON) * majorStep;
+  const span = (lo: number, hi: number): [number, number] => {
+    const min = snapDown(lo);
+    const max = snapUp(hi);
+    return max - min < majorStep - EPSILON ? [min, min + majorStep] : [min, max];
   };
+  const [minX, maxX] = span(bounds.min.x, bounds.max.x);
+  const [minY, maxY] = span(bounds.min.y, bounds.max.y);
+  return { minX, maxX, minY, maxY };
 }
 
 /** Value shown for a major line, in display units. */
@@ -197,7 +203,7 @@ export function updateToolpathGridScale(grid: ToolpathGrid, worldPerPixel: numbe
   const stepPx = grid.majorStep / worldPerPixel;
   const stride = labelStride(stepPx, Math.max(labelSizePx * 3, 36));
   const height = labelSizePx * worldPerPixel;
-  const gap = 4 * worldPerPixel;
+  const gap = LABEL_GAP_PX * worldPerPixel;
   const { minX, minY } = grid.extent;
 
   for (const label of grid.labels) {
@@ -211,6 +217,38 @@ export function updateToolpathGridScale(grid: ToolpathGrid, worldPerPixel: numbe
   }
   grid.minorTicks.visible = stepPx / 2 >= 4;
   grid.majorLines.visible = stepPx >= 6;
+}
+
+/**
+ * What a top-down fit must keep on screen to show the whole grid: the world
+ * box (extent plus ruler ticks) and the pixel-sized label overhang per side.
+ */
+export function toolpathGridFrame(
+  grid: ToolpathGrid,
+  labelSizePx: number
+): {
+  box: ToolpathGridExtent;
+  paddingPx: { left: number; right: number; top: number; bottom: number };
+} {
+  const { minX, maxX, minY, maxY } = grid.extent;
+  let yAspect = 0;
+  let lastXAspect = 0;
+  for (const label of grid.labels) {
+    if (label.axis === "y") {
+      yAspect = Math.max(yAspect, label.aspect);
+    } else if (Math.abs(label.world - maxX) < EPSILON) {
+      lastXAspect = label.aspect;
+    }
+  }
+  return {
+    box: { minX: minX - grid.majorTick, maxX, minY: minY - grid.majorTick, maxY },
+    paddingPx: {
+      left: LABEL_GAP_PX + yAspect * labelSizePx,
+      right: (lastXAspect * labelSizePx) / 2,
+      top: labelSizePx / 2,
+      bottom: LABEL_GAP_PX + labelSizePx,
+    },
+  };
 }
 
 export function disposeToolpathGrid(grid: ToolpathGrid): void {

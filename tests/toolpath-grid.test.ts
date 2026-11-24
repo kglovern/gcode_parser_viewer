@@ -6,6 +6,7 @@ import {
   formatToolpathGridLabel,
   labelStride,
   toolpathGridExtent,
+  toolpathGridFrame,
   toolpathGridSteps,
   updateToolpathGridScale,
 } from "../src/viewer/grid/toolpathGrid";
@@ -40,13 +41,15 @@ describe("toolpath grid", () => {
     expect(toolpathGridSteps("in")).toEqual({ major: 25.4, minor: 12.7 });
   });
 
-  it("snaps the extent outward and pads one step", () => {
-    expect(toolpathGridExtent(box(3, -12, 87, 40), 10)).toEqual({ minX: -10, maxX: 100, minY: -30, maxY: 50 });
-    // Already on a step: still padded by exactly one.
-    expect(toolpathGridExtent(box(0, 0, 50, 20), 10)).toEqual({ minX: -10, maxX: 60, minY: -10, maxY: 30 });
+  it("snaps the extent outward to the nearest step, no padding", () => {
+    expect(toolpathGridExtent(box(3, -12, 87, 40), 10)).toEqual({ minX: 0, maxX: 90, minY: -20, maxY: 40 });
+    // Already on a step: starts exactly at the toolpath.
+    expect(toolpathGridExtent(box(0, 0, 50, 20), 10)).toEqual({ minX: 0, maxX: 50, minY: 0, maxY: 20 });
+    // Zero-width axis still gets one step.
+    expect(toolpathGridExtent(box(0, 5, 0, 5), 10)).toEqual({ minX: 0, maxX: 10, minY: 0, maxY: 10 });
     const inch = toolpathGridExtent(box(0, 0, 60, 10), 25.4);
-    expect(inch.minX).toBeCloseTo(-25.4);
-    expect(inch.maxX).toBeCloseTo(101.6);
+    expect(inch.minX).toBeCloseTo(0);
+    expect(inch.maxX).toBeCloseTo(76.2);
   });
 
   it("labels major lines in display units", () => {
@@ -66,13 +69,28 @@ describe("toolpath grid", () => {
 
   it("builds one label per major step and a minor tick between each", () => {
     const grid = createToolpathGrid({ bounds: box(3, 2, 47, 18), units: "mm", theme: defaultGCodeViewerTheme });
-    // X: -10..60 (8 lines), Y: -10..30 (5 lines).
+    // X: 0..50 (6 lines), Y: 0..20 (3 lines).
     const xLabels = grid.labels.filter((l) => l.axis === "x");
     const yLabels = grid.labels.filter((l) => l.axis === "y");
-    expect(xLabels.map((l) => l.index)).toEqual([-1, 0, 1, 2, 3, 4, 5, 6]);
-    expect(yLabels.map((l) => l.index)).toEqual([-1, 0, 1, 2, 3]);
-    // Minor ticks: 7 on X + 4 on Y, 2 vertices each.
-    expect(vertexCount(grid.minorTicks)).toBe((7 + 4) * 2);
+    expect(xLabels.map((l) => l.index)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(yLabels.map((l) => l.index)).toEqual([0, 1, 2]);
+    // Minor ticks: 5 on X + 2 on Y, 2 vertices each.
+    expect(vertexCount(grid.minorTicks)).toBe((5 + 2) * 2);
+    disposeToolpathGrid(grid);
+  });
+
+  it("frames the grid with its ticks and pixel-sized labels", () => {
+    const grid = createToolpathGrid({ bounds: box(0, 0, 50, 20), units: "mm", theme: defaultGCodeViewerTheme });
+    const { box: frame, paddingPx } = toolpathGridFrame(grid, 13);
+    // Ticks hang off the min edges only.
+    expect(frame.minX).toBeCloseTo(-grid.majorTick);
+    expect(frame.minY).toBeCloseTo(-grid.majorTick);
+    expect(frame.maxX).toBe(50);
+    expect(frame.maxY).toBe(20);
+    // Labels sit left and below; they overhang the far edges by half a label.
+    expect(paddingPx.bottom).toBe(4 + 13);
+    expect(paddingPx.top).toBe(6.5);
+    expect(paddingPx.left).toBeGreaterThan(paddingPx.right);
     disposeToolpathGrid(grid);
   });
 
